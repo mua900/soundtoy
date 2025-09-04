@@ -1,6 +1,8 @@
 #pragma once
 
 #include "common.h"
+#include "audio.h"
+
 #include <SDL3/SDL.h>
 
 #define INIT_WINDOW_WIDTH 1440
@@ -26,20 +28,6 @@ struct Mouse_State {
     Mouse_Flags flags;
 };
 
-struct Audio {
-    SDL_AudioDeviceID playback = 0;
-    SDL_AudioStream* audio_stream = NULL;
-
-    double time = 0;
-    int sample_rate = 0;
-
-    float volume = 0;
-    bool paused = true;
-
-    void pause();
-    void unpause();
-};
-
 struct UiState {
     Rectangle volume_slider = {100, 100, 100, 10};
     vec2 volume_slider_knob_scale = {0.1, 2};
@@ -49,15 +37,18 @@ struct UiState {
 
 struct Application {
 public:
-    Window window;
-    Mouse_State mouse;
+    Window m_window = {};
+    Mouse_State m_mouse = {};
 
-    Assets assets;
-    Audio audio;
+    Assets m_assets = {};
+    Audio m_audio = {};
 
-    UiState ui;
+    UiState m_ui = {};
+    Color m_background_color = { 0xaa, 0x66, 0x33, 0xff };
 
-    bool quit;
+    bool m_quit = false;
+
+    bool initialize();
 
     void handle_events();
     void update();
@@ -69,5 +60,3 @@ private:
 
     bool mouse_input_ui();
 };
-
-bool initialize(Application* app);

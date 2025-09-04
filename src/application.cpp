@@ -4,75 +4,8 @@
 
 #include <iostream>
 
-#define SAMPLE_BUFFER_SIZE 1024
-float sample_buffer[SAMPLE_BUFFER_SIZE];
-
-void audio_callback(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+bool Application::initialize()
 {
-    additional_amount /= sizeof(float);
-
-    Audio* audio = (Audio*)userdata;
-
-    const float PI = 3.1415;
-
-    for (int turn = 0; turn < additional_amount / SAMPLE_BUFFER_SIZE; turn++)
-    {
-        for (int i = 0; i < SAMPLE_BUFFER_SIZE; i++)
-        {
-            sample_buffer[i] = sinf(audio->time * audio->sample_rate * 2 * PI);
-        }
-        SDL_PutAudioStreamData(stream, sample_buffer, SAMPLE_BUFFER_SIZE);
-    }
-}
-
-Audio initialize_audio(int freq, int channels, bool* success)
-{
-    Audio audio = {};
-
-    SDL_AudioDeviceID default_device = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
-
-    SDL_AudioSpec spec = {};
-    spec.freq = freq;
-    spec.channels = channels;
-    spec.format = SDL_AUDIO_F32;
-
-    audio.playback = SDL_OpenAudioDevice(default_device, &spec);
-    if (!audio.playback)
-    {
-        *success = false;
-        return audio;
-    }
-
-    SDL_AudioSpec device_spec = {};
-    if (!SDL_GetAudioDeviceFormat(audio.playback, &device_spec, NULL))
-    {
-        *success = false;
-        return audio;
-    }
-
-    audio.audio_stream = SDL_CreateAudioStream(&spec, &device_spec);
-    if (!audio.audio_stream)
-    {
-        *success = false;
-        return audio;
-    }
-
-    *success = SDL_BindAudioStream(audio.playback, audio.audio_stream);
-
-    return audio;
-}
-
-bool Application::load_assets()
-{
-    
-
-    return true;
-}
-
-bool initialize(Application* app)
-{
-    app->quit = true;
-
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         std::cerr << "Failed to init SDL\n";
@@ -89,12 +22,12 @@ bool initialize(Application* app)
             return false;
         }
 
-        app->window = { window, renderer };
+        m_window = { window, renderer };
     }
 
     {
         bool audio_success = false;
-        app->audio = initialize_audio(48000, 1, &audio_success);
+        m_audio = initialize_audio(48000, 1, &audio_success);
         if (!audio_success)
         {
             std::cerr << "Failed to initialize audio\n";
@@ -102,10 +35,54 @@ bool initialize(Application* app)
         }
     }
 
-    app->quit = false;
+    if (!load_assets())
+    {
+        return false;
+    }
+
+    m_quit = false;
 
     return true;
 }
+
+bool Application::load_assets()
+{
+    String_Builder sb(256);
+    sb.append(make_string(SDL_GetBasePath()));
+#ifdef _WIN32
+    String path_seperator = make_string("\\");
+#else
+    String path_seperator = make_string("/");
+#endif
+    sb.append(make_string("asset"));
+    sb.append(path_seperator);
+
+    {
+        String pause_texture = make_string("pause.png");
+        sb.append(pause_texture);
+        if (!IMG_LoadTexture(m_window.renderer, sb.c_string()))
+        {
+            LOG_ERROR("Failed to load pause texture");
+            return false;
+        }
+        sb.remove(pause_texture.size);
+    }
+
+    {
+        String resume_texture = make_string("resume.png");
+        sb.append(resume_texture);
+        if (!IMG_LoadTexture(m_window.renderer, sb.c_string()))
+        {
+            LOG_ERROR("Failed to load resume texture");
+            return false;
+        }
+        sb.remove(resume_texture.size);
+    }
+
+
+    return true;
+}
+
 
 void Application::handle_events()
 {
@@ -115,7 +92,7 @@ void Application::handle_events()
         switch (e.type)
         {
         case SDL_EVENT_QUIT:
-            this->quit = true;
+            this->m_quit = true;
             break;
         case SDL_EVENT_KEY_DOWN:
         {
@@ -123,7 +100,7 @@ void Application::handle_events()
             switch (keyboard.scancode)
             {
             case SDL_SCANCODE_ESCAPE:
-                this->quit = true;
+                this->m_quit = true;
                 break;
             }
             break;
@@ -140,7 +117,7 @@ void Application::handle_events()
         }
         case SDL_EVENT_MOUSE_MOTION:
         {
-            mouse.flags = SDL_GetMouseState(&mouse.pos.x, &mouse.pos.y);
+            m_mouse.flags = SDL_GetMouseState(&m_mouse.pos.x, &m_mouse.pos.y);
             break;
         }
         default:
@@ -155,16 +132,15 @@ void Application::handle_events()
 void Application::update()
 {
     SDL_Time time = SDL_GetTicksNS();
-    audio.time = (double)time / NS_PER_SECONDS;
-    printf("%f\n", audio.time);
+    m_audio.time = (double)time / NS_PER_SECONDS;
 }
 
 void Application::draw()
 {
-    SDL_Renderer* renderer = this->window.renderer;
+    SDL_Renderer* renderer = this->m_window.renderer;
 
-    Window window = this->window;
-    SDL_SetRenderDrawColor(renderer, 0xaa, 0x66, 0x33, 0xff);
+    Window window = this->m_window;
+    SDL_SetRenderDrawColor(renderer, COLOR_ARG(m_background_color));
     SDL_RenderClear(renderer);
 
     draw_ui();
@@ -176,65 +152,65 @@ void Application::draw_ui()
 {
     // volume slider
     {
-        Rectangle volume_slider = ui.volume_slider;
-        vec2 knob_scale = ui.volume_slider_knob_scale;
+        Rectangle volume_slider = m_ui.volume_slider;
+        vec2 knob_scale = m_ui.volume_slider_knob_scale;
 
         const float slider_knob_width = volume_slider.w * knob_scale.x;
         const float slider_knob_height = volume_slider.h * knob_scale.y;
 
-        SDL_SetRenderDrawColor(window.renderer, 0x55, 0x44, 0x22, 0xff);
+        SDL_SetRenderDrawColor(m_window.renderer, 0x55, 0x44, 0x22, 0xff);
         SDL_FRect slider = { volume_slider.x, volume_slider.y, volume_slider.w, volume_slider.h };
-        SDL_RenderFillRect(window.renderer, &slider);
+        SDL_RenderFillRect(m_window.renderer, &slider);
 
-        float percentage = audio.volume;
-        SDL_SetRenderDrawColor(window.renderer, 0x66, 0x55, 0x22, 0xff);
+        float percentage = m_audio.volume;
+        SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x55, 0x22, 0xff);
         SDL_FRect slider_knob = { volume_slider.x - (slider_knob_width / 2) + (volume_slider.w * percentage), volume_slider.y - volume_slider.h / 2,
                                     slider_knob_width, slider_knob_height };
-        SDL_RenderFillRect(window.renderer, &slider_knob);
+        SDL_RenderFillRect(m_window.renderer, &slider_knob);
     }
 
     // pause button
     {
-        Rectangle button = ui.pause_button;
+        Rectangle button = m_ui.pause_button;
 
-        SDL_SetRenderDrawColor(window.renderer, 0x66, 0x55, 0x55, 0xff);
-        SDL_FRect pbutton = {button.x, button.y, button.w, button.h};
-        SDL_RenderFillRect(window.renderer, &pbutton);
+        SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x55, 0x55, 0xff);
+        SDL_FRect pbutton = { button.x, button.y, button.w, button.h };
+        SDL_RenderFillRect(m_window.renderer, &pbutton);
 
-        SDL_FRect src;
-        SDL_FRect dst;
-        SDL_RenderTexture(window.renderer, assets.pause_texture, &src, &dst);
+        float tex_w, tex_h;
+        SDL_GetTextureSize(m_assets.pause_texture, &tex_w, &tex_h);
+        SDL_FRect src = {0,0,tex_w,tex_h};
+        SDL_FRect dst = pbutton;
+        SDL_RenderTexture(m_window.renderer, m_assets.pause_texture, &src, &dst);
     }
+
+    SDL_RenderTexture(m_window.renderer, m_assets.pause_texture, NULL, NULL);
 }
 
 bool Application::mouse_input_ui()
 {
-    if (ui.volume_slider.contains(mouse.pos))
+    if (m_ui.volume_slider.contains(m_mouse.pos))
     {
-        float diff = mouse.pos.x - ui.volume_slider.x;
-        audio.volume = diff / ui.volume_slider.w;
+        float diff = m_mouse.pos.x - m_ui.volume_slider.x;
+        m_audio.volume = diff / m_ui.volume_slider.w;
         return true;
     }
 
-    if (ui.pause_button.contains(mouse.pos))
+    if (m_ui.pause_button.contains(m_mouse.pos))
     {
-        if (audio.paused)
-            audio.unpause();
+        if (m_audio.paused)
+        {
+            m_audio.unpause();
+            m_background_color = { 0x66, 0xaa, 0x33, 0xff };
+        }
         else
-            audio.pause();
+        {
+            m_audio.pause();
+            m_background_color = { 0xaa, 0x66, 0x33, 0xff };
+        }
 
-        audio.paused = !audio.paused;
+        m_audio.paused = !m_audio.paused;
     }
 
     return false;
-}
-
-void Audio::pause()
-{
-    SDL_PauseAudioDevice(playback);
-}
-
-void Audio::unpause()
-{
-    SDL_ResumeAudioDevice(playback);
 }

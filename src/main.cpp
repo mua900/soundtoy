@@ -5,9 +5,11 @@
 int main()
 {
     Application app;
-    if (!initialize(&app)) return 1;
 
-    while (!app.quit)
+    if (!app.initialize())
+        return 1;
+
+    while (!app.m_quit)
     {
         app.handle_events();
         app.update();

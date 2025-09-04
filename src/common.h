@@ -8,6 +8,8 @@
 #include <cassert>
 #include <cstdarg>
 
+#include "template.h"
+
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -34,8 +36,11 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 
 struct String {
-    const char* data;
-    int size;
+    const char* data = NULL;
+    int size = 0;
+
+    String () {}
+    String (const char* d, int s) : data(d), size(s) {}
 };
 
 #define STRING_EMPTY ((String){.data=NULL,.size=0})
