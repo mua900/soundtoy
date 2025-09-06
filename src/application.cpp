@@ -26,9 +26,7 @@ bool Application::initialize()
     }
 
     {
-        bool audio_success = false;
-        m_audio = initialize_audio(48000, 1, &audio_success);
-        if (!audio_success)
+        if (!m_audio.initialize(48000, 1))
         {
             std::cerr << "Failed to initialize audio\n";
             return false;
@@ -121,6 +119,11 @@ void Application::handle_events()
             m_mouse.flags = SDL_GetMouseState(&m_mouse.pos.x, &m_mouse.pos.y);
             break;
         }
+        case SDL_EVENT_WINDOW_RESIZED:
+        {
+            m_ui.update(m_window);
+            break;
+        }
         default:
             break;
         }
@@ -133,7 +136,7 @@ void Application::handle_events()
 void Application::update()
 {
     SDL_Time time = SDL_GetTicksNS();
-    m_audio.time = (double)time / NS_PER_SECONDS;
+    m_audio.m_time = (double)time / NS_PER_SECONDS;
 }
 
 void Application::draw()
@@ -163,7 +166,7 @@ void Application::draw_ui()
         SDL_FRect slider = { volume_slider.x, volume_slider.y, volume_slider.w, volume_slider.h };
         SDL_RenderFillRect(m_window.renderer, &slider);
 
-        float percentage = m_audio.volume;
+        float percentage = m_audio.get_volume();
         SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x55, 0x22, 0xff);
         SDL_FRect slider_knob = { volume_slider.x - (slider_knob_width / 2) + (volume_slider.w * percentage), volume_slider.y - volume_slider.h / 2,
                                     slider_knob_width, slider_knob_height };
@@ -192,8 +195,8 @@ bool Application::mouse_input_ui()
     if (m_ui.volume_slider.contains(m_mouse.pos))
     {
         float diff = m_mouse.pos.x - m_ui.volume_slider.x;
-        m_audio.volume = diff / m_ui.volume_slider.w;
-        m_audio.set_volume(m_audio.volume);
+        float volume = diff / m_ui.volume_slider.w;
+        m_audio.set_volume(volume);
         return true;
     }
 
@@ -208,8 +211,16 @@ bool Application::mouse_input_ui()
             m_audio.pause();
         }
 
-        m_audio.paused = !m_audio.paused;
+        return true;
     }
 
     return false;
+}
+
+void UiState::update(Window window)
+{
+    ivec2 window_size;
+    SDL_GetWindowSize(window.window, &window_size.x, &window_size.y);
+    pause_button.x = (window_size.x - pause_button.w) / 2;
+    pause_button.y = (window_size.y - pause_button.h) / 2;
 }

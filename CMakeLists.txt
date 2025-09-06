@@ -29,16 +29,18 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT s
 
 add_subdirectory(vendor/SDL)
 add_subdirectory(vendor/SDL_image)
-# add_subdirectory(vendor/SDL_mixer)
+add_subdirectory(vendor/SDL_ttf)
 
 target_include_directories(soundtoy PRIVATE vendor/SDL/include/)
 target_include_directories(soundtoy PRIVATE vendor/SDL_image/include/)
+target_include_directories(soundtoy PRIVATE vendor/SDL_ttf/include/)
 
 target_link_libraries(
     soundtoy
     PRIVATE
     SDL3::SDL3
     SDL3_image::SDL3_image
+    SDL3_ttf::SDL3_ttf
 )
 
 set(CMAKE_BUILD_TYPE Debug)

@@ -8,15 +8,12 @@
 #define INIT_WINDOW_WIDTH 1440
 #define INIT_WINDOW_HEIGHT 810
 
-// @todo text rendering
-
 struct Window {
     SDL_Window* window;
     SDL_Renderer* renderer;
 };
 
 struct Assets {
-    // @todo shaders
     SDL_Texture* pause_texture;
     SDL_Texture* resume_textrue;
 };
@@ -33,6 +30,8 @@ struct UiState {
     vec2 volume_slider_knob_scale = {0.1, 2};
 
     Rectangle pause_button = {INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100};
+
+    void update(Window window);
 };
 
 struct Application {

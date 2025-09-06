@@ -3,22 +3,24 @@
 
 void Audio::pause()
 {
-    SDL_PauseAudioDevice(playback);
+    paused = true;
+    SDL_PauseAudioDevice(m_playback);
 }
 
 void Audio::unpause()
 {
-    SDL_ResumeAudioDevice(playback);
+    paused = false;
+    SDL_ResumeAudioDevice(m_playback);
 }
 
 float Audio::get_volume()
 {
-    return SDL_GetAudioDeviceGain(playback);
+    return SDL_GetAudioDeviceGain(m_playback);
 }
 
 void Audio::set_volume(float volume)
 {
-    SDL_SetAudioDeviceGain(playback, volume);
+    SDL_SetAudioDeviceGain(m_playback, volume);
 }
 
 
@@ -31,7 +33,7 @@ void SDLCALL audio_callback(void* userdata, SDL_AudioStream* stream, int additio
 
     Audio* audio = (Audio*)userdata;
 
-    const float PI = 3.1415;
+    const double PI = 3.1415;
 
     for (int turn = 0; turn < additional_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
     {
@@ -44,9 +46,8 @@ void SDLCALL audio_callback(void* userdata, SDL_AudioStream* stream, int additio
     }
 }
 
-Audio initialize_audio(int freq, int channels, bool* success)
+bool Audio::initialize(int freq, int channels)
 {
-    Audio audio = {};
     SDL_AudioSpec spec = {};
     spec.freq = freq;
     spec.channels = channels;
@@ -54,46 +55,45 @@ Audio initialize_audio(int freq, int channels, bool* success)
 
     SDL_AudioDeviceID default_device = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
 
-
-    audio.playback = SDL_OpenAudioDevice(default_device, &spec);
-    if (!audio.playback)
+    m_playback = SDL_OpenAudioDevice(default_device, &spec);
+    if (!m_playback)
     {
-        *success = false;
-        return audio;
+        return false;
     }
 
     SDL_AudioSpec device_spec = {};
-    if (!SDL_GetAudioDeviceFormat(audio.playback, &device_spec, NULL))
+    if (!SDL_GetAudioDeviceFormat(m_playback, &device_spec, NULL))
     {
-        *success = false;
-        return audio;
+        return false;
     }
 
-    audio.audio_stream = SDL_CreateAudioStream(&spec, &device_spec);
-    if (!audio.audio_stream)
+    m_audio_stream =  SDL_CreateAudioStream(&spec, &device_spec);
+    if (!m_audio_stream)
     {
-        *success = false;
-        return audio;
+        return false;
     }
 
-    *success = SDL_BindAudioStream(audio.playback, audio.audio_stream);
+    if (!SDL_BindAudioStream(m_playback, m_audio_stream))
+    {
+        return false;
+    }
 
-    SDL_SetAudioStreamGetCallback(audio.audio_stream, audio_callback, &audio);
+    SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback, this);
 
-    *success = audio.audio_stream ? true : false;
+    if (!m_audio_stream) return false;
 
-    SDL_PauseAudioDevice(audio.playback);
+    SDL_PauseAudioDevice(m_playback);
 
-    SDL_SetAudioDeviceGain(audio.playback, audio.volume);  // start with the default value
+    SDL_SetAudioDeviceGain(m_playback, 0.0);  // start with the default value
 
     printf("Audio Backend: %s\n", SDL_GetCurrentAudioDriver());
-    auto dev_name = SDL_GetAudioDeviceName(audio.playback);
+    auto dev_name = SDL_GetAudioDeviceName(m_playback);
     if (dev_name)
     {
         printf("Audio Device Name: %s\n", dev_name);
     }
 
-    return audio;
+    return true;
 }
 
 
