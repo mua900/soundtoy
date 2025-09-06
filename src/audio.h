@@ -14,6 +14,9 @@ struct Audio {
 
     void pause();
     void unpause();
+
+    float get_volume();
+    void set_volume(float volume);
 };
 
 Audio initialize_audio(int freq, int channels, bool* success);

@@ -60,7 +60,8 @@ bool Application::load_assets()
     {
         String pause_texture = make_string("pause.png");
         sb.append(pause_texture);
-        if (!IMG_LoadTexture(m_window.renderer, sb.c_string()))
+        m_assets.pause_texture = IMG_LoadTexture(m_window.renderer, sb.c_string());
+        if (!m_assets.pause_texture)
         {
             LOG_ERROR("Failed to load pause texture");
             return false;
@@ -71,14 +72,14 @@ bool Application::load_assets()
     {
         String resume_texture = make_string("resume.png");
         sb.append(resume_texture);
-        if (!IMG_LoadTexture(m_window.renderer, sb.c_string()))
+        m_assets.resume_textrue = IMG_LoadTexture(m_window.renderer, sb.c_string());
+        if (!m_assets.resume_textrue)
         {
             LOG_ERROR("Failed to load resume texture");
             return false;
         }
         sb.remove(resume_texture.size);
     }
-
 
     return true;
 }
@@ -169,7 +170,7 @@ void Application::draw_ui()
         SDL_RenderFillRect(m_window.renderer, &slider_knob);
     }
 
-    // pause button
+    // pause/resume button
     {
         Rectangle button = m_ui.pause_button;
 
@@ -178,13 +179,12 @@ void Application::draw_ui()
         SDL_RenderFillRect(m_window.renderer, &pbutton);
 
         float tex_w, tex_h;
-        SDL_GetTextureSize(m_assets.pause_texture, &tex_w, &tex_h);
+        SDL_Texture* texture = m_audio.paused ? m_assets.resume_textrue : m_assets.pause_texture;
+        SDL_GetTextureSize(texture, &tex_w, &tex_h);
         SDL_FRect src = {0,0,tex_w,tex_h};
         SDL_FRect dst = pbutton;
-        SDL_RenderTexture(m_window.renderer, m_assets.pause_texture, &src, &dst);
+        SDL_RenderTexture(m_window.renderer, texture, &src, &dst);
     }
-
-    SDL_RenderTexture(m_window.renderer, m_assets.pause_texture, NULL, NULL);
 }
 
 bool Application::mouse_input_ui()
@@ -193,6 +193,7 @@ bool Application::mouse_input_ui()
     {
         float diff = m_mouse.pos.x - m_ui.volume_slider.x;
         m_audio.volume = diff / m_ui.volume_slider.w;
+        m_audio.set_volume(m_audio.volume);
         return true;
     }
 
@@ -201,12 +202,10 @@ bool Application::mouse_input_ui()
         if (m_audio.paused)
         {
             m_audio.unpause();
-            m_background_color = { 0x66, 0xaa, 0x33, 0xff };
         }
         else
         {
             m_audio.pause();
-            m_background_color = { 0xaa, 0x66, 0x33, 0xff };
         }
 
         m_audio.paused = !m_audio.paused;
