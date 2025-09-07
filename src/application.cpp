@@ -1,8 +1,9 @@
 #include "application.h"
 
-#include <SDL3_image/SDL_image.h>
-
 #include <iostream>
+#include <SDL3_image/SDL_image.h>
+#include <SDL3_ttf/SDL_ttf.h>
+
 
 bool Application::initialize()
 {
@@ -12,6 +13,7 @@ bool Application::initialize()
         return false;
     }
 
+    // window
     {
         SDL_Window* window;
         SDL_Renderer* renderer;
@@ -25,6 +27,15 @@ bool Application::initialize()
         m_window = { window, renderer };
     }
 
+    // ttf
+    {
+        if (!TTF_Init())
+        {
+            std::cerr << "Could not initialize TTF\n";
+            return false;
+        }
+    }
+
     {
         if (!m_audio.initialize(48000, 1))
         {
@@ -35,6 +46,7 @@ bool Application::initialize()
 
     if (!load_assets())
     {
+        std::cerr << "Could not load assets\n";
         return false;
     }
 
@@ -42,6 +54,8 @@ bool Application::initialize()
 
     return true;
 }
+
+#define FONT_SIZE 100.0
 
 bool Application::load_assets()
 {
@@ -77,6 +91,30 @@ bool Application::load_assets()
             return false;
         }
         sb.remove(resume_texture.size);
+    }
+
+    // font
+    {
+        const String font_folder = make_string("font");
+
+        sb.append(font_folder);
+        sb.append(path_seperator);
+
+        sb.append(make_string("Roboto"));
+        sb.append(path_seperator);
+
+        sb.append(make_string("Roboto-VariableFont.ttf"));
+
+        {
+            TTF_Font* font = TTF_OpenFont(sb.c_string(), FONT_SIZE);
+            if (!font) {
+                std::cerr << "Could not load font " << sb.c_string() << "\n";
+                std::cerr << SDL_GetError() << "\n";
+                return false;
+            }
+
+            m_assets.font = { font, FONT_SIZE };
+        }
     }
 
     return true;
@@ -122,6 +160,18 @@ void Application::handle_events()
         case SDL_EVENT_WINDOW_RESIZED:
         {
             m_ui.update(m_window);
+            break;
+        }
+        case SDL_EVENT_TEXT_INPUT:
+        {
+            SDL_TextInputEvent text = e.text;
+            String input_text = make_string(text.text);
+            m_ui.text_field.add(input_text);
+            break;
+        }
+        case SDL_EVENT_TEXT_EDITING:
+        {
+            SDL_TextEditingEvent edit = e.edit;
             break;
         }
         default:
@@ -188,6 +238,38 @@ void Application::draw_ui()
         SDL_FRect dst = pbutton;
         SDL_RenderTexture(m_window.renderer, texture, &src, &dst);
     }
+
+    // text field
+    {
+        SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x55, 0x55, 0xff);
+        Rectangle text_field_area = m_ui.text_field.area;
+        SDL_FRect tf_area = { text_field_area.x, text_field_area.y, text_field_area.w, text_field_area.h };
+        SDL_RenderFillRect(m_window.renderer, &tf_area);
+
+        const float font_size = TTF_GetFontSize(m_assets.font.font);
+        const int line_capacity = text_field_area.w / font_size;
+        const int line_count = text_field_area.h / font_size;
+
+        String string = m_ui.text_field.get_string();
+
+        int measure_pixels = 0;
+        size_t measure_characters = 0;
+        TTF_MeasureString(m_assets.font.font, string.data, string.size, line_capacity, &measure_pixels, &measure_characters);
+
+        const SDL_Color text_color = { 0x11, 0x22, 0x11, 0xff };
+        SDL_Surface* text_surface = TTF_RenderText_Solid_Wrapped(m_assets.font.font, string.data, string.size, text_color, text_field_area.w);
+        SDL_Texture* text = SDL_CreateTextureFromSurface(m_window.renderer, text_surface);
+        SDL_DestroySurface(text_surface);
+
+        SDL_FRect string_area = {tf_area.x, tf_area.y, font_size * string.size, font_size};
+        SDL_RenderTexture(m_window.renderer, text, NULL, &string_area);
+
+        if (doing_text_input)
+        {
+            SDL_SetRenderDrawColor(m_window.renderer, 0x44, 0x22, 0x88, 0xff);
+            // SDL_RenderLine(m_window.renderer, );
+        }
+    }
 }
 
 bool Application::mouse_input_ui()
@@ -214,6 +296,48 @@ bool Application::mouse_input_ui()
         return true;
     }
 
+    if (m_ui.text_field.area.contains(m_mouse.pos))
+    {
+        vec2 relative_mouse_pos = { m_mouse.pos.x - m_ui.text_field.area.x, m_mouse.pos.y - m_ui.text_field.area.y };
+
+        const SDL_Rect area = {m_ui.text_field.area.x, m_ui.text_field.area.y, m_ui.text_field.area.w, m_ui.text_field.area.h};
+        SDL_SetTextInputArea(m_window.window, &area, m_ui.text_field.cursor_character);
+
+        if (!doing_text_input)
+        {
+            SDL_StartTextInput(m_window.window);
+            doing_text_input = true;
+
+            int line = (int)(relative_mouse_pos.y / FONT_SIZE);
+            String tf_string = m_ui.text_field.get_string();
+
+            size_t character_offset = 0;
+
+            size_t width_characters = 0;
+            int width_pixels = 0;
+            for (int i = 0; i < line - 1; i++)
+            {
+                TTF_MeasureString(m_assets.font.font, tf_string.data + character_offset, tf_string.size - character_offset, m_ui.text_field.area.w, &width_pixels, &width_characters);
+                character_offset += width_characters;
+            }
+
+            TTF_MeasureString(m_assets.font.font, tf_string.data + character_offset, tf_string.size - character_offset, m_ui.text_field.area.w - relative_mouse_pos.x, &width_pixels, &width_characters);
+            character_offset += width_characters;
+
+            m_ui.text_field.cursor_character = character_offset;
+            m_ui.text_field.cursor_pixel = width_pixels;
+        }
+        else
+        {
+            SDL_StopTextInput(m_window.window);
+            doing_text_input = false;
+        }
+
+        m_background_color = doing_text_input ? Color{0, 0, 0x22, 0xff} : DEFAULT_BACKGROUND_COLOR;
+
+        return true;
+    }
+
     return false;
 }
 
@@ -221,6 +345,10 @@ void UiState::update(Window window)
 {
     ivec2 window_size;
     SDL_GetWindowSize(window.window, &window_size.x, &window_size.y);
+
     pause_button.x = (window_size.x - pause_button.w) / 2;
     pause_button.y = (window_size.y - pause_button.h) / 2;
+
+    text_field.area.x = (window_size.x - text_field.area.w) / 2;
+    text_field.area.y = ((float)window_size.y * (4.0 / 5.0)) - text_field.area.h/2;
 }

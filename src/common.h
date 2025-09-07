@@ -102,12 +102,17 @@ void log_log(enum Log_Level ll, char const* const msg, ...);
 #define MAX(x,y) (((x) > (y)) ? (x) : (y))
 
 struct String_Builder {
-    char* buffer;
-    int buffer_capacity;
-    int cursor;
+    char* buffer = NULL;
+    int buffer_capacity = 0;
+    int cursor = 0;
+
+    String_Builder() {
+        create(128);
+    }
 
     String_Builder(int initial_capacity);
 
+    void create(int initial_capacity);
     void append(String string);
     void append_char(char ch);
     const char* c_string();
@@ -116,6 +121,7 @@ struct String_Builder {
     void append_many(String* strings, int n);
     void free_buffer();
     void clear();
+    String to_string();
 private:
     void resize();
     int grow_to_size(int size);

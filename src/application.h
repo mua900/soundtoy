@@ -4,6 +4,8 @@
 #include "audio.h"
 
 #include <SDL3/SDL.h>
+#include <SDL3_image/SDL_image.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 #define INIT_WINDOW_WIDTH 1440
 #define INIT_WINDOW_HEIGHT 810
@@ -13,9 +15,16 @@ struct Window {
     SDL_Renderer* renderer;
 };
 
+struct Font {
+    TTF_Font* font = NULL;
+    float size = 0;
+};
+
 struct Assets {
-    SDL_Texture* pause_texture;
-    SDL_Texture* resume_textrue;
+    Font font = {};
+
+    SDL_Texture* pause_texture = NULL;
+    SDL_Texture* resume_textrue = NULL;
 };
 
 typedef SDL_MouseButtonFlags Mouse_Flags;
@@ -25,14 +34,36 @@ struct Mouse_State {
     Mouse_Flags flags;
 };
 
-struct UiState {
-    Rectangle volume_slider = {100, 100, 100, 10};
-    vec2 volume_slider_knob_scale = {0.1, 2};
+struct Text_Field
+{
+    Rectangle area = {};
+    String_Builder text = {};
+    int cursor_character = 0;
+    int cursor_pixel = 0;
+    int line = 0;
 
-    Rectangle pause_button = {INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100};
+    String get_string()
+    {
+        return text.to_string();
+    }
+
+    void add(String s)
+    {
+        text.append(s);
+    }
+};
+
+struct UiState {
+    Rectangle volume_slider = { 100, 100, 100, 10 };
+    vec2 volume_slider_knob_scale = { 0.1, 2 };
+
+    Rectangle pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
+    Text_Field text_field = { { INIT_WINDOW_WIDTH / 2 - 500, INIT_WINDOW_HEIGHT * (4.0 / 5.0) - 100, 1000, 200 } };
 
     void update(Window window);
 };
+
+#define DEFAULT_BACKGROUND_COLOR Color{ 0xaa, 0x66, 0x33, 0xff }
 
 struct Application {
 public:
@@ -43,9 +74,10 @@ public:
     Audio m_audio = {};
 
     UiState m_ui = {};
-    Color m_background_color = { 0xaa, 0x66, 0x33, 0xff };
+    Color m_background_color = DEFAULT_BACKGROUND_COLOR;
 
     bool m_quit = false;
+    bool doing_text_input = false;
 
     bool initialize();
 

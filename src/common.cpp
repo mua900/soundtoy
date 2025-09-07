@@ -73,12 +73,17 @@ String string_copy(String s)
     return { data, s.size };
 }
 
-String_Builder::String_Builder(int initial_capacity) {
+void String_Builder::create(int initial_capacity)
+{
     buffer = (char*)malloc(initial_capacity);
     if (!buffer) panic("Malloc fail");
     buffer_capacity = initial_capacity;
     cursor = 0;
     buffer[0] = '\0';
+}
+
+String_Builder::String_Builder(int initial_capacity) {
+    create(initial_capacity);
 }
 
 void String_Builder::remove(int amount)
@@ -89,8 +94,11 @@ void String_Builder::remove(int amount)
 void String_Builder::resize() {
     char* nbuff = (char*)malloc(buffer_capacity * 2 * sizeof(char));
     if (!nbuff) panic("Malloc fail");
-    memcpy(nbuff, buffer, cursor);
-    free(buffer);
+    if (buffer)
+    {
+        memcpy(nbuff, buffer, cursor);
+        free(buffer);
+    }
     buffer = nbuff;
     buffer_capacity *= 2;
 }
@@ -158,6 +166,11 @@ void String_Builder::free_buffer() {
 void String_Builder::clear() {
     cursor = 0;
     buffer[0] = '\0';
+}
+
+String String_Builder::to_string()
+{
+    return String(buffer, cursor);
 }
 
 bool Rectangle::contains(vec2 p)
