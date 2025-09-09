@@ -128,54 +128,71 @@ void Application::handle_events()
     {
         switch (e.type)
         {
-        case SDL_EVENT_QUIT:
-            this->m_quit = true;
-            break;
-        case SDL_EVENT_KEY_DOWN:
-        {
-            SDL_KeyboardEvent keyboard = e.key;
-            switch (keyboard.scancode)
+            case SDL_EVENT_QUIT:
             {
-            case SDL_SCANCODE_ESCAPE:
                 this->m_quit = true;
                 break;
             }
-            break;
-        }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        {
-            SDL_MouseButtonEvent mouse = e.button;
-            if (mouse_input_ui())
+            case SDL_EVENT_KEY_DOWN:
+            {
+                SDL_KeyboardEvent keyboard = e.key;
+                switch (keyboard.scancode)
+                {
+                    case SDL_SCANCODE_ESCAPE:
+                    {
+                        this->m_quit = true;
+                        break;
+                    }
+                    case SDL_SCANCODE_RETURN:
+                    {
+                        text_input_stop();
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                }
+
+                break;
+            }
+            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            {
+                SDL_MouseButtonEvent mouse = e.button;
+                if (mouse_input_ui())
+                {
+                    break;
+                }
+
+                break;
+            }
+            case SDL_EVENT_MOUSE_MOTION:
+            {
+                m_mouse.flags = SDL_GetMouseState(&m_mouse.pos.x, &m_mouse.pos.y);
+                break;
+            }
+            case SDL_EVENT_WINDOW_RESIZED:
+            {
+                m_ui.update(m_window);
+                break;
+            }
+            case SDL_EVENT_TEXT_INPUT:
+            {
+                SDL_TextInputEvent text = e.text;
+                String input_text = make_string(text.text);
+
+                update_input_string(input_text);
+                break;
+            }
+            case SDL_EVENT_TEXT_EDITING:
+            {
+                SDL_TextEditingEvent edit = e.edit;
+                break;
+            }
+            default:
             {
                 break;
             }
-
-            break;
-        }
-        case SDL_EVENT_MOUSE_MOTION:
-        {
-            m_mouse.flags = SDL_GetMouseState(&m_mouse.pos.x, &m_mouse.pos.y);
-            break;
-        }
-        case SDL_EVENT_WINDOW_RESIZED:
-        {
-            m_ui.update(m_window);
-            break;
-        }
-        case SDL_EVENT_TEXT_INPUT:
-        {
-            SDL_TextInputEvent text = e.text;
-            String input_text = make_string(text.text);
-            m_ui.text_field.add(input_text);
-            break;
-        }
-        case SDL_EVENT_TEXT_EDITING:
-        {
-            SDL_TextEditingEvent edit = e.edit;
-            break;
-        }
-        default:
-            break;
         }
     }
 }
@@ -246,28 +263,16 @@ void Application::draw_ui()
         SDL_FRect tf_area = { text_field_area.x, text_field_area.y, text_field_area.w, text_field_area.h };
         SDL_RenderFillRect(m_window.renderer, &tf_area);
 
-        const float font_size = TTF_GetFontSize(m_assets.font.font);
-        const int line_capacity = text_field_area.w / font_size;
-        const int line_count = text_field_area.h / font_size;
 
-        String string = m_ui.text_field.get_string();
-
-        int measure_pixels = 0;
-        size_t measure_characters = 0;
-        TTF_MeasureString(m_assets.font.font, string.data, string.size, line_capacity, &measure_pixels, &measure_characters);
-
-        const SDL_Color text_color = { 0x11, 0x22, 0x11, 0xff };
-        SDL_Surface* text_surface = TTF_RenderText_Solid_Wrapped(m_assets.font.font, string.data, string.size, text_color, text_field_area.w);
-        SDL_Texture* text = SDL_CreateTextureFromSurface(m_window.renderer, text_surface);
-        SDL_DestroySurface(text_surface);
-
-        SDL_FRect string_area = {tf_area.x, tf_area.y, font_size * string.size, font_size};
-        SDL_RenderTexture(m_window.renderer, text, NULL, &string_area);
-
-        if (doing_text_input)
+        SDL_Texture* text_texture = m_ui.text_field.m_texture;
+        if (text_texture)
         {
-            SDL_SetRenderDrawColor(m_window.renderer, 0x44, 0x22, 0x88, 0xff);
-            // SDL_RenderLine(m_window.renderer, );
+            int line_count = m_ui.text_field.line_count;
+            float font_size = m_assets.font.size;
+
+            SDL_FRect string_area = { tf_area.x, tf_area.y, tf_area.w, line_count * font_size };
+            SDL_FRect texture_area = { 0, 0, string_area.w, string_area.h };
+            SDL_RenderTexture(m_window.renderer, text_texture, &texture_area, &string_area);
         }
     }
 }
@@ -298,47 +303,61 @@ bool Application::mouse_input_ui()
 
     if (m_ui.text_field.area.contains(m_mouse.pos))
     {
-        vec2 relative_mouse_pos = { m_mouse.pos.x - m_ui.text_field.area.x, m_mouse.pos.y - m_ui.text_field.area.y };
-
         const SDL_Rect area = {m_ui.text_field.area.x, m_ui.text_field.area.y, m_ui.text_field.area.w, m_ui.text_field.area.h};
         SDL_SetTextInputArea(m_window.window, &area, m_ui.text_field.cursor_character);
 
         if (!doing_text_input)
         {
-            SDL_StartTextInput(m_window.window);
-            doing_text_input = true;
-
-            int line = (int)(relative_mouse_pos.y / FONT_SIZE);
-            String tf_string = m_ui.text_field.get_string();
-
-            size_t character_offset = 0;
-
-            size_t width_characters = 0;
-            int width_pixels = 0;
-            for (int i = 0; i < line - 1; i++)
-            {
-                TTF_MeasureString(m_assets.font.font, tf_string.data + character_offset, tf_string.size - character_offset, m_ui.text_field.area.w, &width_pixels, &width_characters);
-                character_offset += width_characters;
-            }
-
-            TTF_MeasureString(m_assets.font.font, tf_string.data + character_offset, tf_string.size - character_offset, m_ui.text_field.area.w - relative_mouse_pos.x, &width_pixels, &width_characters);
-            character_offset += width_characters;
-
-            m_ui.text_field.cursor_character = character_offset;
-            m_ui.text_field.cursor_pixel = width_pixels;
+            text_input_start();
         }
         else
         {
-            SDL_StopTextInput(m_window.window);
-            doing_text_input = false;
+            text_input_stop();
         }
-
-        m_background_color = doing_text_input ? Color{0, 0, 0x22, 0xff} : DEFAULT_BACKGROUND_COLOR;
 
         return true;
     }
 
     return false;
+}
+
+void Application::text_input_start()
+{
+    vec2 relative_mouse_pos = { m_mouse.pos.x - m_ui.text_field.area.x, m_mouse.pos.y - m_ui.text_field.area.y };
+
+    m_background_color = Color{ 0, 0, 0x22, 0xff };
+
+    SDL_StartTextInput(m_window.window);
+
+    int line_count = (int)(relative_mouse_pos.y / FONT_SIZE);
+    String tf_string = m_ui.text_field.get_string();
+
+    size_t character_offset = 0;
+
+    size_t width_characters = 0;
+    int width_pixels = 0;
+    for (int i = 0; i < line_count - 1; i++)
+    {
+        TTF_MeasureString(m_assets.font.font, tf_string.data + character_offset, tf_string.size - character_offset, m_ui.text_field.area.w, &width_pixels, &width_characters);
+        character_offset += width_characters;
+    }
+
+    TTF_MeasureString(m_assets.font.font, tf_string.data + character_offset, tf_string.size - character_offset, m_ui.text_field.area.w - relative_mouse_pos.x, &width_pixels, &width_characters);
+    character_offset += width_characters;
+
+    m_ui.text_field.cursor_character = character_offset;
+    m_ui.text_field.cursor_pixel = width_pixels;
+
+    doing_text_input = true;
+}
+
+void Application::text_input_stop()
+{
+    SDL_StopTextInput(m_window.window);
+
+    m_background_color = DEFAULT_BACKGROUND_COLOR;
+
+    doing_text_input = false;
 }
 
 void UiState::update(Window window)
@@ -351,4 +370,35 @@ void UiState::update(Window window)
 
     text_field.area.x = (window_size.x - text_field.area.w) / 2;
     text_field.area.y = ((float)window_size.y * (4.0 / 5.0)) - text_field.area.h/2;
+}
+
+bool Application::update_input_string(String s)
+{
+    m_ui.text_field.text.append(s);
+
+    // re-render and update the texture
+    Rectangle text_field_area = m_ui.text_field.area;
+    Font font = m_assets.font;
+
+    const float font_size = font.size;
+    const int line_count = text_field_area.h / font_size;
+
+    String string = m_ui.text_field.get_string();
+
+    int measure_pixels = 0;
+    size_t measure_characters = 0;
+    TTF_MeasureString(font.font, string.data, string.size, text_field_area.w, &measure_pixels, &measure_characters);
+
+    const SDL_Color text_color = { 0x11, 0x22, 0x11, 0xff };
+    SDL_Surface* text_surface = TTF_RenderText_Solid_Wrapped(m_assets.font.font, string.data, string.size, text_color, text_field_area.w);
+    SDL_Texture* text = SDL_CreateTextureFromSurface(m_window.renderer, text_surface);
+    SDL_DestroySurface(text_surface);
+
+    if (text)
+    {
+        m_ui.text_field.m_texture = text;
+        m_ui.text_field.line_count = line_count;
+    }
+
+    return (text) ? true : false;
 }

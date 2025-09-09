@@ -29,13 +29,13 @@ float sample_buffer[SAMPLE_BUFFER_SIZE];
 
 void SDLCALL audio_callback(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
 {
-    additional_amount /= sizeof(float);
+    total_amount /= sizeof(float);
 
     Audio* audio = (Audio*)userdata;
 
     const double PI = 3.1415;
 
-    for (int turn = 0; turn < additional_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
+    for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
     {
         for (int i = 0; i < SAMPLE_BUFFER_SIZE; i++)
         {

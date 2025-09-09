@@ -40,16 +40,13 @@ struct Text_Field
     String_Builder text = {};
     int cursor_character = 0;
     int cursor_pixel = 0;
-    int line = 0;
+    int line_count = 0;
+
+    SDL_Texture* m_texture = NULL;  // cached texture the text is rendered on, updated every text input event
 
     String get_string()
     {
         return text.to_string();
-    }
-
-    void add(String s)
-    {
-        text.append(s);
     }
 };
 
@@ -90,4 +87,8 @@ private:
     void draw_ui();
 
     bool mouse_input_ui();
+
+    void text_input_start();
+    void text_input_stop();
+    bool update_input_string(String s);
 };

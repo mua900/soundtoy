@@ -8,8 +8,8 @@
 #include <cassert>
 #include <cstdarg>
 
-#include "template.h"
-
+#define IS_MAX_UNSIGNED(x) ((x)+1==0)
+#define BIT(x) (1U << (x))
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -78,8 +78,6 @@ struct Color {
 #define COLOR_BLUE  ((Color){0,0,0xff,0xff})
 
 #define COLOR_ARG(color) color.r,color.g,color.b,color.a
-
-#define BIT(x) (1 << x)
 
 enum Log_Level {
     Log_Level_Message,
