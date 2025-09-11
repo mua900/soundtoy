@@ -25,6 +25,8 @@
 NORETURN
 void panic(char const* const msg);
 
+#define NOT_IMPLEMENTED(x) panic(x " not implemeneted");
+
 typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
@@ -41,6 +43,8 @@ struct String {
 
     String () {}
     String (const char* d, int s) : data(d), size(s) {}
+
+    void print();
 };
 
 #define STRING_EMPTY ((String){.data=NULL,.size=0})

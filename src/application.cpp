@@ -50,6 +50,8 @@ bool Application::initialize()
         return false;
     }
 
+    m_evaluator.set(48000, 0.0);  // @todo
+
     m_quit = false;
 
     return true;
@@ -186,6 +188,7 @@ void Application::handle_events()
             }
             case SDL_EVENT_TEXT_EDITING:
             {
+                // we don't care about this right now
                 SDL_TextEditingEvent edit = e.edit;
                 break;
             }
@@ -398,6 +401,26 @@ bool Application::update_input_string(String s)
     {
         m_ui.text_field.m_texture = text;
         m_ui.text_field.line_count = line_count;
+    }
+
+    if (true)
+    {
+        /*
+        Parser parser;
+        auto parsed = parser.parse(m_ui.text_field.get_string());
+        for (int i = 0; i < parsed.size; i++)
+        {
+            print_expr(parsed.get(i));
+        }
+        */
+        String s = m_ui.text_field.get_string();
+        s.print();
+        auto tokens = tokenize(s);
+        String_Builder sb(128);
+        for (int i = 0; i < tokens.m_size; i++)
+        {
+            print_token(tokens.get(i), &sb, true);
+        }
     }
 
     return (text) ? true : false;

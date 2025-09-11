@@ -177,3 +177,11 @@ bool Rectangle::contains(vec2 p)
 {
     return p.x >= x && p.y >= y && p.x <= x + w && p.y <= y + h;
 }
+
+void String::print()
+{
+    String_Builder sb(size);
+    sb.append(*this);
+    printf("%s\n", sb.c_string());
+    sb.free_buffer();
+}

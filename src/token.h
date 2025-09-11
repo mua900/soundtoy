@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common.h"
+
 enum Token_Type {
     TOKEN_TYPE_UNKNOWN = 0,
     TOKEN_TYPE_PLUS,
@@ -45,3 +47,6 @@ struct Token {
     double to_real();
     long long to_integer();
 };
+
+void print_token(Token& token, String_Builder* sb, bool ignore_some=false);
+const char* get_token_type_string(Token_Type type);

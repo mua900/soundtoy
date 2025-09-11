@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "audio.h"
+#include "evaluator.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
@@ -72,6 +73,8 @@ public:
 
     UiState m_ui = {};
     Color m_background_color = DEFAULT_BACKGROUND_COLOR;
+
+    Evaluator m_evaluator = {};
 
     bool m_quit = false;
     bool doing_text_input = false;

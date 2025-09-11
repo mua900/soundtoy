@@ -5,51 +5,56 @@
 template <typename T>
 struct DArray
 {
-	T* data = NULL;
-	int size = 0;
-	int cap = 0;
+	T* m_data = NULL;
+	int m_size = 0;
+	int m_cap = 0;
 
 	DArray() {}
 	DArray(int cap) {
-		data = new T[cap];
-		cap = cap;
+		m_data = new T[cap];
+		m_cap = cap;
 	}
 
 	T get(int index)
 	{
-		if (index >= size) panic("Out of bounds array access");
-		return data[index];
+		if (index >= m_size) panic("Out of bounds array access");
+		return m_data[index];
 	}
 
 	void add(T elem)
 	{
-		if (size + 1 >= cap)
+		if (m_size + 1 >= m_cap)
 		{
 			resize();
 		}
 
-		data[size] = elem;
-		size += 1;
+		m_data[m_size] = elem;
+		m_size += 1;
 	}
 
 	void resize()
 	{
-		int ncap = cap * 2;
+		int ncap = m_cap ? (m_cap * 2) : 8;
 		T* ndata = new T[ncap];
-		for (int bucket_index = 0; bucket_index < size; bucket_index++)
+		for (int bucket_index = 0; bucket_index < m_size; bucket_index++)
 		{
-			ndata[bucket_index] = data[bucket_index];
+			ndata[bucket_index] = m_data[bucket_index];
 		}
-		delete[](data);
-		data = ndata;
-		cap *= 2;
+		delete[](m_data);
+		m_data = ndata;
+		m_cap *= 2;
 	}
 
 	void free()
 	{
-		delete[](data);
-		size = 0;
-		cap = 0;
+		if (m_data)
+		{
+			delete[](m_data);
+			m_data = nullptr;
+
+			m_size = 0;
+			m_cap = 0;
+		}
 	}
 };
 
@@ -61,7 +66,7 @@ struct Array
 
 	Array() {}
 	Array(T* data, int size) : data(data), size(size) {}
-	Array(DArray<T> darray) : data(darray.data), size(darray.size) {}
+	Array(DArray<T> darray) : data(darray.m_data), size(darray.m_size) {}
 
 	T get(int index)
 	{
@@ -92,13 +97,13 @@ struct Bucket_List {
 		for (int bucket_index = 0; bucket_index < p_bucket_count; bucket_index++) {
 			Bucket* bucket = &buckets_mem[bucket_index];
 			bucket->occupancy_mask = 0;
-			buckets.data[bucket_index] = bucket;
+			buckets.m_data[bucket_index] = bucket;
 		}
 	}
 
 	int add(T& elem)
 	{
-		for (int bucket_index = 0; bucket_index < buckets.size; bucket_index++)
+		for (int bucket_index = 0; bucket_index < buckets.m_size; bucket_index++)
 		{
 			Bucket* bucket = buckets[bucket_index];
 			auto mask = bucket->mask;
@@ -120,7 +125,7 @@ struct Bucket_List {
 
 		nbucket->elements[0] = elem;
 		nbucket->mask |= BIT(0);
-		return buckets.size * BUCKET_SIZE;
+		return buckets.m_size * BUCKET_SIZE;
 	}
 
 	T* get(int id)
@@ -134,12 +139,12 @@ struct Bucket_List {
 	{
 		int bucket_index = id / BUCKET_SIZE;
 		int index = id % BUCKET_SIZE;
-		if (bucket_index >= buckets.size)
+		if (bucket_index >= buckets.m_size)
 		{
 			LOG_ERROR("Bucket_List: removal attempt from out of bounds bucket");
 			return;
 		}
 
-		buckets.data[bucket_index]->mask &= ~BIT(index);
+		buckets.m_data[bucket_index]->mask &= ~BIT(index);
 	}
 };
