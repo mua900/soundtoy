@@ -72,7 +72,9 @@ struct Expr_Literal : Expr {
 struct Expr_Variable : Expr {
     String name;
 
-    Expr_Variable(String var_name) : name(var_name) {}
+    Expr_Variable(String var_name) : name(var_name) {
+        type = Expr_Type::Variable;
+    }
 };
 
 struct Expr_Unary : Expr {

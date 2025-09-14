@@ -94,4 +94,5 @@ private:
     void text_input_start();
     void text_input_stop();
     bool update_input_string(String s);
+    bool set_eval_string(String s);
 };

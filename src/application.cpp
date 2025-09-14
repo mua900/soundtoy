@@ -147,6 +147,7 @@ void Application::handle_events()
                     }
                     case SDL_SCANCODE_RETURN:
                     {
+                        set_eval_string(m_ui.text_field.get_string());
                         text_input_stop();
                         break;
                     }
@@ -345,7 +346,9 @@ void Application::text_input_start()
         character_offset += width_characters;
     }
 
-    TTF_MeasureString(m_assets.font.font, tf_string.data + character_offset, tf_string.size - character_offset, m_ui.text_field.area.w - relative_mouse_pos.x, &width_pixels, &width_characters);
+    TTF_MeasureString(m_assets.font.font,
+        tf_string.data + character_offset, tf_string.size - character_offset,
+        m_ui.text_field.area.w - relative_mouse_pos.x, &width_pixels, &width_characters);
     character_offset += width_characters;
 
     m_ui.text_field.cursor_character = character_offset;
@@ -384,7 +387,7 @@ bool Application::update_input_string(String s)
     Font font = m_assets.font;
 
     const float font_size = font.size;
-    const int line_count = text_field_area.h / font_size;
+    const int line_count = (int)(text_field_area.h / font_size);
 
     String string = m_ui.text_field.get_string();
 
@@ -403,25 +406,17 @@ bool Application::update_input_string(String s)
         m_ui.text_field.line_count = line_count;
     }
 
-    if (true)
+    return (text) ? true : false;
+}
+
+bool Application::set_eval_string(String eval_string)
+{
+    Parser parser;
+    auto parsed = parser.parse(m_ui.text_field.get_string());
+    for (int i = 0; i < parsed.size; i++)
     {
-        /*
-        Parser parser;
-        auto parsed = parser.parse(m_ui.text_field.get_string());
-        for (int i = 0; i < parsed.size; i++)
-        {
-            print_expr(parsed.get(i));
-        }
-        */
-        String s = m_ui.text_field.get_string();
-        s.print();
-        auto tokens = tokenize(s);
-        String_Builder sb(128);
-        for (int i = 0; i < tokens.m_size; i++)
-        {
-            print_token(tokens.get(i), &sb, true);
-        }
+        print_expr(parsed.get(i), 0);
     }
 
-    return (text) ? true : false;
+    return false;
 }

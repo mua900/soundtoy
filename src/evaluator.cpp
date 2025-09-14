@@ -4,6 +4,8 @@ DArray<Token> tokenize(String expression)
 {
     auto tokens = DArray<Token>(8);
 
+#define ADD_TOKEN(p_token_type, p_token_string) tokens.add(Token(make_string(p_token_string), p_token_type, cursor)); cursor++;
+
     int cursor = 0;
     while (cursor < expression.size)
     {
@@ -11,60 +13,86 @@ DArray<Token> tokenize(String expression)
 
         switch (ch)
         {
-            case '+': tokens.add(Token(make_string("+"), TOKEN_TYPE_PLUS, cursor)); break;
-            case '-': tokens.add(Token(make_string("-"), TOKEN_TYPE_MINUS, cursor)); break;
-            case '*': tokens.add(Token(make_string("*"), TOKEN_TYPE_STAR, cursor)); break;
-            case '/': tokens.add(Token(make_string("/"), TOKEN_TYPE_SLASH, cursor)); break;
-            case '%': tokens.add(Token(make_string("%"), TOKEN_TYPE_PERCENT, cursor)); break;
-            case ',': tokens.add(Token(make_string(","), TOKEN_TYPE_COMMA, cursor)); break;
-            case ':': tokens.add(Token(make_string(":"), TOKEN_TYPE_COLON, cursor)); break;
-            case ';': tokens.add(Token(make_string(";"), TOKEN_TYPE_SEMICOLON, cursor)); break;
-            case '&': tokens.add(Token(make_string("&"), TOKEN_TYPE_AMPERSAND, cursor)); break;
-            case '(': tokens.add(Token(make_string("("), TOKEN_TYPE_PAREN_OPEN, cursor)); break;
-            case ')': tokens.add(Token(make_string(")"), TOKEN_TYPE_PAREN_CLOSE, cursor)); break;
-            case '{': tokens.add(Token(make_string("{"), TOKEN_TYPE_BRACE_OPEN, cursor)); break;
-            case '}': tokens.add(Token(make_string("}"), TOKEN_TYPE_BRACE_CLOSE, cursor)); break;
+            case '+':
+                ADD_TOKEN(TOKEN_TYPE_PLUS, "+")
+                break;
+            case '-':
+                ADD_TOKEN(TOKEN_TYPE_MINUS, "-")
+                break;
+            case '*':
+                ADD_TOKEN(TOKEN_TYPE_STAR, "*")
+                break;
+            case '/':
+                ADD_TOKEN(TOKEN_TYPE_SLASH, "/")
+                break;
+            case '%':
+                ADD_TOKEN(TOKEN_TYPE_PERCENT, "%")
+                break;
+            case ',':
+                ADD_TOKEN(TOKEN_TYPE_COMMA, ",")
+                break;
+            case ':':
+                ADD_TOKEN(TOKEN_TYPE_COLON, ":")
+                break;
+            case ';':
+                ADD_TOKEN(TOKEN_TYPE_SEMICOLON, ";")
+                break;
+            case '&':
+                ADD_TOKEN(TOKEN_TYPE_AMPERSAND, "&")
+                break;
+            case '(':
+                ADD_TOKEN(TOKEN_TYPE_PAREN_OPEN, "(")
+                break;
+            case ')':
+                ADD_TOKEN(TOKEN_TYPE_PAREN_CLOSE, ")")
+                break;
+            case '{':
+                ADD_TOKEN(TOKEN_TYPE_BRACE_OPEN, "{")
+                break;
+            case '}':
+                ADD_TOKEN(TOKEN_TYPE_BRACE_CLOSE, "}")
+                break;
             case '!': {
                 if (expression.data[cursor+1] == '=')
                 {
-                    tokens.add(Token(make_string("!="), TOKEN_TYPE_EXCLAMATION_EQUALS, cursor));
+                    ADD_TOKEN(TOKEN_TYPE_EXCLAMATION_EQUALS, "!=")
                 }
                 else
                 {
-                    tokens.add(Token(make_string("!"), TOKEN_TYPE_EXCLAMATION, cursor));
+                    ADD_TOKEN(TOKEN_TYPE_EXCLAMATION, "!")
                 }
                 break;
             }
             case '=': {
                 if (expression.data[cursor+1] == '=')
                 {
-                    tokens.add(Token(make_string("=="), TOKEN_TYPE_EQUALS_EQUALS, cursor));
+                    ADD_TOKEN(TOKEN_TYPE_EQUALS_EQUALS, "==")
                 }
                 else
                 {
-                    tokens.add(Token(make_string("="), TOKEN_TYPE_EQUALS, cursor));
+                    ADD_TOKEN(TOKEN_TYPE_EQUALS, "=")
                 }
                 break;
             }
             case '>': {
                 if (expression.data[cursor+1] == '=')
                 {
-                    tokens.add(Token(make_string(">="), TOKEN_TYPE_GREATER_EQUALS, cursor));
+                    ADD_TOKEN(TOKEN_TYPE_GREATER_EQUALS, ">=");
                 }
                 else
                 {
-                    tokens.add(Token(make_string(">"), TOKEN_TYPE_GREATER, cursor));
+                    ADD_TOKEN(TOKEN_TYPE_GREATER, ">")
                 }
                 break;
             }
             case '<': {
                 if (expression.data[cursor+1] == '=')
                 {
-                    tokens.add(Token(make_string("<="), TOKEN_TYPE_LESS_EQUALS, cursor));
+                    ADD_TOKEN(TOKEN_TYPE_LESS_EQUALS, "<=");
                 }
                 else
                 {
-                    tokens.add(Token(make_string("<"), TOKEN_TYPE_LESS, cursor));
+                    ADD_TOKEN(TOKEN_TYPE_LESS, "<");
                 }
                 break;
             }
@@ -112,6 +140,10 @@ DArray<Token> tokenize(String expression)
                         tokens.add(Token(ident, TOKEN_TYPE_LITERAL_INT, cursor));
                     }
                 }
+                else {
+                    LOG_MSGF("Unknown character %c", ch);
+                    cursor++;
+                }
             }
         }
     }
@@ -145,12 +177,12 @@ Expr* collapse_expr(Expr* root)  // @todo implement
 
 bool Parser::consume(Token_Type type)
 {
-    bool consumed = (tokens.get(cursor).type != type);
-    if (consumed)
+    bool match = (tokens.get(cursor).type == type);
+    if (match)
     {
         cursor++;
     }
-    return consumed;
+    return match;
 }
 
 Array<Expr*> Parser::parse(String expression_string)
@@ -161,7 +193,7 @@ Array<Expr*> Parser::parse(String expression_string)
 
     while (true)
     {
-        if (cursor < tokens.size)
+        if (cursor >= tokens.size)
         {
             LOG_ERROR("Malformed token stream");
             break;
@@ -197,7 +229,7 @@ Array<Expr*> Parser::parse(String expression_string)
 
 Expr* Parser::parse_expression()
 {
-    Expr* expr = parse_comparison_expr();
+    Expr* expr = parse_equality_expr();
     if (expr)
     {
         collapse_expr(expr);
@@ -348,6 +380,9 @@ Expr* Parser::parse_call_expr()
     if (!primary)
         return NULL;
 
+    // function call
+    cursor++;  // (
+
     if (primary->type != Expr_Type::Variable)
     {
         return primary; //  what is this expression supposed to be when there is a parenthesis opening after it?
@@ -356,7 +391,6 @@ Expr* Parser::parse_call_expr()
 
     Expr_Variable* var = static_cast<Expr_Variable*>(primary);
 
-    Token_Type type = tokens.get(cursor).type;
     int arg_count = 0;
     int paren_close = 0;
     DArray<Expr*> arguments;
@@ -368,41 +402,46 @@ Expr* Parser::parse_call_expr()
 
         while (true)
         {
-            if (!(type != TOKEN_TYPE_END && cursor < tokens.size))
+            if (!(tokens.get(paren_close).type != TOKEN_TYPE_END && cursor < tokens.size))
             {
                 parser_error.message = make_string("Reached end of input before being able to parse all the arguments to function call"); // @todo bad error message
                 parser_error.offset = paren_close;
                 return NULL;
             }
 
-            if (type == TOKEN_TYPE_PAREN_CLOSE)
+            if (tokens.get(paren_close).type == TOKEN_TYPE_PAREN_CLOSE)
             {
                 break;
             }
 
-            if (type == TOKEN_TYPE_COMMA)
+            if (tokens.get(paren_close).type == TOKEN_TYPE_COMMA)
                 arg_count++;
 
-            type = tokens.get(paren_close).type;
             paren_close++;
         }
     }
 
     arguments = DArray<Expr*>(arg_count);
 
-    while (cursor <= paren_close)
+    while (cursor < paren_close)
     {
         Expr* arg = parse_expression();
-        if (!(arg && consume(TOKEN_TYPE_COMMA)))
+
+        if (arg)
+            arguments.add(arg);
+
+        if (cursor == paren_close) break;
+
+        if (!(arg && tokens.get(cursor).type == TOKEN_TYPE_COMMA))
         {
             arguments.free();
             return NULL;
         }
 
-        arguments.add(arg);
-
         cursor++;
     }
+
+    cursor++; // )
 
     return new Expr_Call(var->name, Array<Expr*>(arguments));
 }
@@ -611,6 +650,11 @@ Eval Evaluator::evaluate(Expr* expr)
 
 void print_expr(Expr* expr, int indent)
 {
+    for (int i = 0; i < indent; i++)
+    {
+        printf("    ");
+    }
+
     switch (expr->type)
     {
         case Expr_Type::Literal:

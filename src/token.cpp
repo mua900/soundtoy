@@ -16,7 +16,10 @@ void print_token(Token& token, String_Builder* sb, bool ignore_some)
 
     if (ignore_some)
     {
-        if (token.type == TOKEN_TYPE_END)
+        if (token.type == TOKEN_TYPE_END ||
+            token.type == TOKEN_TYPE_UNKNOWN ||
+            token.type == TOKEN_TYPE_SEMICOLON
+            )
         {
             return;
         }
