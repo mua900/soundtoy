@@ -50,9 +50,78 @@ bool Application::initialize()
         return false;
     }
 
-    m_evaluator.set(48000, 0.0);  // @todo
+    m_evaluator.set(48000, 0.0);
+
+    // info string
+    {
+        auto textures = new SDL_Texture*[TEXTURE_COUNT];
+        m_texture_cache = Array<SDL_Texture*>(textures, TEXTURE_COUNT);
+
+        gen_static_textures(Color{0x44, 0x22, 0x33, 0xff});
+    }
 
     m_quit = false;
+
+    return true;
+}
+
+bool Application::gen_static_textures(Color color)
+{
+    SDL_Color sdl_color = {color.r, color.g, color.b, color.a};
+    SDL_Surface* paused = TTF_RenderText_Solid(m_assets.font.font, "Paused", 0, sdl_color);
+    SDL_Surface* playing = TTF_RenderText_Solid(m_assets.font.font, "Playing", 0, sdl_color);
+
+    if (!(paused && playing))
+    {
+        if (paused)
+            SDL_DestroySurface(paused);
+        if (playing)
+            SDL_DestroySurface(playing);
+        return false;
+    }
+
+    SDL_Texture* paused_texture = SDL_CreateTextureFromSurface(m_window.renderer, paused);
+    SDL_Texture* playing_texture = SDL_CreateTextureFromSurface(m_window.renderer, playing);
+
+    if (!(paused_texture && playing_texture))
+    {
+        SDL_DestroySurface(paused);
+        SDL_DestroySurface(playing);
+
+        if (paused_texture)
+            SDL_DestroyTexture(paused_texture);
+        if (playing_texture)
+            SDL_DestroyTexture(playing_texture);
+
+        return false;
+    }
+
+    m_texture_cache.data[TEXTURE_TEXT_PAUSED] = paused_texture;
+    m_texture_cache.data[TEXTURE_TEXT_PLAYING] = playing_texture;
+
+    return true;
+}
+
+bool Application::gen_textures(Color color)
+{
+    SDL_Color sdl_color = { color.r, color.g, color.b, color.a };
+
+    char buffer[50];
+    int writen = snprintf(buffer, sizeof(buffer), "%.4f", m_audio.get_volume());
+
+    SDL_Surface* volume = TTF_RenderText_Solid(m_assets.font.font, buffer, writen, sdl_color);
+    if (!volume)
+        return false;
+
+    SDL_Texture* volume_texture = SDL_CreateTextureFromSurface(m_window.renderer, volume);
+
+    if (!volume_texture)
+    {
+        SDL_DestroySurface(volume);
+        return false;
+    }
+
+    m_texture_cache.data[TEXTURE_VOLUME_VALUE] = volume_texture;
 
     return true;
 }
@@ -61,6 +130,8 @@ bool Application::initialize()
 
 bool Application::load_assets()
 {
+    // @todo cleanup
+
     String_Builder sb(256);
     sb.append(make_string(SDL_GetBasePath()));
 #ifdef _WIN32
@@ -86,8 +157,8 @@ bool Application::load_assets()
     {
         String resume_texture = make_string("resume.png");
         sb.append(resume_texture);
-        m_assets.resume_textrue = IMG_LoadTexture(m_window.renderer, sb.c_string());
-        if (!m_assets.resume_textrue)
+        m_assets.resume_texture = IMG_LoadTexture(m_window.renderer, sb.c_string());
+        if (!m_assets.resume_texture)
         {
             LOG_ERROR("Failed to load resume texture");
             return false;
@@ -132,7 +203,7 @@ void Application::handle_events()
         {
             case SDL_EVENT_QUIT:
             {
-                this->m_quit = true;
+                m_quit = true;
                 break;
             }
             case SDL_EVENT_KEY_DOWN:
@@ -142,13 +213,20 @@ void Application::handle_events()
                 {
                     case SDL_SCANCODE_ESCAPE:
                     {
-                        this->m_quit = true;
+                        m_quit = true;
                         break;
                     }
                     case SDL_SCANCODE_RETURN:
                     {
-                        set_eval_string(m_ui.text_field.get_string());
+                        set_eval_string(m_ui.m_text_field.get_string());
                         text_input_stop();
+                        break;
+                    }
+                    case SDL_SCANCODE_BACKSPACE:
+                    {
+                        auto text_field = m_ui.get_selected_text_field();
+                        if (text_field)
+                            text_field->delete_last();
                         break;
                     }
                     default:
@@ -184,13 +262,12 @@ void Application::handle_events()
                 SDL_TextInputEvent text = e.text;
                 String input_text = make_string(text.text);
 
-                update_input_string(input_text);
-                break;
-            }
-            case SDL_EVENT_TEXT_EDITING:
-            {
-                // we don't care about this right now
-                SDL_TextEditingEvent edit = e.edit;
+                auto text_field = m_ui.get_selected_text_field();
+                if (text_field)
+                {
+                    text_field->m_text.append(input_text);
+                    update_input_string();
+                }
                 break;
             }
             default:
@@ -208,13 +285,26 @@ void Application::update()
 {
     SDL_Time time = SDL_GetTicksNS();
     m_audio.m_time = (double)time / NS_PER_SECONDS;
+
+    if (!doing_text_input)
+    {
+        bool conversion_success = false;
+        auto sample_rate = string_to_integer(m_ui.m_sample_rate_box.get_string(), &conversion_success);
+        if (conversion_success)
+        {
+            m_audio.reinitialize(sample_rate, m_audio.m_channel_count);
+        }
+        else
+        {
+            m_error_log.add(make_string("Unable to parse sample rate"));
+        }
+    }
 }
 
 void Application::draw()
 {
-    SDL_Renderer* renderer = this->m_window.renderer;
+    SDL_Renderer* renderer = m_window.renderer;
 
-    Window window = this->m_window;
     SDL_SetRenderDrawColor(renderer, COLOR_ARG(m_background_color));
     SDL_RenderClear(renderer);
 
@@ -227,8 +317,8 @@ void Application::draw_ui()
 {
     // volume slider
     {
-        Rectangle volume_slider = m_ui.volume_slider;
-        vec2 knob_scale = m_ui.volume_slider_knob_scale;
+        Rectangle volume_slider = m_ui.m_volume_slider;
+        vec2 knob_scale = m_ui.m_volume_slider_knob_scale;
 
         const float slider_knob_width = volume_slider.w * knob_scale.x;
         const float slider_knob_height = volume_slider.h * knob_scale.y;
@@ -246,32 +336,50 @@ void Application::draw_ui()
 
     // pause/resume button
     {
-        Rectangle button = m_ui.pause_button;
+        Rectangle button = m_ui.m_pause_button;
 
         SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x55, 0x55, 0xff);
         SDL_FRect pbutton = { button.x, button.y, button.w, button.h };
         SDL_RenderFillRect(m_window.renderer, &pbutton);
 
         float tex_w, tex_h;
-        SDL_Texture* texture = m_audio.paused ? m_assets.resume_textrue : m_assets.pause_texture;
+        SDL_Texture* texture = m_audio.paused ? m_assets.resume_texture : m_assets.pause_texture;
         SDL_GetTextureSize(texture, &tex_w, &tex_h);
         SDL_FRect src = {0,0,tex_w,tex_h};
         SDL_FRect dst = pbutton;
         SDL_RenderTexture(m_window.renderer, texture, &src, &dst);
     }
 
+    // paused/playing text
+    {
+        SDL_Texture* texture = m_texture_cache.data[(m_audio.paused) ? TEXTURE_TEXT_PAUSED : TEXTURE_TEXT_PLAYING];
+
+        Rectangle pause_button = m_ui.m_pause_button;
+
+        int measured_width = 0;
+        TTF_MeasureString(m_assets.font.font, "Paused", 0, 0, &measured_width, nullptr);
+
+        float tex_w, tex_h;
+        SDL_GetTextureSize(texture, &tex_w, &tex_h);
+
+        SDL_FRect src = { 0,0,tex_w,tex_h };
+        const int margin = 5;
+        SDL_FRect dst = {pause_button.x - measured_width/2, pause_button.y + pause_button.h + margin, tex_w, tex_h};
+
+        SDL_RenderTexture(m_window.renderer, texture, &src, &dst);
+    }
+
     // text field
     {
         SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x55, 0x55, 0xff);
-        Rectangle text_field_area = m_ui.text_field.area;
+        Rectangle text_field_area = m_ui.m_text_field.m_area;
         SDL_FRect tf_area = { text_field_area.x, text_field_area.y, text_field_area.w, text_field_area.h };
         SDL_RenderFillRect(m_window.renderer, &tf_area);
 
-
-        SDL_Texture* text_texture = m_ui.text_field.m_texture;
+        SDL_Texture* text_texture = m_ui.m_text_field.m_texture;
         if (text_texture)
         {
-            int line_count = m_ui.text_field.line_count;
+            int line_count = m_ui.m_text_field.m_line_count;
             float font_size = m_assets.font.size;
 
             SDL_FRect string_area = { tf_area.x, tf_area.y, tf_area.w, line_count * font_size };
@@ -279,19 +387,38 @@ void Application::draw_ui()
             SDL_RenderTexture(m_window.renderer, text_texture, &texture_area, &string_area);
         }
     }
+
+    // sample rate text box
+    {
+        SDL_SetRenderDrawColor(m_window.renderer, 0xaa, 0x22, 0x11, 0xff);
+        Rectangle box_area = m_ui.m_sample_rate_box.m_area;
+        SDL_FRect area = {box_area.x, box_area.y, box_area.w, box_area.h};
+        SDL_RenderFillRect(m_window.renderer, &area);
+
+        SDL_Texture* text_texture = m_ui.m_sample_rate_box.m_texture;
+        if (text_texture)
+        {
+            const int line_count = 1;
+            float font_size = m_assets.font.size;
+
+            SDL_FRect string_area = {area.x, area.y, area.w, font_size * line_count};
+            SDL_FRect texture_area = {0, 0, string_area.w, string_area.h};
+            SDL_RenderTexture(m_window.renderer, text_texture, &texture_area, &string_area);
+        }
+    }
 }
 
 bool Application::mouse_input_ui()
 {
-    if (m_ui.volume_slider.contains(m_mouse.pos))
+    if (m_ui.m_volume_slider.contains(m_mouse.pos))
     {
-        float diff = m_mouse.pos.x - m_ui.volume_slider.x;
-        float volume = diff / m_ui.volume_slider.w;
+        float diff = m_mouse.pos.x - m_ui.m_volume_slider.x;
+        float volume = diff / m_ui.m_volume_slider.w;
         m_audio.set_volume(volume);
         return true;
     }
 
-    if (m_ui.pause_button.contains(m_mouse.pos))
+    if (m_ui.m_pause_button.contains(m_mouse.pos))
     {
         if (m_audio.paused)
         {
@@ -305,19 +432,26 @@ bool Application::mouse_input_ui()
         return true;
     }
 
-    if (m_ui.text_field.area.contains(m_mouse.pos))
+    if (m_ui.m_text_field.m_area.contains(m_mouse.pos))
     {
-        const SDL_Rect area = {m_ui.text_field.area.x, m_ui.text_field.area.y, m_ui.text_field.area.w, m_ui.text_field.area.h};
-        SDL_SetTextInputArea(m_window.window, &area, m_ui.text_field.cursor_character);
+        const SDL_Rect area = {m_ui.m_text_field.m_area.x, m_ui.m_text_field.m_area.y, m_ui.m_text_field.m_area.w, m_ui.m_text_field.m_area.h};
+        SDL_SetTextInputArea(m_window.window, &area, m_ui.m_text_field.m_cursor_pixel);
 
-        if (!doing_text_input)
-        {
-            text_input_start();
-        }
-        else
-        {
-            text_input_stop();
-        }
+        toggle_text_input();
+
+        m_ui.m_text_input_target = TEXT_INPUT_TEXT_FIELD;
+
+        return true;
+    }
+
+    if (m_ui.m_sample_rate_box.m_area.contains(m_mouse.pos))
+    {
+        const SDL_Rect area = {m_ui.m_sample_rate_box.m_area.x, m_ui.m_sample_rate_box.m_area.y, m_ui.m_sample_rate_box.m_area.w, m_ui.m_sample_rate_box.m_area.h};
+        SDL_SetTextInputArea(m_window.window, &area, m_ui.m_sample_rate_box.m_cursor_pixel);
+
+        toggle_text_input();
+
+        m_ui.m_text_input_target = TEXT_INPUT_SAMPLE_RATE;
 
         return true;
     }
@@ -325,45 +459,32 @@ bool Application::mouse_input_ui()
     return false;
 }
 
-void Application::text_input_start()
-{
-    vec2 relative_mouse_pos = { m_mouse.pos.x - m_ui.text_field.area.x, m_mouse.pos.y - m_ui.text_field.area.y };
-
-    m_background_color = Color{ 0, 0, 0x22, 0xff };
-
-    SDL_StartTextInput(m_window.window);
-
-    int line_count = (int)(relative_mouse_pos.y / FONT_SIZE);
-    String tf_string = m_ui.text_field.get_string();
-
-    size_t character_offset = 0;
-
-    size_t width_characters = 0;
-    int width_pixels = 0;
-    for (int i = 0; i < line_count - 1; i++)
-    {
-        TTF_MeasureString(m_assets.font.font, tf_string.data + character_offset, tf_string.size - character_offset, m_ui.text_field.area.w, &width_pixels, &width_characters);
-        character_offset += width_characters;
-    }
-
-    TTF_MeasureString(m_assets.font.font,
-        tf_string.data + character_offset, tf_string.size - character_offset,
-        m_ui.text_field.area.w - relative_mouse_pos.x, &width_pixels, &width_characters);
-    character_offset += width_characters;
-
-    m_ui.text_field.cursor_character = character_offset;
-    m_ui.text_field.cursor_pixel = width_pixels;
-
-    doing_text_input = true;
-}
-
 void Application::text_input_stop()
 {
     SDL_StopTextInput(m_window.window);
+    doing_text_input = false;
 
     m_background_color = DEFAULT_BACKGROUND_COLOR;
+}
 
-    doing_text_input = false;
+void Application::text_input_start()
+{
+    SDL_StartTextInput(m_window.window);
+    doing_text_input = true;
+
+    m_background_color = {0, 0x22, 0x11, 0xff};
+}
+
+void Application::toggle_text_input()
+{
+    if (!doing_text_input)
+    {
+        text_input_start();
+    }
+    else
+    {
+        text_input_stop();
+    }
 }
 
 void UiState::update(Window window)
@@ -371,48 +492,69 @@ void UiState::update(Window window)
     ivec2 window_size;
     SDL_GetWindowSize(window.window, &window_size.x, &window_size.y);
 
-    pause_button.x = (window_size.x - pause_button.w) / 2;
-    pause_button.y = (window_size.y - pause_button.h) / 2;
+    m_pause_button.x = (window_size.x - m_pause_button.w) / 2;
+    m_pause_button.y = (window_size.y - m_pause_button.h) / 2;
 
-    text_field.area.x = (window_size.x - text_field.area.w) / 2;
-    text_field.area.y = ((float)window_size.y * (4.0 / 5.0)) - text_field.area.h/2;
+    m_text_field.m_area.x = (window_size.x - m_text_field.m_area.w) / 2;
+    m_text_field.m_area.y = ((float)window_size.y * (4.0 / 5.0)) - m_text_field.m_area.h/2;
+
+    m_sample_rate_box.m_area.x = window_size.x * (3.0 / 5.0);
+    m_sample_rate_box.m_area.y = window_size.y * (1.0 / 5.0);
+    m_sample_rate_box.m_area.w = window_size.x * (1.0 / 5.0);
+    m_sample_rate_box.m_area.h = window_size.y * (1.0 / 5.0);
 }
 
-bool Application::update_input_string(String s)
+Text_Field* UiState::get_selected_text_field()
 {
-    m_ui.text_field.text.append(s);
+    return (m_text_input_target == TEXT_INPUT_TEXT_FIELD) ? &m_text_field : &m_sample_rate_box;
+}
 
-    // re-render and update the texture
-    Rectangle text_field_area = m_ui.text_field.area;
-    Font font = m_assets.font;
-
-    const float font_size = font.size;
-    const int line_count = (int)(text_field_area.h / font_size);
-
-    String string = m_ui.text_field.get_string();
+bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, String s, Font font, bool wrapped)
+{
+    Rectangle area = m_area;
 
     int measure_pixels = 0;
     size_t measure_characters = 0;
-    TTF_MeasureString(font.font, string.data, string.size, text_field_area.w, &measure_pixels, &measure_characters);
+    TTF_MeasureString(font.font, get_string().data, get_string().size, area.w, &measure_pixels, &measure_characters);
 
     const SDL_Color text_color = { 0x11, 0x22, 0x11, 0xff };
-    SDL_Surface* text_surface = TTF_RenderText_Solid_Wrapped(m_assets.font.font, string.data, string.size, text_color, text_field_area.w);
-    SDL_Texture* text = SDL_CreateTextureFromSurface(m_window.renderer, text_surface);
+    SDL_Surface* text_surface;
+    
+    if (wrapped) {
+        text_surface = TTF_RenderText_Solid_Wrapped(font.font, get_string().data, get_string().size, text_color, area.w);
+        m_line_count = (int)(area.h / font.size);
+    } else {
+        text_surface = TTF_RenderText_Solid(font.font, get_string().data, get_string().size, text_color);
+        m_line_count = 1;  // unwrapped text
+    }
+
+    SDL_Texture* text = SDL_CreateTextureFromSurface(renderer, text_surface);
     SDL_DestroySurface(text_surface);
 
     if (text)
     {
-        m_ui.text_field.m_texture = text;
-        m_ui.text_field.line_count = line_count;
+        SDL_DestroyTexture(m_texture);
+
+        m_texture = text;
     }
 
     return (text) ? true : false;
 }
 
+bool Application::update_input_string()
+{
+    auto text_field = m_ui.get_selected_text_field();
+    if (!text_field)
+        return false;
+    String s = text_field->get_string();
+    return text_field->render_text_field_texture(m_window.renderer, s, m_assets.font,
+                                               (m_ui.m_text_input_target == TEXT_INPUT_TEXT_FIELD));
+}
+
 bool Application::set_eval_string(String eval_string)
 {
     Parser parser;
-    auto parsed = parser.parse(m_ui.text_field.get_string());
+    auto parsed = parser.parse(m_ui.m_text_field.get_string());
     for (int i = 0; i < parsed.size; i++)
     {
         print_expr(parsed.get(i), 0);

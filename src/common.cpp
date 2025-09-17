@@ -73,6 +73,27 @@ String string_copy(String s)
     return { data, s.size };
 }
 
+int string_to_integer(String s, bool* success)
+{
+    int accum = 0;
+    int power = 1;
+    for (int i = s.size - 1; i >= 0; i--)
+    {
+        if (!(s.data[i] >= '0' && s.data[i] <= '9'))
+        {
+            *success = false;
+            return 0;
+        }
+
+        accum += (s.data[i] - '0') * power;
+
+        power *= 10;
+    }
+
+    *success = true;
+    return accum;
+}
+
 void String_Builder::create(int initial_capacity)
 {
     buffer = (char*)malloc(initial_capacity);
@@ -89,6 +110,22 @@ String_Builder::String_Builder(int initial_capacity) {
 void String_Builder::remove(int amount)
 {
     cursor = MAX(0, cursor - amount);
+}
+
+void String_Builder::remove_slice(int start, int end)
+{
+    if (start >= cursor || start >= end)
+        return;
+
+    if (end >= cursor)
+        end = cursor;
+
+    for (int i = end; i < cursor; i++)
+    {
+        buffer[start + i] = buffer[i];
+    }
+
+    cursor -= (end - start);
 }
 
 void String_Builder::resize() {
@@ -131,6 +168,22 @@ void String_Builder::append_char(char ch) {
 
     buffer[cursor] = ch;
     cursor += 1;
+}
+
+void String_Builder::append_integer(int n)
+{
+    if (n < 0)
+    {
+        append_char('-');
+        n = -n;
+    }
+
+    while (n)
+    {
+        char c = (n % 10) + '0';
+        append_char(c);
+        n /= 10;
+    }
 }
 
 void String_Builder::clear_and_append(String s) {

@@ -32,6 +32,7 @@ void SDLCALL audio_callback(void* userdata, SDL_AudioStream* stream, int additio
     total_amount /= sizeof(float);
 
     Audio* audio = (Audio*)userdata;
+    auto evaluator = audio->m_evaluator;
 
     const double PI = 3.1415;
 
@@ -39,7 +40,7 @@ void SDLCALL audio_callback(void* userdata, SDL_AudioStream* stream, int additio
     {
         for (int i = 0; i < SAMPLE_BUFFER_SIZE; i++)
         {
-            sample_buffer[i] = 1.0; //  sinf(audio->time * audio->sample_rate * 2 * PI);
+            sample_buffer[i] = sinf(audio->m_time * audio->m_sample_rate * 2 * PI);
         }
 
         SDL_PutAudioStreamData(stream, sample_buffer, SAMPLE_BUFFER_SIZE);
@@ -93,7 +94,16 @@ bool Audio::initialize(int freq, int channels)
         printf("Audio Device Name: %s\n", dev_name);
     }
 
+    m_sample_rate = freq;
+    m_channel_count = channels;
+
     return true;
 }
 
+bool Audio::reinitialize(int freq, int channels)
+{
+    if (freq == m_sample_rate && channels == m_channel_count)
+        return true;
 
+    return initialize(freq, channels);
+}

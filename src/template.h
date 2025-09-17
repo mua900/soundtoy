@@ -36,9 +36,9 @@ struct DArray
 	{
 		int ncap = m_cap ? (m_cap * 2) : 8;
 		T* ndata = new T[ncap];
-		for (int bucket_index = 0; bucket_index < m_size; bucket_index++)
+		for (int i = 0; i < m_size; i++)
 		{
-			ndata[bucket_index] = m_data[bucket_index];
+			ndata[i] = m_data[i];
 		}
 		delete[](m_data);
 		m_data = ndata;

@@ -1,4 +1,5 @@
 #include "evaluator.h"
+#include <math.h>
 
 DArray<Token> tokenize(String expression)
 {
@@ -154,22 +155,206 @@ DArray<Token> tokenize(String expression)
     return tokens;
 }
 
-Expr* collapse_expr(Expr* root)  // @todo implement
+double get_sign(double x)
+{
+    return (x > 0) - (x < 0);
+}
+
+Builtin_Function* get_default_builtin_functions()
+{
+    auto func_list = new Builtin_Function[BUILTIN_FUNC_COUNT];
+    func_list[BUILTIN_FUNC_SIN] = sin;
+    func_list[BUILTIN_FUNC_COS] = cos;
+    func_list[BUILTIN_FUNC_ABS] = fabs;
+    func_list[BUILTIN_FUNC_SIGN] = get_sign;
+    func_list[BUILTIN_FUNC_ARCSIN] = asin;
+    func_list[BUILTIN_FUNC_ARCCOS] = acos;
+    return func_list;
+}
+
+Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String* error_string);
+Expr* collapse_expr(Expr* root, String* error_string)
+{
+    static Builtin_Function* cached_builtin_functions = nullptr;
+    if (!cached_builtin_functions)
+    {
+        cached_builtin_functions = get_default_builtin_functions();
+    }
+
+    return collapse_expr_real(root, cached_builtin_functions, error_string);
+}
+
+// recursive depth first
+Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String* error_string)
 {
     Expr* expr = root;
     switch (expr->type)
     {
         case Expr_Type::Grouping:
+        {
+            auto group = static_cast<Expr_Grouping*>(expr);
+            return collapse_expr_real(group, builtin_functions, error_string);
+        }
         case Expr_Type::Binary:
+        {
+            auto binary = static_cast<Expr_Binary*>(expr);
+            auto left = collapse_expr_real(binary->left, builtin_functions, error_string);
+            auto right = collapse_expr_real(binary->right, builtin_functions, error_string);
+
+            binary->left = left;
+            binary->right = right;
+
+            if (left->type == Expr_Type::Literal && right->type == Expr_Type::Literal)
+            {
+                Value left_value = static_cast<Expr_Literal*>(left)->value;
+                Value right_value = static_cast<Expr_Literal*>(right)->value;
+
+                if (left_value.type == Value::VALUE_STRING || right_value.type == Value::VALUE_STRING)
+                {
+                    *error_string = make_string("Can't do aritmetic with strings");
+                    break;
+                }
+
+                double left_numeric = (left_value.type == Value::VALUE_INTEGER) ? left_value.integer : left_value.real;
+                double right_numeric = (right_value.type == Value::VALUE_INTEGER) ? right_value.integer : right_value.real;
+
+                switch (binary->op)
+                {
+                    case Binop_Unknown:
+                        *error_string = make_string("Unknown binary operator");
+                        break;
+                    case Binop_Add:     return new Expr_Literal(left_numeric + right_numeric);
+                    case Binop_Sub:     return new Expr_Literal(left_numeric - right_numeric);
+                    case Binop_Mul:     return new Expr_Literal(left_numeric * right_numeric);
+                    case Binop_Div:     return new Expr_Literal(left_numeric / right_numeric);
+                    case Binop_Mod:     return new Expr_Literal(fmod(left_numeric, right_numeric));
+                    case Binop_Eq:      return new Expr_Literal(left_numeric == right_numeric);
+                    case Binop_Neq:     return new Expr_Literal(left_numeric != right_numeric);
+                    case Binop_Gt:      return new Expr_Literal(left_numeric > right_numeric);
+                    case Binop_Ge:      return new Expr_Literal(left_numeric >= right_numeric);
+                    case Binop_Lt:      return new Expr_Literal(left_numeric < right_numeric);
+                    case Binop_Le:      return new Expr_Literal(left_numeric <= right_numeric);
+                }
+            }
+        }
         case Expr_Type::Call:
+        {
+            auto call = static_cast<Expr_Call*>(expr);
+
+            bool all_literals = true;
+            bool all_reals = true;
+            for (int i = 0; i < call->arguments.size; i++)
+            {
+                call->arguments.data[i] = collapse_expr_real(call->arguments.data[i], builtin_functions, error_string);
+                if (call->arguments.data[i]->type != Expr_Type::Literal)
+                {
+                    all_literals = false;
+                }
+                else
+                {
+                    if (static_cast<Expr_Literal*>(call->arguments.data[0])->value.type != Value::VALUE_REAL)
+                    {
+                        all_reals = false;
+                    }
+                }
+            }
+
+            if (all_literals && all_reals)
+            {
+                if (call->arguments.size != 1)
+                {
+                    // @todo when you are able to define your own functions which might look like whatever it wants to this needs to be fixed
+                    *error_string = make_string("No known function with arity not equal to 1");
+                    return NULL;
+                }
+
+                Builtin_Func_Type func_type = BUILTIN_FUNC_UNKNOWN;
+
+                if (string_compare(call->function_name, make_string("sin")))
+                    func_type = BUILTIN_FUNC_SIN;
+                else if (string_compare(call->function_name, make_string("cos")))
+                    func_type = BUILTIN_FUNC_COS;
+                else if (string_compare(call->function_name, make_string("abs")))
+                    func_type = BUILTIN_FUNC_ABS;
+                else if (string_compare(call->function_name, make_string("sign")) || string_compare(call->function_name, make_string("sgn")))  // @xxx is this a good idea?
+                    func_type = BUILTIN_FUNC_SIGN;
+                else if (string_compare(call->function_name, make_string("asin")))
+                    func_type = BUILTIN_FUNC_ARCSIN;
+                else if (string_compare(call->function_name, make_string("acos")))
+                    func_type = BUILTIN_FUNC_ARCCOS;
+
+                if (func_type == BUILTIN_FUNC_UNKNOWN)
+                {
+                    String_Builder sb(64);
+                    sb.append(make_string("No such function as "));
+                    sb.append(call->function_name);
+                    *error_string = sb.to_string();  // lifetime outside of this function
+                    return NULL;
+                }
+
+                Expr_Literal* lit = static_cast<Expr_Literal*>(call->arguments.data[0]);
+                double arg = lit->value.real;
+                return new Expr_Literal(builtin_functions[func_type](arg));
+            }
+
+            break;
+        }
         case Expr_Type::Literal:
+        {
+            return expr;
+        }
         case Expr_Type::Unary:
         {
             Expr_Unary* unary = static_cast<Expr_Unary*>(expr);
-            
+            {
+                auto operand = collapse_expr_real(unary->operand, builtin_functions, error_string);
+                if (!operand)
+                    return NULL;
+                unary->operand = operand;
+            }
+
+            if (unary->operand->type == Expr_Type::Literal)
+            {
+                auto operand = static_cast<Expr_Literal*>(unary->operand);
+                switch (unary->op)
+                {
+                    case Unop_Negate:
+                    {
+                        if (operand->value.is_numeric())
+                        {
+                            *error_string = make_string("Can not negate non numeric value");
+                            return NULL;
+                        }
+
+                        if (operand->value.type == Value::VALUE_INTEGER)
+                        {
+                            operand->value.integer = - operand->value.integer;
+                        }
+                        else if (operand->value.type == Value::VALUE_REAL)
+                        {
+                            operand->value.real = - operand->value.real;
+                        }
+
+                        return operand;
+                    }
+                    case Unop_Not:
+                    {
+                        if (operand->value.type != Value::VALUE_BOOL)
+                        {
+                            *error_string = make_string("Can not apply the operator Not to non boolean value");
+                            return NULL;
+                        }
+
+                        operand->value.boolean = ! operand->value.boolean;
+                        return operand;
+                    }
+                }
+            }
+
+            break;
         }
         case Expr_Type::Variable:
-            break;
+            return expr;
     }
 
     return expr;
@@ -183,6 +368,11 @@ bool Parser::consume(Token_Type type)
         cursor++;
     }
     return match;
+}
+
+void Parser::report_error()
+{
+    printf("ERROR: %.*s\n", parser_error.message.size, parser_error.message.data);
 }
 
 Array<Expr*> Parser::parse(String expression_string)
@@ -232,7 +422,13 @@ Expr* Parser::parse_expression()
     Expr* expr = parse_equality_expr();
     if (expr)
     {
-        collapse_expr(expr);
+        String error_string = {};
+        expr = collapse_expr(expr, &error_string);
+
+        if (!expr)
+        {
+            printf("Collapse expression failed\n");
+        }
     }
 
     return expr;
@@ -517,7 +713,6 @@ void Evaluator::add(String expr_string)
     for (int i = 0; i < expressions.size; i++)
     {
         Expr* expr = expressions.get(i);
-        expr = collapse_expr(expr);
         m_expressions.add(expr);
     }
 }
@@ -543,7 +738,7 @@ Eval Evaluator::evaluate(Expr* expr)
             }
             else if (literal->value.type == Value::VALUE_STRING)
             {
-                m_error.message = make_string("String literals aren't used and doesn't mean anything yet");
+                eval_error.message = make_string("String literals aren't used and doesn't mean anything yet");
                 return fail;
             }
             else
@@ -569,7 +764,7 @@ Eval Evaluator::evaluate(Expr* expr)
                 }
             }
 
-            m_error.message = make_string("Variable not defined"); // @todo error message
+            eval_error.message = make_string("Variable not defined"); // @todo error message
             return fail;
         }
         case Expr_Type::Unary:
@@ -606,7 +801,7 @@ Eval Evaluator::evaluate(Expr* expr)
             switch (binary->op)
             {
                 case Binop_Unknown: {
-                    m_error.message = make_string("Invalid binary operator"); // @todo maybe this should be considered a bug case
+                    eval_error.message = make_string("Invalid binary operator"); // @todo maybe this should be considered a bug case
                     return fail;
                 }
                 case Binop_Add: {
@@ -641,7 +836,6 @@ Eval Evaluator::evaluate(Expr* expr)
         }
         case Expr_Type::Call:
         {
-            NOT_IMPLEMENTED("Function calls")
         }
     }
 

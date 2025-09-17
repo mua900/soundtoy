@@ -57,6 +57,8 @@ String string_slice(String s, int start, int end);
 String string_get_extension(String s);
 String string_copy(String s);
 
+int string_to_integer(String s, bool* success);
+
 struct ivec2 {
     int x, y;
 };
@@ -117,8 +119,10 @@ struct String_Builder {
     void create(int initial_capacity);
     void append(String string);
     void append_char(char ch);
+    void append_integer(int n);
     const char* c_string();
     void remove(int amount);  // remove the last n characters from the buffer
+    void remove_slice(int start, int end);
     void clear_and_append(String s);
     void append_many(String* strings, int n);
     void free_buffer();

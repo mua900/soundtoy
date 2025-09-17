@@ -24,15 +24,21 @@ struct Value {
     enum Value_Type {
         VALUE_INTEGER,
         VALUE_REAL,
+        VALUE_BOOL,
         VALUE_STRING,
     } type;
 
     union {
+        bool boolean;
         long long integer;
         double real;
         String string;
     };
 
+
+    Value(bool b) : boolean(b) {
+        type = VALUE_BOOL;
+    }
     Value(long long integer) : integer(integer) {
         type = VALUE_INTEGER;
     }
@@ -41,6 +47,11 @@ struct Value {
     }
     Value(String string) : string(string) {
         type = VALUE_STRING;
+    }
+
+    bool is_numeric()
+    {
+        return type == VALUE_INTEGER || type == VALUE_REAL;
     }
 };
 
@@ -57,8 +68,6 @@ struct Expr {
     Expr_Type type;
 };
 
-Expr* collapse_expr(Expr* root);
-
 void print_expr(Expr* expr, int indent);
 
 struct Expr_Literal : Expr {
@@ -67,6 +76,7 @@ struct Expr_Literal : Expr {
     Expr_Literal(double real) : value(real) {}
     Expr_Literal(long long integer) : value(integer) {}
     Expr_Literal(String string) : value(string) {}
+    Expr_Literal(bool b) : value(b) {}
 };
 
 struct Expr_Variable : Expr {
