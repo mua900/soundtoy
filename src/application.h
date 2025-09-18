@@ -125,6 +125,8 @@ public:
     void handle_events();
     void update();
     void draw();
+
+    void cleanup();
 private:
     bool load_assets();
 
@@ -134,6 +136,8 @@ private:
 
     bool gen_static_textures(Color color);
     bool gen_textures(Color color);
+
+    void update_audio_spec();
 
     void text_input_start();
     void text_input_stop();

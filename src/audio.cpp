@@ -47,6 +47,43 @@ void SDLCALL audio_callback(void* userdata, SDL_AudioStream* stream, int additio
     }
 }
 
+bool Audio::create_audio_stream(int freq, int channels)
+{
+    SDL_AudioSpec spec = {};
+    spec.freq = freq;
+    spec.channels = channels;
+    spec.format = SDL_AUDIO_F32;
+
+    SDL_AudioSpec device_spec = {};
+    if (!SDL_GetAudioDeviceFormat(m_playback, &device_spec, NULL))
+    {
+        return false;
+    }
+
+    SDL_AudioStream* stream = SDL_CreateAudioStream(&spec, &device_spec);
+    if (!stream)
+    {
+        return false;
+    }
+
+    if (!SDL_BindAudioStream(m_playback, stream))
+    {
+        SDL_DestroyAudioStream(stream);
+        return false;
+    }
+
+    SDL_SetAudioStreamGetCallback(stream, audio_callback, this);
+
+    m_audio_stream = stream;
+
+    return true;
+}
+
+void Audio::cleanup()
+{
+    SDL_CloseAudioDevice(m_playback);
+}
+
 bool Audio::initialize(int freq, int channels)
 {
     SDL_AudioSpec spec = {};
@@ -62,30 +99,11 @@ bool Audio::initialize(int freq, int channels)
         return false;
     }
 
-    SDL_AudioSpec device_spec = {};
-    if (!SDL_GetAudioDeviceFormat(m_playback, &device_spec, NULL))
-    {
-        return false;
-    }
-
-    m_audio_stream =  SDL_CreateAudioStream(&spec, &device_spec);
-    if (!m_audio_stream)
-    {
-        return false;
-    }
-
-    if (!SDL_BindAudioStream(m_playback, m_audio_stream))
-    {
-        return false;
-    }
-
-    SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback, this);
-
-    if (!m_audio_stream) return false;
+    create_audio_stream(freq, channels);
 
     SDL_PauseAudioDevice(m_playback);
 
-    SDL_SetAudioDeviceGain(m_playback, 0.0);  // start with the default value
+    SDL_SetAudioDeviceGain(m_playback, 0.0);
 
     printf("Audio Backend: %s\n", SDL_GetCurrentAudioDriver());
     auto dev_name = SDL_GetAudioDeviceName(m_playback);
@@ -102,8 +120,7 @@ bool Audio::initialize(int freq, int channels)
 
 bool Audio::reinitialize(int freq, int channels)
 {
-    if (freq == m_sample_rate && channels == m_channel_count)
-        return true;
+    SDL_DestroyAudioStream(m_audio_stream);
 
-    return initialize(freq, channels);
+    return create_audio_stream(freq, channels);
 }

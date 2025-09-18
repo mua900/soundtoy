@@ -126,6 +126,20 @@ bool Application::gen_textures(Color color)
     return true;
 }
 
+void Application::update_audio_spec()
+{
+    bool conversion_success = false;
+    auto sample_rate = string_to_integer(m_ui.m_sample_rate_box.get_string(), &conversion_success);
+    if (conversion_success)
+    {
+        m_audio.reinitialize(sample_rate, m_audio.m_channel_count);
+    }
+    else
+    {
+        m_error_log.add(make_string("Unable to parse sample rate"));
+    }
+}
+
 #define FONT_SIZE 100.0
 
 bool Application::load_assets()
@@ -285,20 +299,6 @@ void Application::update()
 {
     SDL_Time time = SDL_GetTicksNS();
     m_audio.m_time = (double)time / NS_PER_SECONDS;
-
-    if (!doing_text_input)
-    {
-        bool conversion_success = false;
-        auto sample_rate = string_to_integer(m_ui.m_sample_rate_box.get_string(), &conversion_success);
-        if (conversion_success)
-        {
-            m_audio.reinitialize(sample_rate, m_audio.m_channel_count);
-        }
-        else
-        {
-            m_error_log.add(make_string("Unable to parse sample rate"));
-        }
-    }
 }
 
 void Application::draw()
@@ -311,6 +311,11 @@ void Application::draw()
     draw_ui();
 
     SDL_RenderPresent(renderer);
+}
+
+void Application::cleanup()
+{
+    m_audio.cleanup();
 }
 
 void Application::draw_ui()
@@ -415,6 +420,7 @@ bool Application::mouse_input_ui()
         float diff = m_mouse.pos.x - m_ui.m_volume_slider.x;
         float volume = diff / m_ui.m_volume_slider.w;
         m_audio.set_volume(volume);
+        printf("%f\n", m_audio.get_volume());
         return true;
     }
 
@@ -465,6 +471,11 @@ void Application::text_input_stop()
     doing_text_input = false;
 
     m_background_color = DEFAULT_BACKGROUND_COLOR;
+
+    if (m_ui.m_text_input_target == TEXT_INPUT_SAMPLE_RATE)
+    {
+        update_audio_spec();
+    }
 }
 
 void Application::text_input_start()

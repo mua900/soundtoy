@@ -17,10 +17,13 @@ struct Audio {
 
     bool initialize(int freq, int channels);
     bool reinitialize(int freq, int channels);
+    void cleanup();
 
     void pause();
     void unpause();
 
     float get_volume();
     void set_volume(float volume);
+
+    bool create_audio_stream(int freq, int channels);
 };

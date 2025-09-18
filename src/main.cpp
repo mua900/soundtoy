@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "application.h"
 
 int main()
@@ -15,6 +13,8 @@ int main()
         app.update();
         app.draw();
     }
+
+    app.cleanup();
 
     SDL_Quit();
 
