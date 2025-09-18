@@ -79,14 +79,6 @@ struct Expr_Literal : Expr {
     Expr_Literal(bool b) : value(b) {}
 };
 
-struct Expr_Variable : Expr {
-    String name;
-
-    Expr_Variable(String var_name) : name(var_name) {
-        type = Expr_Type::Variable;
-    }
-};
-
 struct Expr_Unary : Expr {
     Op_Unary op;
     Expr* operand = NULL;
@@ -121,8 +113,18 @@ struct Expr_Grouping : Expr {
 struct Expr_Call : Expr {
     String function_name;
     Array<Expr*> arguments;
+    int fn_id = 0;  // function id assigned by parser
 
-    Expr_Call(String f_name, Array<Expr*> args) : function_name(f_name), arguments(args) {
+    Expr_Call(String f_name, Array<Expr*> args, int func_id) : function_name(f_name), arguments(args), fn_id(func_id) {
         type = Expr_Type::Call;
+    }
+};
+
+struct Expr_Variable : Expr {
+    String name;
+    int var_id = 0;
+
+    Expr_Variable(String var_name) : name(var_name) {
+        type = Expr_Type::Variable;
     }
 };

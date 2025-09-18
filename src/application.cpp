@@ -50,7 +50,10 @@ bool Application::initialize()
         return false;
     }
 
-    m_evaluator.set(48000, 0.0);
+    {
+        get_default_builtin_functions(m_evaluator.m_builtin_functions);
+        m_evaluator.set(48000, 0.0);
+    }
 
     // info string
     {
@@ -238,11 +241,14 @@ void Application::handle_events()
                     }
                     case SDL_SCANCODE_BACKSPACE:
                     {
-                        auto text_field = m_ui.get_selected_text_field();
-                        if (text_field)
+                        if (doing_text_input)
                         {
-                            text_field->delete_last();
-                            text_field->render_text_field_texture(m_window.renderer, text_field->get_string(), m_assets.font, false);
+                            auto text_field = m_ui.get_selected_text_field();
+                            if (text_field)
+                            {
+                                text_field->delete_last();
+                                text_field->render_text_field_texture(m_window.renderer, text_field->get_string(), m_assets.font, false);
+                            }
                         }
                         break;
                     }
@@ -301,7 +307,10 @@ void Application::handle_events()
 void Application::update()
 {
     SDL_Time time = SDL_GetTicksNS();
-    m_audio.m_time = (double)time / NS_PER_SECONDS;
+    double time_sec = (double)time / NS_PER_SECONDS;
+    m_audio.m_time = time_sec;
+
+    m_evaluator.update(time_sec);
 }
 
 void Application::draw()
@@ -574,11 +583,18 @@ bool Application::update_input_string()
 
 bool Application::set_eval_string(String eval_string)
 {
-    Parser parser;
+    Parser parser = {};
+
     auto parsed = parser.parse(m_ui.m_text_field.get_string());
     for (int i = 0; i < parsed.size; i++)
     {
-        print_expr(parsed.get(i), 0);
+        Expr* expr = parsed.get(i);
+        print_expr(expr, 0);
+        auto eval = m_evaluator.evaluate(expr);
+        if (eval.success)
+        {
+            printf("%f\n", eval.value);
+        }
     }
 
     return false;

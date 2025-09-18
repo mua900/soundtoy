@@ -43,12 +43,7 @@ private:
 
 using Builtin_Function = double (*) (double);
 
-enum Builtin_Type {
-    BUILTIN_TIME = 0,
-    BUILTIN_SAMPLE_RATE,
-
-    BUILTIN_COUNT
-};
+using Function_ID = unsigned int;
 
 enum Builtin_Func_Type {
     BUILTIN_FUNC_SIN,
@@ -63,6 +58,17 @@ enum Builtin_Func_Type {
     BUILTIN_FUNC_UNKNOWN,
 };
 
+#define FUNC_ID_INVALID (Function_ID)(-1)
+
+Function_ID get_function_id(String name);
+
+enum Builtin_Type {
+    BUILTIN_TIME = 0,
+    BUILTIN_SAMPLE_RATE,
+
+    BUILTIN_COUNT
+};
+
 struct Eval {
     double value;
     bool success;
@@ -70,19 +76,18 @@ struct Eval {
 
 using Builtin_Function_List = Builtin_Function[BUILTIN_FUNC_COUNT];
 
-// returns essentially a Builtin_Function_List
-Builtin_Function* get_default_builtin_functions();
+// the argument must be an array of pointers of size BUILTIN_FUNC_COUNT
+void get_default_builtin_functions(Builtin_Function* func_list);
+
+bool is_builtin_function(Expr_Call* call);
 
 struct Evaluator
 {
     void set(double sample_rate, double time);
     void update(double time);
 
-    void add(String expr_string);
     Eval evaluate(Expr* expr);
 
-private:
-    DArray<Expr*> m_expressions = {};
     Builtin_Function_List m_builtin_functions = {};
     double m_builtins[BUILTIN_COUNT] = {};
     Error eval_error = {};
