@@ -240,7 +240,10 @@ void Application::handle_events()
                     {
                         auto text_field = m_ui.get_selected_text_field();
                         if (text_field)
+                        {
                             text_field->delete_last();
+                            text_field->render_text_field_texture(m_window.renderer, text_field->get_string(), m_assets.font, false);
+                        }
                         break;
                     }
                     default:
@@ -522,6 +525,13 @@ Text_Field* UiState::get_selected_text_field()
 
 bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, String s, Font font, bool wrapped)
 {
+    if (s.size == 0)
+    {
+        SDL_DestroyTexture(m_texture);
+        m_texture = NULL;
+        return true;
+    }
+
     Rectangle area = m_area;
 
     int measure_pixels = 0;

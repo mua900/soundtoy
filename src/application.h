@@ -87,7 +87,7 @@ struct UiState {
     Text_Field* get_selected_text_field();
 };
 
-#define DEFAULT_BACKGROUND_COLOR Color{ 0xaa, 0x66, 0x33, 0xff }
+#define DEFAULT_BACKGROUND_COLOR Color{ 0x88, 0x66, 0x33, 0xff }
 
 enum {
     // static textures

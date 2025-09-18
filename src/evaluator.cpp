@@ -155,6 +155,8 @@ DArray<Token> tokenize(String expression)
     return tokens;
 }
 
+// @todo refactor this region
+
 double get_sign(double x)
 {
     return (x > 0) - (x < 0);
@@ -175,13 +177,13 @@ Builtin_Function* get_default_builtin_functions()
 Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String* error_string);
 Expr* collapse_expr(Expr* root, String* error_string)
 {
-    static Builtin_Function* cached_builtin_functions = nullptr;
-    if (!cached_builtin_functions)
+    static Builtin_Function* builtin_functions = nullptr;
+    if (!builtin_functions)
     {
-        cached_builtin_functions = get_default_builtin_functions();
+        builtin_functions = get_default_builtin_functions();
     }
 
-    return collapse_expr_real(root, cached_builtin_functions, error_string);
+    return collapse_expr_real(root, builtin_functions, error_string);
 }
 
 // recursive depth first
