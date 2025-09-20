@@ -1,15 +1,5 @@
 #include "token.h"
 
-double Token::to_real()
-{
-    return 0.0;
-}
-
-long long Token::to_integer()
-{
-    return 0;
-}
-
 void print_token(Token& token, String_Builder* sb, bool ignore_some)
 {
     sb->clear();

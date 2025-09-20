@@ -139,9 +139,12 @@ private:
 
     void update_audio_spec();
 
+    void set_volume(float volume);
+
     void text_input_start();
     void text_input_stop();
     void toggle_text_input();
     bool update_input_string();
+
     bool set_eval_string(String s);
 };

@@ -28,6 +28,19 @@ void log_log(enum Log_Level ll, char const* const msg, ...)
     }
 }
 
+// very simple snap function
+float snap_value(float val, float bound1, float bound2, float threshold)
+{
+    if (abs(val - bound1) <= threshold)
+        val = bound1;
+    else if (abs(val - bound2) <= threshold)
+        val = bound2;
+    else if (abs(val - (bound1 + bound2) / 2) <= threshold)
+        val = (bound1 + bound2) / 2;
+
+    return val;
+}
+
 String make_string(const char* s)
 {
     int len = strlen(s);
@@ -92,6 +105,13 @@ int string_to_integer(String s, bool* success)
 
     *success = true;
     return accum;
+}
+
+double string_to_real(String s)
+{
+    char* end_ptr = NULL;
+    double res = strtod(s.data, &end_ptr);
+    return res;
 }
 
 void String_Builder::create(int initial_capacity)

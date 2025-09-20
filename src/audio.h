@@ -7,9 +7,12 @@ struct Audio {
     SDL_AudioDeviceID m_playback = 0;
     SDL_AudioStream* m_audio_stream = nullptr;
 
-    Evaluator m_evaluator = {};
+    Expr* sample_expression = nullptr;
+    Evaluator evaluator = {};
 
-    double m_time = 0;
+    double sample_time = 0;  // time variable used for sampling.
+
+    double m_time = 0;       // real life time since the application startup updated by the application
     int m_sample_rate = 0;
     int m_channel_count = 0;
 
@@ -21,9 +24,12 @@ struct Audio {
 
     void pause();
     void unpause();
+    void toggle_pause();
 
     float get_volume();
     void set_volume(float volume);
+
+    bool set_sample_expression(Expr* expr);
 
     bool create_audio_stream(int freq, int channels);
 };

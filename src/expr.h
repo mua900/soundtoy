@@ -73,10 +73,18 @@ void print_expr(Expr* expr, int indent);
 struct Expr_Literal : Expr {
     Value value;
 
-    Expr_Literal(double real) : value(real) {}
-    Expr_Literal(long long integer) : value(integer) {}
-    Expr_Literal(String string) : value(string) {}
-    Expr_Literal(bool b) : value(b) {}
+    Expr_Literal(bool b) : value(b) {
+        type = Expr_Type::Literal;
+    }
+    Expr_Literal(long long integer) : value(integer) {
+        type = Expr_Type::Literal;
+    }
+    Expr_Literal(double real) : value(real) {
+        type = Expr_Type::Literal;
+    }
+    Expr_Literal(String string) : value(string) {
+        type = Expr_Type::Literal;
+    }
 };
 
 struct Expr_Unary : Expr {
@@ -124,7 +132,7 @@ struct Expr_Variable : Expr {
     String name;
     int var_id = 0;
 
-    Expr_Variable(String var_name) : name(var_name) {
+    Expr_Variable(String var_name, int id) : name(var_name), var_id(id) {
         type = Expr_Type::Variable;
     }
 };

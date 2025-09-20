@@ -31,7 +31,7 @@ enum Token_Type {
     TOKEN_TYPE_IDENT,
     TOKEN_TYPE_LITERAL_INT,
     TOKEN_TYPE_LITERAL_FLOAT,
-    // TT_LITERAL_STRING,
+    TOKEN_TYPE_LITERAL_STRING,
 
     TOKEN_TYPE_END,
 };
@@ -43,9 +43,6 @@ struct Token {
 
     Token() {}
     Token(String s, Token_Type t_type, int p_offset) : token_string(s), type(t_type), offset(p_offset) {}
-
-    double to_real();
-    long long to_integer();
 };
 
 void print_token(Token& token, String_Builder* sb, bool ignore_some=false);

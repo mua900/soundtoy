@@ -51,7 +51,7 @@ bool Application::initialize()
     }
 
     {
-        get_default_builtin_functions(m_evaluator.m_builtin_functions);
+        get_default_builtin_functions(m_evaluator.builtin_functions);
         m_evaluator.set(48000, 0.0);
     }
 
@@ -141,6 +141,13 @@ void Application::update_audio_spec()
     {
         m_error_log.add(make_string("Unable to parse sample rate"));
     }
+}
+
+void Application::set_volume(float volume)
+{
+    m_audio.set_volume(volume);
+
+    gen_textures(Color{0x22, 0x55, 0x65, 0xff});
 }
 
 #define FONT_SIZE 100.0
@@ -235,7 +242,11 @@ void Application::handle_events()
                     }
                     case SDL_SCANCODE_RETURN:
                     {
-                        set_eval_string(m_ui.m_text_field.get_string());
+                        bool set = set_eval_string(m_ui.m_text_field.get_string());
+                        if (!set)
+                        {
+                            printf("Could not set sample expression\n");
+                        }
                         text_input_stop();
                         break;
                     }
@@ -250,6 +261,11 @@ void Application::handle_events()
                                 text_field->render_text_field_texture(m_window.renderer, text_field->get_string(), m_assets.font, false);
                             }
                         }
+                        break;
+                    }
+                    case SDL_SCANCODE_SPACE:
+                    {
+                        m_audio.toggle_pause();
                         break;
                     }
                     default:
@@ -313,6 +329,11 @@ void Application::update()
     m_evaluator.update(time_sec);
 }
 
+void Application::cleanup()
+{
+    m_audio.cleanup();
+}
+
 void Application::draw()
 {
     SDL_Renderer* renderer = m_window.renderer;
@@ -323,11 +344,6 @@ void Application::draw()
     draw_ui();
 
     SDL_RenderPresent(renderer);
-}
-
-void Application::cleanup()
-{
-    m_audio.cleanup();
 }
 
 void Application::draw_ui()
@@ -349,6 +365,26 @@ void Application::draw_ui()
         SDL_FRect slider_knob = { volume_slider.x - (slider_knob_width / 2) + (volume_slider.w * percentage), volume_slider.y - volume_slider.h / 2,
                                     slider_knob_width, slider_knob_height };
         SDL_RenderFillRect(m_window.renderer, &slider_knob);
+
+        // volume text
+        {
+            SDL_Texture* texture = m_texture_cache.data[TEXTURE_VOLUME_VALUE];
+
+            char buff[50];
+            int string_length = snprintf(buff, sizeof(buff), "%.4f", m_audio.get_volume());
+
+            int measured_width = 0;
+            TTF_MeasureString(m_assets.font.font, buff, string_length, 0, &measured_width, NULL);
+
+            float tex_w, tex_h;
+            SDL_GetTextureSize(texture, &tex_w, &tex_h);
+
+            SDL_FRect src = { 0, 0, tex_w, tex_h };
+            int margin = 10;
+            SDL_FRect dst = { volume_slider.x - tex_w / 2, volume_slider.y + volume_slider.h + margin, tex_w, tex_h};
+
+            SDL_RenderTexture(m_window.renderer, texture, &src, &dst);
+        }
     }
 
     // pause/resume button
@@ -431,21 +467,18 @@ bool Application::mouse_input_ui()
     {
         float diff = m_mouse.pos.x - m_ui.m_volume_slider.x;
         float volume = diff / m_ui.m_volume_slider.w;
-        m_audio.set_volume(volume);
+
+        volume = snap_value(volume, 0.0, 1.0, 0.09);
+
+        set_volume(volume);
+
         printf("%f\n", m_audio.get_volume());
         return true;
     }
 
     if (m_ui.m_pause_button.contains(m_mouse.pos))
     {
-        if (m_audio.paused)
-        {
-            m_audio.unpause();
-        }
-        else
-        {
-            m_audio.pause();
-        }
+        m_audio.toggle_pause();
 
         return true;
     }
@@ -586,6 +619,11 @@ bool Application::set_eval_string(String eval_string)
     Parser parser = {};
 
     auto parsed = parser.parse(m_ui.m_text_field.get_string());
+    if (parsed.size == 0)
+    {
+        return false;
+    }
+
     for (int i = 0; i < parsed.size; i++)
     {
         Expr* expr = parsed.get(i);
@@ -595,7 +633,18 @@ bool Application::set_eval_string(String eval_string)
         {
             printf("%f\n", eval.value);
         }
+
+        if (!eval.success)
+        {
+            return false;
+        }
     }
 
-    return false;
+    if (!m_audio.set_sample_expression(parsed.get(0)))
+    {
+        printf("Failed to set sample expression");
+        return false;
+    }
+
+    return true;
 }

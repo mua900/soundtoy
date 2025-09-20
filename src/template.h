@@ -42,7 +42,7 @@ struct DArray
 		}
 		delete[](m_data);
 		m_data = ndata;
-		m_cap *= 2;
+		m_cap = ncap;
 	}
 
 	void free()

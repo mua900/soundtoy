@@ -13,6 +13,18 @@ void Audio::unpause()
     SDL_ResumeAudioDevice(m_playback);
 }
 
+void Audio::toggle_pause()
+{
+    if (paused)
+    {
+        unpause();
+    }
+    else
+    {
+        pause();
+    }
+}
+
 float Audio::get_volume()
 {
     return SDL_GetAudioDeviceGain(m_playback);
@@ -24,28 +36,78 @@ void Audio::set_volume(float volume)
 }
 
 
-#define SAMPLE_BUFFER_SIZE 1024
-float sample_buffer[SAMPLE_BUFFER_SIZE];
-
-void SDLCALL audio_callback(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+void SDLCALL audio_callback_default(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
 {
     total_amount /= sizeof(float);
 
     Audio* audio = (Audio*)userdata;
-    auto evaluator = audio->m_evaluator;
 
-    const double PI = 3.1415;
+#define BUFFER_SIZE 512
+    float buffer[BUFFER_SIZE];
+
+    for (int turn = 0; turn < total_amount / BUFFER_SIZE + 1; turn++)
+    {
+        for (int i = 0; i < BUFFER_SIZE; i++)
+        {
+            buffer[i] = 0.45;
+        }
+
+        SDL_PutAudioStreamData(stream, buffer, BUFFER_SIZE);
+    }
+}
+
+#define SAMPLE_BUFFER_SIZE 1024
+float g_sample_buffer[SAMPLE_BUFFER_SIZE];
+
+void SDLCALL audio_callback_sample(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+{
+    total_amount /= sizeof(float);
+
+    Audio* audio = (Audio*)userdata;
+    Expr* expr = audio->sample_expression;
+
+    double inv_sample_rate = 1.0 / audio->m_sample_rate;
+
+    Evaluator evaluator = audio->evaluator;
 
     for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
     {
-        for (int i = 0; i < SAMPLE_BUFFER_SIZE; i++)
+        for (int sample = 0; sample < SAMPLE_BUFFER_SIZE; sample++)
         {
-            sample_buffer[i] = sinf(audio->m_time * audio->m_sample_rate * 2 * PI);
+            Eval eval = evaluator.evaluate(expr);
+
+            /*
+                we assume the evaluator is able to evaluate the expression here since
+                we are in the callback and we shouldn't be here if we have an invalid expression.
+                And we don't want to check in the callback.
+            */ 
+            g_sample_buffer[sample] = eval.value;
+
+            evaluator.step_time(inv_sample_rate * 1e2);
         }
 
-        SDL_PutAudioStreamData(stream, sample_buffer, SAMPLE_BUFFER_SIZE);
+        SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
     }
 }
+
+bool Audio::set_sample_expression(Expr* expr)
+{
+    Eval eval = evaluator.evaluate(expr);
+    if (eval.success) {
+        printf("%f\n", eval.value);
+
+        sample_expression = expr;
+        evaluator.reset(m_sample_rate, 0.0);
+
+        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_sample, this);
+
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
 
 bool Audio::create_audio_stream(int freq, int channels)
 {
@@ -72,7 +134,7 @@ bool Audio::create_audio_stream(int freq, int channels)
         return false;
     }
 
-    SDL_SetAudioStreamGetCallback(stream, audio_callback, this);
+    SDL_SetAudioStreamGetCallback(stream, audio_callback_default, this);
 
     m_audio_stream = stream;
 
@@ -82,6 +144,9 @@ bool Audio::create_audio_stream(int freq, int channels)
 void Audio::cleanup()
 {
     SDL_CloseAudioDevice(m_playback);
+    SDL_DestroyAudioStream(m_audio_stream);
+
+    m_audio_stream = NULL;
 }
 
 bool Audio::initialize(int freq, int channels)
@@ -115,12 +180,16 @@ bool Audio::initialize(int freq, int channels)
     m_sample_rate = freq;
     m_channel_count = channels;
 
+    evaluator.set(freq, 0.0);
+
     return true;
 }
 
 bool Audio::reinitialize(int freq, int channels)
 {
     SDL_DestroyAudioStream(m_audio_stream);
+
+    evaluator.set(freq, 0.0);
 
     return create_audio_stream(freq, channels);
 }

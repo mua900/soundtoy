@@ -141,6 +141,24 @@ DArray<Token> tokenize(String expression)
                         tokens.add(Token(ident, TOKEN_TYPE_LITERAL_INT, cursor));
                     }
                 }
+                else if (ch == '"')
+                {
+                    int start = cursor + 1;
+                    cursor++;
+                    while (ch != '"')
+                    {
+                        if (cursor >= expression.size)
+                        {
+                            printf("Unterminated string literal");
+                            break;
+                        }
+                        cursor++;
+                        ch = expression.data[cursor];
+                    }
+
+                    String s_literal = string_slice(expression, start, cursor);
+                    tokens.add(Token(s_literal, TOKEN_TYPE_LITERAL_STRING, start));
+                }
                 else {
                     LOG_MSGF("Unknown character %c", ch);
                     cursor++;
@@ -355,27 +373,16 @@ Expr* Parser::parse_unary_expr()
 
 Expr* Parser::parse_call_expr()
 {
-    Expr* primary = parse_primary_expr();
-    if (!primary) return NULL;
-
-    if (tokens.get(cursor).type != TOKEN_TYPE_PAREN_OPEN)
+    if (!(tokens.get(cursor).type == TOKEN_TYPE_IDENT && tokens.get(cursor + 1).type == TOKEN_TYPE_PAREN_OPEN))
     {
-        return primary;
+        return parse_primary_expr();
     }
 
-    if (!primary)
-        return NULL;
+    String name = tokens.get(cursor).token_string;
+    cursor++;  // identifier
 
     // function call
     cursor++;  // (
-
-    if (primary->type != Expr_Type::Variable)
-    {
-        return primary; //  what is this expression supposed to be when there is a parenthesis opening after it?
-                        //  should we even return this if this is not defined and is going to fail when it tries to parse the next part?
-    }
-
-    Expr_Variable* var = static_cast<Expr_Variable*>(primary);
 
     int arg_count = 0;
     int paren_close = 0;
@@ -429,13 +436,13 @@ Expr* Parser::parse_call_expr()
 
     cursor++; // )
 
-    Function_ID fn_id = get_function_id(var->name);
+    Function_ID fn_id = get_function_id(name);
     if (fn_id == FUNC_ID_INVALID)
     {
         return NULL;
     }
 
-    return new Expr_Call(var->name, Array<Expr*>(arguments), fn_id);
+    return new Expr_Call(name, Array<Expr*>(arguments), fn_id);
 }
 
 Expr* Parser::parse_primary_expr()
@@ -445,14 +452,21 @@ Expr* Parser::parse_primary_expr()
     switch (type)
     {
         case TOKEN_TYPE_LITERAL_INT:
+        {
             cursor++;
-            return new Expr_Literal(token.to_integer());
+            bool success = false;
+            long long i = string_to_integer(token.token_string, &success);
+            return new Expr_Literal(i);
+        }
         case TOKEN_TYPE_LITERAL_FLOAT:
             cursor++;
-            return new Expr_Literal(token.to_real());
+            return new Expr_Literal(string_to_real(token.token_string));
         case TOKEN_TYPE_IDENT:
+        {
             cursor++;
-            return new Expr_Variable(token.token_string);
+            Var_ID var_id = get_var_id(token.token_string);
+            return new Expr_Variable(token.token_string, var_id);
+        }
         case TOKEN_TYPE_PAREN_OPEN:
         {
             cursor++;
@@ -501,15 +515,20 @@ const char* Builtin_Func_Names[BUILTIN_FUNC_COUNT] = {
 };
 
 
+Evaluator::Evaluator()
+{
+    get_default_builtin_functions(builtin_functions);
+}
+
 void Evaluator::set(double sample_rate, double time)
 {
-    m_builtins[BUILTIN_TIME] = time;
-    m_builtins[BUILTIN_SAMPLE_RATE] = sample_rate;
+    builtins[BUILTIN_TIME] = time;
+    builtins[BUILTIN_SAMPLE_RATE] = sample_rate;
 }
 
 void Evaluator::update(double time)
 {
-    m_builtins[BUILTIN_TIME] = time;
+    builtins[BUILTIN_TIME] = time;
 }
 
 // simple depth first recursive tree traversal
@@ -545,18 +564,7 @@ Eval Evaluator::evaluate(Expr* expr)
 
             // builtin variables
             {
-                if (string_compare(make_string("time"), var->name) ||
-                    string_compare(make_string("t"), var->name)
-                    )
-                {
-                    return { m_builtins[BUILTIN_TIME], true };
-                }
-                else if (string_compare(make_string("sample_rate"), var->name) ||
-                    string_compare(make_string("sr"), var->name)
-                    )
-                {
-                    return { m_builtins[BUILTIN_SAMPLE_RATE], true };
-                }
+                return { builtins[var->var_id], true };
             }
 
             eval_error.message = make_string("Variable not defined"); // @todo error message
@@ -596,7 +604,7 @@ Eval Evaluator::evaluate(Expr* expr)
             switch (binary->op)
             {
                 case Binop_Unknown: {
-                    eval_error.message = make_string("Invalid binary operator"); // @todo maybe this should be considered a bug case
+                    eval_error.message = make_string("Invalid binary operator"); // @todo bug case
                     return fail;
                 }
                 case Binop_Add: {
@@ -640,7 +648,7 @@ Eval Evaluator::evaluate(Expr* expr)
                     return fail;
                 }
 
-                return { m_builtin_functions[call->fn_id](arg.value), true };
+                return { builtin_functions[call->fn_id](arg.value), true };
             }
             else {
                 NOT_IMPLEMENTED("User defined functions")
@@ -667,11 +675,11 @@ void print_expr(Expr* expr, int indent)
             switch (literal->value.type)
             {
                 case Value::VALUE_INTEGER:
-                    printf("Literal: %lli", literal->value.integer); break;
+                    printf("Literal: %lli\n", literal->value.integer); break;
                 case Value::VALUE_REAL:
-                    printf("Literal: %f", literal->value.real); break;
+                    printf("Literal: %f\n", literal->value.real); break;
                 case Value::VALUE_STRING:
-                    printf("Literal: %s", literal->value.string.data); break;
+                    printf("Literal: %s\n", literal->value.string.data); break;
             }
             break;
         }
@@ -742,6 +750,26 @@ const char* get_binop_string(Op_Binary op)
 double get_sign(double x)
 {
     return (x > 0) - (x < 0);
+}
+
+Var_ID get_var_id(String name)
+{
+    if (string_compare(make_string("time"), name) ||
+        string_compare(make_string("t"), name)
+        )
+    {
+        return BUILTIN_TIME;
+    }
+    else if (string_compare(make_string("sample_rate"), name) ||
+        string_compare(make_string("sr"), name)
+        )
+    {
+        return BUILTIN_SAMPLE_RATE;
+    }
+    else
+    {
+        return VAR_ID_INVALID;
+    }
 }
 
 Function_ID get_function_id(String name)
@@ -967,6 +995,12 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
         break;
     }
     case Expr_Type::Variable:
+        auto var = static_cast<Expr_Variable*>(expr);
+        if (var->var_id == VAR_ID_INVALID)
+        {
+            *error_string = make_string("Undefined variable");
+            return NULL;
+        }
         return expr;
     }
 

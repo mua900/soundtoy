@@ -43,8 +43,6 @@ private:
 
 using Builtin_Function = double (*) (double);
 
-using Function_ID = unsigned int;
-
 enum Builtin_Func_Type {
     BUILTIN_FUNC_SIN,
     BUILTIN_FUNC_COS,
@@ -58,9 +56,17 @@ enum Builtin_Func_Type {
     BUILTIN_FUNC_UNKNOWN,
 };
 
+using Var_ID = unsigned int;
+using Function_ID = unsigned int;
+
+#define VAR_ID_INVALID (Var_ID)(-1)
 #define FUNC_ID_INVALID (Function_ID)(-1)
 
+// @todo user defined variables and functions
+Var_ID get_var_id(String name);
 Function_ID get_function_id(String name);
+
+// @todo builtin constants like pi, e etc.
 
 enum Builtin_Type {
     BUILTIN_TIME = 0,
@@ -70,8 +76,8 @@ enum Builtin_Type {
 };
 
 struct Eval {
-    double value;
-    bool success;
+    double value = 0.0;
+    bool success = false;
 };
 
 using Builtin_Function_List = Builtin_Function[BUILTIN_FUNC_COUNT];
@@ -83,14 +89,26 @@ bool is_builtin_function(Expr_Call* call);
 
 struct Evaluator
 {
+    Evaluator();
+
+    Builtin_Function_List builtin_functions = {};
+    double builtins[BUILTIN_COUNT] = {};
+    Error eval_error = {};
+
     void set(double sample_rate, double time);
     void update(double time);
 
     Eval evaluate(Expr* expr);
 
-    Builtin_Function_List m_builtin_functions = {};
-    double m_builtins[BUILTIN_COUNT] = {};
-    Error eval_error = {};
+    void reset(double sample_rate, double time) {
+        set(sample_rate, time);
+        eval_error = Error();
+    }
+
+    double get_time() { return builtins[BUILTIN_TIME]; }
+    double get_sample_rate() { return builtins[BUILTIN_SAMPLE_RATE]; }
+
+    void step_time(double step) { builtins[BUILTIN_TIME] += step; }
 };
 
 // collapse the expression (constant fold) and return the new root node of the collapsed expression
