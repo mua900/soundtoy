@@ -7,7 +7,7 @@ void panic(char const* const msg)
     exit(1);
 }
 
-// @todo fix
+// @todo get rid of this and add proper logging to the project
 void log_log(enum Log_Level ll, char const* const msg, ...)
 {
     char buff[1024];

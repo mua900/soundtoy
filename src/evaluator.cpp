@@ -839,6 +839,16 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
     case Expr_Type::Binary:
     {
         auto binary = static_cast<Expr_Binary*>(expr);
+
+        if (!binary->left)
+        {
+            return collapse_expr_real(binary->right, builtin_functions, error_string);
+        }
+        if (!binary->right)
+        {
+            return collapse_expr_real(binary->left, builtin_functions, error_string);
+        }
+
         auto left = collapse_expr_real(binary->left, builtin_functions, error_string);
         auto right = collapse_expr_real(binary->right, builtin_functions, error_string);
 
@@ -904,7 +914,7 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
         {
             if (call->arguments.size != 1)
             {
-                // @todo when you are able to define your own functions which might look like whatever it wants to this needs to be fixed
+                // @todo when you are able to define your own functions which can take arguments how much ever it wants to this needs to be fixed
                 *error_string = make_string("No known function with arity not equal to 1");
                 return NULL;
             }

@@ -22,6 +22,7 @@ struct Font {
 };
 
 struct Assets {
+    // @todo multiple font sizes so that we can choose between them
     Font font = {};
 
     SDL_Texture* pause_texture = NULL;
@@ -89,15 +90,25 @@ struct UiState {
 
 #define DEFAULT_BACKGROUND_COLOR Color{ 0x88, 0x66, 0x33, 0xff }
 
+struct Text {
+    SDL_Texture* texture = NULL;
+    String string = {};
+
+    Text() {}
+    Text(SDL_Texture* p_texture, String p_string) : texture(p_texture), string(p_string) {}
+};
+
 enum {
-    // static textures
-    TEXTURE_TEXT_PAUSED = 0,
-    TEXTURE_TEXT_PLAYING,
+    // static text
+    TEXT_TEXT_PAUSED = 0,
+    TEXT_TEXT_PLAYING,
+    TEXT_INVALID_EXPRESSION,
+    TEXT_VALID_EXPRESSION,
 
-    // dynamic textures
-    TEXTURE_VOLUME_VALUE,
+    // dynamic text
+    TEXT_VOLUME_VALUE,
 
-    TEXTURE_COUNT,
+    TEXT_COUNT,
 };
 
 struct Application {
@@ -113,10 +124,11 @@ public:
 
     Evaluator m_evaluator = {};
 
-    Array<SDL_Texture*> m_texture_cache = {};
+    Array<Text> m_rendered_text_cache = {};
 
     bool m_quit = false;
     bool doing_text_input = false;
+    bool input_valid = false;
 
     DArray<String> m_error_log = {};
 
@@ -134,8 +146,8 @@ private:
 
     bool mouse_input_ui();
 
-    bool gen_static_textures(Color color);
-    bool gen_textures(Color color);
+    bool gen_static_text(Color color);
+    bool gen_text(Color color);
 
     void update_audio_spec();
 
@@ -145,6 +157,9 @@ private:
     void text_input_stop();
     void toggle_text_input();
     bool update_input_string();
+
+    Text create_text(String text, Color color);
+    void render_text_at(Text text, vec2 center);  // @todo
 
     bool set_eval_string(String s);
 };

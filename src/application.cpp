@@ -57,10 +57,10 @@ bool Application::initialize()
 
     // info string
     {
-        auto textures = new SDL_Texture*[TEXTURE_COUNT];
-        m_texture_cache = Array<SDL_Texture*>(textures, TEXTURE_COUNT);
+        auto texts = new Text[TEXT_COUNT];
+        m_rendered_text_cache = Array<Text>(texts, TEXT_COUNT);
 
-        gen_static_textures(Color{0x44, 0x22, 0x33, 0xff});
+        gen_static_text(Color{0x44, 0x22, 0x33, 0xff});
     }
 
     m_quit = false;
@@ -68,63 +68,71 @@ bool Application::initialize()
     return true;
 }
 
-bool Application::gen_static_textures(Color color)
+Text Application::create_text(String text, Color color)
 {
-    SDL_Color sdl_color = {color.r, color.g, color.b, color.a};
-    SDL_Surface* paused = TTF_RenderText_Solid(m_assets.font.font, "Paused", 0, sdl_color);
-    SDL_Surface* playing = TTF_RenderText_Solid(m_assets.font.font, "Playing", 0, sdl_color);
+    SDL_Color sdl_color = { color.r, color.g, color.b, color.a };
+    SDL_Surface* surface = TTF_RenderText_Solid(m_assets.font.font, text.data, text.size, sdl_color);
 
-    if (!(paused && playing))
+    if (!surface)
+        return Text();
+
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(m_window.renderer, surface);
+
+    if (!texture)
     {
-        if (paused)
-            SDL_DestroySurface(paused);
-        if (playing)
-            SDL_DestroySurface(playing);
+        SDL_DestroySurface(surface);
+        return Text();
+    }
+
+    return Text(texture, text);
+}
+
+void Application::render_text_at(Text text, vec2 center)
+{
+    float tex_w, tex_h;
+    SDL_GetTextureSize(text.texture, &tex_w, &tex_h);
+
+    SDL_FRect src = { 0,0,tex_w,tex_h };
+    SDL_FRect dst = { center.x - tex_w / 2, center.y - tex_h / 2, tex_w, tex_h };
+
+    SDL_RenderTexture(m_window.renderer, text.texture, &src, &dst);
+}
+
+bool Application::gen_static_text(Color color)
+{
+    Text paused = create_text(make_string("Paused"), color);
+    Text playing = create_text(make_string("Playing"), color);
+    Text invalid_expression = create_text(make_string("Invalid Expression"), color);
+    Text valid_expression = create_text(make_string("Valid Expression"), color);
+
+    if (!paused.texture ||
+        !playing.texture ||
+        !invalid_expression.texture)
+    {
         return false;
     }
 
-    SDL_Texture* paused_texture = SDL_CreateTextureFromSurface(m_window.renderer, paused);
-    SDL_Texture* playing_texture = SDL_CreateTextureFromSurface(m_window.renderer, playing);
-
-    if (!(paused_texture && playing_texture))
-    {
-        SDL_DestroySurface(paused);
-        SDL_DestroySurface(playing);
-
-        if (paused_texture)
-            SDL_DestroyTexture(paused_texture);
-        if (playing_texture)
-            SDL_DestroyTexture(playing_texture);
-
-        return false;
-    }
-
-    m_texture_cache.data[TEXTURE_TEXT_PAUSED] = paused_texture;
-    m_texture_cache.data[TEXTURE_TEXT_PLAYING] = playing_texture;
+    m_rendered_text_cache.data[TEXT_TEXT_PAUSED] = paused;
+    m_rendered_text_cache.data[TEXT_TEXT_PLAYING] = playing;
+    m_rendered_text_cache.data[TEXT_INVALID_EXPRESSION] = invalid_expression;
+    m_rendered_text_cache.data[TEXT_VALID_EXPRESSION] = valid_expression;
 
     return true;
 }
 
-bool Application::gen_textures(Color color)
+bool Application::gen_text(Color color)
 {
-    SDL_Color sdl_color = { color.r, color.g, color.b, color.a };
-
     char buffer[50];
     int writen = snprintf(buffer, sizeof(buffer), "%.4f", m_audio.get_volume());
 
-    SDL_Surface* volume = TTF_RenderText_Solid(m_assets.font.font, buffer, writen, sdl_color);
-    if (!volume)
-        return false;
+    Text volume = create_text(make_string(buffer), color);
 
-    SDL_Texture* volume_texture = SDL_CreateTextureFromSurface(m_window.renderer, volume);
-
-    if (!volume_texture)
+    if (!volume.texture)
     {
-        SDL_DestroySurface(volume);
         return false;
     }
 
-    m_texture_cache.data[TEXTURE_VOLUME_VALUE] = volume_texture;
+    m_rendered_text_cache.data[TEXT_VOLUME_VALUE] = volume;
 
     return true;
 }
@@ -147,7 +155,7 @@ void Application::set_volume(float volume)
 {
     m_audio.set_volume(volume);
 
-    gen_textures(Color{0x22, 0x55, 0x65, 0xff});
+    gen_text(Color{0x22, 0x55, 0x65, 0xff});
 }
 
 #define FONT_SIZE 100.0
@@ -368,22 +376,19 @@ void Application::draw_ui()
 
         // volume text
         {
-            SDL_Texture* texture = m_texture_cache.data[TEXTURE_VOLUME_VALUE];
-
-            char buff[50];
-            int string_length = snprintf(buff, sizeof(buff), "%.4f", m_audio.get_volume());
+            Text text = m_rendered_text_cache.data[TEXT_VOLUME_VALUE];
 
             int measured_width = 0;
-            TTF_MeasureString(m_assets.font.font, buff, string_length, 0, &measured_width, NULL);
+            TTF_MeasureString(m_assets.font.font, text.string.data, text.string.size, 0, &measured_width, NULL);
 
             float tex_w, tex_h;
-            SDL_GetTextureSize(texture, &tex_w, &tex_h);
+            SDL_GetTextureSize(text.texture, &tex_w, &tex_h);
 
             SDL_FRect src = { 0, 0, tex_w, tex_h };
             int margin = 10;
             SDL_FRect dst = { volume_slider.x - tex_w / 2, volume_slider.y + volume_slider.h + margin, tex_w, tex_h};
 
-            SDL_RenderTexture(m_window.renderer, texture, &src, &dst);
+            SDL_RenderTexture(m_window.renderer, text.texture, &src, &dst);
         }
     }
 
@@ -405,21 +410,21 @@ void Application::draw_ui()
 
     // paused/playing text
     {
-        SDL_Texture* texture = m_texture_cache.data[(m_audio.paused) ? TEXTURE_TEXT_PAUSED : TEXTURE_TEXT_PLAYING];
+        Text text = m_rendered_text_cache.data[(m_audio.paused) ? TEXT_TEXT_PAUSED : TEXT_TEXT_PLAYING];
 
         Rectangle pause_button = m_ui.m_pause_button;
 
         int measured_width = 0;
-        TTF_MeasureString(m_assets.font.font, "Paused", 0, 0, &measured_width, nullptr);
+        TTF_MeasureString(m_assets.font.font, text.string.data, text.string.size, 0, &measured_width, nullptr);
 
         float tex_w, tex_h;
-        SDL_GetTextureSize(texture, &tex_w, &tex_h);
+        SDL_GetTextureSize(text.texture, &tex_w, &tex_h);
 
         SDL_FRect src = { 0,0,tex_w,tex_h };
         const int margin = 5;
         SDL_FRect dst = {pause_button.x - measured_width/2, pause_button.y + pause_button.h + margin, tex_w, tex_h};
 
-        SDL_RenderTexture(m_window.renderer, texture, &src, &dst);
+        SDL_RenderTexture(m_window.renderer, text.texture, &src, &dst);
     }
 
     // text field
