@@ -83,7 +83,7 @@ void SDLCALL audio_callback_sample(void* userdata, SDL_AudioStream* stream, int 
             */ 
             g_sample_buffer[sample] = eval.value;
 
-            evaluator.step_time(inv_sample_rate * 1e2);
+            evaluator.step_time(inv_sample_rate);
         }
 
         SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);

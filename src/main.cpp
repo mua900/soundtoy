@@ -5,9 +5,11 @@ int main()
     Application app;
 
     if (!app.initialize())
+    {
         return 1;
+    }
 
-    while (!app.m_quit)
+    while (!app.quit)
     {
         app.handle_events();
         app.update();
@@ -15,8 +17,6 @@ int main()
     }
 
     app.cleanup();
-
-    SDL_Quit();
 
     return 0;
 }

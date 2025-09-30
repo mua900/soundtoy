@@ -8,7 +8,6 @@
 
 DArray<Token> tokenize(String expression);
 
-// @todo turn this into a something that can register and remember errors
 struct Error {
     String message = {};
     int offset = 0;
@@ -66,11 +65,15 @@ using Function_ID = unsigned int;
 Var_ID get_var_id(String name);
 Function_ID get_function_id(String name);
 
-// @todo builtin constants like pi, e etc.
 
-enum Builtin_Type {
+enum Builtin_Variable {
+    // constant per evaluation
     BUILTIN_TIME = 0,
     BUILTIN_SAMPLE_RATE,
+
+    // constant
+    BUILTIN_CONST_PI,
+    BUILTIN_CONST_E,
 
     BUILTIN_COUNT
 };

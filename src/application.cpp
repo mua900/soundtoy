@@ -63,7 +63,7 @@ bool Application::initialize()
         gen_static_text(Color{0x44, 0x22, 0x33, 0xff});
     }
 
-    m_quit = false;
+    quit = false;
 
     return true;
 }
@@ -235,7 +235,7 @@ void Application::handle_events()
         {
             case SDL_EVENT_QUIT:
             {
-                m_quit = true;
+                quit = true;
                 break;
             }
             case SDL_EVENT_KEY_DOWN:
@@ -245,7 +245,7 @@ void Application::handle_events()
                 {
                     case SDL_SCANCODE_ESCAPE:
                     {
-                        m_quit = true;
+                        quit = true;
                         break;
                     }
                     case SDL_SCANCODE_RETURN:
@@ -273,7 +273,10 @@ void Application::handle_events()
                     }
                     case SDL_SCANCODE_SPACE:
                     {
-                        m_audio.toggle_pause();
+                        if (!doing_text_input)
+                        {
+                            m_audio.toggle_pause();
+                        }
                         break;
                     }
                     default:
@@ -340,6 +343,7 @@ void Application::update()
 void Application::cleanup()
 {
     m_audio.cleanup();
+    SDL_Quit();
 }
 
 void Application::draw()

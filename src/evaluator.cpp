@@ -1,6 +1,9 @@
 #include "evaluator.h"
 #include <math.h>
 
+const double PI = 3.14159265359;
+const double E = 2.71828182846;
+
 DArray<Token> tokenize(String expression)
 {
     auto tokens = DArray<Token>(8);
@@ -761,10 +764,18 @@ Var_ID get_var_id(String name)
         return BUILTIN_TIME;
     }
     else if (string_compare(make_string("sample_rate"), name) ||
-        string_compare(make_string("sr"), name)
-        )
+             string_compare(make_string("sr"), name)
+            )
     {
         return BUILTIN_SAMPLE_RATE;
+    }
+    else if (string_compare(make_string("pi"), name))
+    {
+        return BUILTIN_CONST_PI;
+    }
+    else if (string_compare(make_string("e"), name))
+    {
+        return BUILTIN_CONST_E;
     }
     else
     {
@@ -784,7 +795,7 @@ Function_ID get_function_id(String name)
         return BUILTIN_FUNC_ABS;
     }
     else if (string_compare(name, make_string("sign"))
-         || string_compare(name, make_string("sgn"))) {  // @xxx is this a good idea?
+         || string_compare(name, make_string("sgn"))) {  // @xxx is this a good idea to allow multiple keywords to mean the same thing?
         return BUILTIN_FUNC_SIGN;
     }
     else if (string_compare(name, make_string("asin"))) {
@@ -815,11 +826,12 @@ bool is_builtin_function(Expr_Call* call)
 Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String* error_string);
 Expr* collapse_expr(Expr* root, String* error_string)
 {
-    bool inited = false;
+    static bool inited = false;
     static Builtin_Function_List builtin_functions;
     if (!inited)
     {
         get_default_builtin_functions(builtin_functions);
+        inited = true;
     }
 
     return collapse_expr_real(root, builtin_functions, error_string);
@@ -887,6 +899,8 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
             case Binop_Le:      return new Expr_Literal(left_numeric <= right_numeric);
             }
         }
+
+        break;
     }
     case Expr_Type::Call:
     {

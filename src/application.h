@@ -111,7 +111,7 @@ enum {
     TEXT_COUNT,
 };
 
-struct Application {
+class Application {
 public:
     Window m_window = {};
     Mouse_State m_mouse = {};
@@ -126,7 +126,7 @@ public:
 
     Array<Text> m_rendered_text_cache = {};
 
-    bool m_quit = false;
+    bool quit = false;
     bool doing_text_input = false;
     bool input_valid = false;
 
