@@ -45,6 +45,22 @@ struct DArray
 		m_cap = ncap;
 	}
 
+	bool is_empty()
+	{
+		return m_size == 0;
+	}
+
+	T pop()
+	{
+		if (is_empty())
+		{
+			return nullptr;
+		}
+
+		m_size -= 1;
+		return m_data[m_size - 1];
+	}
+
 	void free()
 	{
 		if (m_data)

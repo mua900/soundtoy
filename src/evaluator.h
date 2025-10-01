@@ -5,6 +5,7 @@
 
 #include "token.h"
 #include "expr.h"
+#include "bytecode.h"
 
 DArray<Token> tokenize(String expression);
 
@@ -90,6 +91,7 @@ void get_default_builtin_functions(Builtin_Function* func_list);
 
 bool is_builtin_function(Expr_Call* call);
 
+// on tree evaluator
 struct Evaluator
 {
     Evaluator();

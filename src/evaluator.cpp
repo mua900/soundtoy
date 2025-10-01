@@ -558,6 +558,10 @@ Eval Evaluator::evaluate(Expr* expr)
                 eval_error.message = make_string("String literals aren't used and doesn't mean anything yet");
                 return fail;
             }
+            else if (literal->value.type == Value::VALUE_BOOL)
+            {
+                NOT_IMPLEMENTED("Logical operations")
+            }
             else
                 panic("Unknown value type");  // @todo cleanup
         }

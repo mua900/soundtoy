@@ -49,14 +49,14 @@ void SDLCALL audio_callback_default(void* userdata, SDL_AudioStream* stream, int
     {
         for (int i = 0; i < BUFFER_SIZE; i++)
         {
-            buffer[i] = 0.45;
+            buffer[i] = sin(audio->m_time);
         }
 
         SDL_PutAudioStreamData(stream, buffer, BUFFER_SIZE);
     }
 }
 
-#define SAMPLE_BUFFER_SIZE 1024
+#define SAMPLE_BUFFER_SIZE 512
 float g_sample_buffer[SAMPLE_BUFFER_SIZE];
 
 void SDLCALL audio_callback_sample(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
@@ -81,7 +81,8 @@ void SDLCALL audio_callback_sample(void* userdata, SDL_AudioStream* stream, int 
                 we are in the callback and we shouldn't be here if we have an invalid expression.
                 And we don't want to check in the callback.
             */ 
-            g_sample_buffer[sample] = eval.value;
+            float value = SDL_clamp(eval.value, 0.0, 1.0);
+            g_sample_buffer[sample] = value;
 
             evaluator.step_time(inv_sample_rate);
         }
