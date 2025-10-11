@@ -472,6 +472,8 @@ void Application::draw_ui()
 
 bool Application::mouse_input_ui()
 {
+    
+    
     if (m_ui.m_volume_slider.contains(m_mouse.pos))
     {
         float diff = m_mouse.pos.x - m_ui.m_volume_slider.x;

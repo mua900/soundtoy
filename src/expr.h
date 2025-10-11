@@ -1,5 +1,7 @@
 #pragma once
 
+#include "token.h"
+
 enum Op_Unary {
     Unop_Negate, Unop_Not
 };
@@ -20,38 +22,40 @@ enum Op_Binary {
     Binop_Le,
 };
 
+enum class Value_Type {
+    INTEGER,
+    REAL,
+    BOOL,
+    STRING,
+};
+
 struct Value {
-    enum Value_Type {
-        VALUE_INTEGER,
-        VALUE_REAL,
-        VALUE_BOOL,
-        VALUE_STRING,
-    } type;
+    Value_Type type;
 
     union {
         bool boolean;
-        long long integer;
+        s64 integer;
         double real;
         String string;
     };
 
 
     Value(bool b) : boolean(b) {
-        type = VALUE_BOOL;
+        type = Value_Type::BOOL;
     }
     Value(long long integer) : integer(integer) {
-        type = VALUE_INTEGER;
+        type = Value_Type::INTEGER;
     }
     Value(double real) : real(real) {
-        type = VALUE_REAL;
+        type = Value_Type::REAL;
     }
     Value(String string) : string(string) {
-        type = VALUE_STRING;
+        type = Value_Type::STRING;
     }
 
     bool is_numeric()
     {
-        return type == VALUE_INTEGER || type == VALUE_REAL;
+        return type == Value_Type::INTEGER || type == Value_Type::REAL;
     }
 };
 
@@ -131,8 +135,9 @@ struct Expr_Call : Expr {
 struct Expr_Variable : Expr {
     String name;
     int var_id = 0;
+    Value_Type variable_type;  // @todo
 
-    Expr_Variable(String var_name, int id) : name(var_name), var_id(id) {
+    Expr_Variable(String var_name, int id) : name(var_name), var_id(id), variable_type(Value_Type::INTEGER) {
         type = Expr_Type::Variable;
     }
 };

@@ -26,6 +26,8 @@ add_executable(soundtoy
     src/token.h
     src/expr.h
     src/bytecode.h
+    src/bytecode.cpp
+    src/template.h
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT soundtoy)

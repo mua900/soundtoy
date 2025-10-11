@@ -11,22 +11,6 @@
 #define IS_MAX_UNSIGNED(x) ((x)+1==0)
 #define BIT(x) (1U << (x))
 
-#ifdef _MSC_VER
-#include <intrin.h>
-
-#define NORETURN __declspec(noreturn)
-
-#else
-
-#define NORETURN __attribute__((noreturn))
-
-#endif
-
-NORETURN
-void panic(char const* const msg);
-
-#define NOT_IMPLEMENTED(x) panic(x " not implemeneted");
-
 typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
@@ -37,6 +21,50 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
+
+unsigned int pop_count(u64 x);
+
+#ifdef _MSC_VER
+
+#include <intrin.h>
+
+#define NORETURN __declspec(noreturn)
+
+static inline unsigned int msvc_trailing_zeros(u64 x)
+{
+    unsigned long pos = 0;
+    unsigned char is_zero = _BitScanForward64(&pos, x);
+    // @note no checking for zero here since we assume non-zero input.
+    return pos;
+}
+
+static inline unsigned int msvc_leading_zeros(u64 x)
+{
+    unsigned long pos = 0;
+    unsigned char is_zero = _BitScanReverse64(&pos, x);
+    // @note no checking for zero here since we assume non-zero input.
+    return pos;
+}
+
+#define POP_COUNT(x)      pop_count(x)
+#define LEADING_ZEROS(x)  msvc_trailing_zeros(x)
+#define TRAILING_ZEROS(x) msvc_leading_zeros(x)
+
+#else // _MSC_VER
+
+#define NORETURN __attribute__((noreturn))
+
+#define POP_COUNT(x)      __builtin_popcountll(x)
+#define LEADING_ZEROS(x)  __builtin_clzll(x)
+#define TRAILING_ZEROS(x) __builtin_ctzll(x)
+
+#endif
+
+NORETURN
+void panic(char const* const msg);
+
+#define NOT_IMPLEMENTED(x) panic(x " not implemeneted");
+
 struct String {
     const char* data = NULL;
     int size = 0;
@@ -44,6 +72,7 @@ struct String {
     String () {}
     String (const char* d, int s) : data(d), size(s) {}
 
+    bool operator==(String& other);
     void print();
 };
 

@@ -544,21 +544,21 @@ Eval Evaluator::evaluate(Expr* expr)
         case Expr_Type::Literal:
         {
             auto literal = static_cast<Expr_Literal*>(expr);
-            if (literal->value.type == Value::VALUE_INTEGER)
+            if (literal->value.type == Value_Type::INTEGER)
             {
                 // @todo integer math
                 return { (double)literal->value.integer, true };
             }
-            else if (literal->value.type == Value::VALUE_REAL)
+            else if (literal->value.type == Value_Type::REAL)
             {
                 return { literal->value.real, true };
             }
-            else if (literal->value.type == Value::VALUE_STRING)
+            else if (literal->value.type == Value_Type::STRING)
             {
                 eval_error.message = make_string("String literals aren't used and doesn't mean anything yet");
                 return fail;
             }
-            else if (literal->value.type == Value::VALUE_BOOL)
+            else if (literal->value.type == Value_Type::BOOL)
             {
                 NOT_IMPLEMENTED("Logical operations")
             }
@@ -681,12 +681,14 @@ void print_expr(Expr* expr, int indent)
             auto literal = static_cast<Expr_Literal*>(expr);
             switch (literal->value.type)
             {
-                case Value::VALUE_INTEGER:
+                case Value_Type::INTEGER:
                     printf("Literal: %lli\n", literal->value.integer); break;
-                case Value::VALUE_REAL:
+                case Value_Type::REAL:
                     printf("Literal: %f\n", literal->value.real); break;
-                case Value::VALUE_STRING:
+                case Value_Type::STRING:
                     printf("Literal: %s\n", literal->value.string.data); break;
+                case Value_Type::BOOL:
+                    printf("Bool: %s\n", BOOL_STRING(literal->value.boolean)); break;
             }
             break;
         }
@@ -876,14 +878,14 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
             Value left_value = static_cast<Expr_Literal*>(left)->value;
             Value right_value = static_cast<Expr_Literal*>(right)->value;
 
-            if (left_value.type == Value::VALUE_STRING || right_value.type == Value::VALUE_STRING)
+            if (left_value.type == Value_Type::STRING || right_value.type == Value_Type::STRING)
             {
                 *error_string = make_string("Can't do aritmetic with strings");
                 break;
             }
 
-            double left_numeric = (left_value.type == Value::VALUE_INTEGER) ? left_value.integer : left_value.real;
-            double right_numeric = (right_value.type == Value::VALUE_INTEGER) ? right_value.integer : right_value.real;
+            double left_numeric = (left_value.type == Value_Type::INTEGER) ? left_value.integer : left_value.real;
+            double right_numeric = (right_value.type == Value_Type::INTEGER) ? right_value.integer : right_value.real;
 
             switch (binary->op)
             {
@@ -921,7 +923,7 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
             }
             else
             {
-                if (static_cast<Expr_Literal*>(call->arguments.data[0])->value.type != Value::VALUE_REAL)
+                if (static_cast<Expr_Literal*>(call->arguments.data[0])->value.type != Value_Type::REAL)
                 {
                     all_reals = false;
                 }
@@ -995,11 +997,11 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
                         return NULL;
                     }
 
-                    if (operand->value.type == Value::VALUE_INTEGER)
+                    if (operand->value.type == Value_Type::INTEGER)
                     {
                         operand->value.integer = -operand->value.integer;
                     }
-                    else if (operand->value.type == Value::VALUE_REAL)
+                    else if (operand->value.type == Value_Type::REAL)
                     {
                         operand->value.real = -operand->value.real;
                     }
@@ -1008,7 +1010,7 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
                 }
                 case Unop_Not:
                 {
-                    if (operand->value.type != Value::VALUE_BOOL)
+                    if (operand->value.type != Value_Type::BOOL)
                     {
                         *error_string = make_string("Can not apply the operator Not to non boolean value");
                         return NULL;
