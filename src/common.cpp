@@ -209,12 +209,26 @@ void String_Builder::append_integer(int n)
         n = -n;
     }
 
-    while (n)
+    int count = 0;
+    int pow = 1;
+    while (n >= pow)
+    {
+        pow *= 10;
+        count += 1;
+    }
+
+    grow_to_size(cursor + count);
+
+    int increment = count;
+    while (count)
     {
         char c = (n % 10) + '0';
-        append_char(c);
+        buffer[cursor + count - 1] = c;
         n /= 10;
+        count -= 1;
     }
+
+    cursor += increment;
 }
 
 void String_Builder::clear_and_append(String s) {

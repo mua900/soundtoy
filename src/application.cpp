@@ -36,8 +36,10 @@ bool Application::initialize()
         }
     }
 
+    const int initial_sample_rate = 48000;
+
     {
-        if (!m_audio.initialize(48000, 1))
+        if (!m_audio.initialize(initial_sample_rate, 1))
         {
             std::cerr << "Failed to initialize audio\n";
             return false;
@@ -52,7 +54,7 @@ bool Application::initialize()
 
     {
         get_default_builtin_functions(m_evaluator.builtin_functions);
-        m_evaluator.set(48000, 0.0);
+        m_evaluator.set(initial_sample_rate, 0.0);
     }
 
     // info string
@@ -61,6 +63,13 @@ bool Application::initialize()
         m_rendered_text_cache = Array<Text>(texts, TEXT_COUNT);
 
         gen_static_text(Color{0x44, 0x22, 0x33, 0xff});
+    }
+
+    // ui
+    {
+        m_ui.m_sample_rate_box.m_text.append_integer(initial_sample_rate);
+        printf("%s\n", m_ui.m_sample_rate_box.m_text.c_string());
+        m_ui.m_sample_rate_box.update_text(m_window.renderer, m_assets.font, false);
     }
 
     quit = false;
@@ -87,17 +96,6 @@ Text Application::create_text(String text, Color color)
     return Text(texture, text);
 }
 
-void Application::render_text_at(Text text, vec2 center)
-{
-    float tex_w, tex_h;
-    SDL_GetTextureSize(text.texture, &tex_w, &tex_h);
-
-    SDL_FRect src = { 0,0,tex_w,tex_h };
-    SDL_FRect dst = { center.x - tex_w / 2, center.y - tex_h / 2, tex_w, tex_h };
-
-    SDL_RenderTexture(m_window.renderer, text.texture, &src, &dst);
-}
-
 bool Application::gen_static_text(Color color)
 {
     Text paused = create_text(make_string("Paused"), color);
@@ -112,8 +110,8 @@ bool Application::gen_static_text(Color color)
         return false;
     }
 
-    m_rendered_text_cache.data[TEXT_TEXT_PAUSED] = paused;
-    m_rendered_text_cache.data[TEXT_TEXT_PLAYING] = playing;
+    m_rendered_text_cache.data[TEXT_PAUSED] = paused;
+    m_rendered_text_cache.data[TEXT_PLAYING] = playing;
     m_rendered_text_cache.data[TEXT_INVALID_EXPRESSION] = invalid_expression;
     m_rendered_text_cache.data[TEXT_VALID_EXPRESSION] = valid_expression;
 
@@ -267,7 +265,7 @@ void Application::handle_events()
                             if (text_field)
                             {
                                 text_field->delete_last();
-                                text_field->render_text_field_texture(m_window.renderer, text_field->get_string(), m_assets.font, false);
+                                text_field->update_text(m_window.renderer, m_assets.font, false);
                             }
                         }
                         break;
@@ -442,7 +440,7 @@ void Application::draw_ui()
         const int margin = 5;
         Font font = m_assets.font;
         render_text(m_window.renderer, font,
-            m_rendered_text_cache.data[(m_audio.paused) ? TEXT_TEXT_PAUSED : TEXT_TEXT_PLAYING],
+            m_rendered_text_cache.data[(m_audio.paused) ? TEXT_PAUSED : TEXT_PLAYING],
             vec2(pause_button.x, pause_button.y + pause_button.h + font.size/2));
     }
 
@@ -466,8 +464,8 @@ void Application::draw_ui()
     }
 
     // sample rate text box
+    SDL_SetRenderDrawColor(m_window.renderer, 0xaa, 0x22, 0x11, 0xff);
     {
-        SDL_SetRenderDrawColor(m_window.renderer, 0xaa, 0x22, 0x11, 0xff);
         Rectangle box_area = m_ui.m_sample_rate_box.m_area;
         SDL_FRect area = {box_area.x, box_area.y, box_area.w, box_area.h};
         SDL_RenderFillRect(m_window.renderer, &area);
@@ -488,7 +486,11 @@ void Application::draw_ui()
     {
         if (m_events[EVENT_INVALID_EXPRESSION].active)
         {
-            render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(TEXT_INVALID_EXPRESSION), vec2(300, 500));
+            auto tf_area = m_ui.m_text_field.m_area;
+
+            render_text(m_window.renderer, m_assets.font,
+                m_rendered_text_cache.get(TEXT_INVALID_EXPRESSION),
+                vec2(tf_area.x + tf_area.w/2, tf_area.y - tf_area.h));
         }
     }
 }
@@ -577,7 +579,7 @@ void Application::toggle_text_input()
     }
 }
 
-void UiState::update(Window window)
+void Ui_State::update(Window window)
 {
     ivec2 window_size;
     SDL_GetWindowSize(window.window, &window_size.x, &window_size.y);
@@ -594,7 +596,7 @@ void UiState::update(Window window)
     m_sample_rate_box.m_area.h = window_size.y * (1.0 / 5.0);
 }
 
-Text_Field* UiState::get_selected_text_field()
+Text_Field* Ui_State::get_selected_text_field()
 {
     return (m_text_input_target == TEXT_INPUT_TEXT_FIELD) ? &m_text_field : &m_sample_rate_box;
 }
@@ -643,8 +645,7 @@ bool Application::update_input_string()
     auto text_field = m_ui.get_selected_text_field();
     if (!text_field)
         return false;
-    String s = text_field->get_string();
-    return text_field->render_text_field_texture(m_window.renderer, s, m_assets.font,
+    return text_field->update_text(m_window.renderer, m_assets.font,
                                                (m_ui.m_text_input_target == TEXT_INPUT_TEXT_FIELD));
 }
 

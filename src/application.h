@@ -54,6 +54,16 @@ struct Text_Field
         return m_text.to_string();
     }
 
+    void append_string(String s)
+    {
+        m_text.append(s);
+    }
+
+    bool update_text(SDL_Renderer* renderer, Font font, bool wrapped)
+    {
+        return render_text_field_texture(renderer, get_string(), font, wrapped);
+    }
+
     void delete_text()
     {
         m_text.remove_slice(m_selection_start, m_selection_end);
@@ -64,6 +74,7 @@ struct Text_Field
         m_text.remove(1);
     }
 
+private:
     bool render_text_field_texture(SDL_Renderer* renderer, String s, Font font, bool wrapped);
 };
 
@@ -73,7 +84,7 @@ enum Text_Input_Target : u8 {
     TEXT_INPUT_SAMPLE_RATE,
 };
 
-struct UiState {
+struct Ui_State {
     Rectangle m_volume_slider = { 100, 100, 100, 10 };
     vec2 m_volume_slider_knob_scale = { 0.1, 2 };
 
@@ -100,8 +111,8 @@ struct Text {
 
 enum {
     // static text
-    TEXT_TEXT_PAUSED = 0,
-    TEXT_TEXT_PLAYING,
+    TEXT_PAUSED = 0,
+    TEXT_PLAYING,
     TEXT_INVALID_EXPRESSION,
     TEXT_VALID_EXPRESSION,
 
@@ -132,7 +143,7 @@ public:
     Assets m_assets = {};
     Audio m_audio = {};
 
-    UiState m_ui = {};
+    Ui_State m_ui = {};
     Color m_background_color = DEFAULT_BACKGROUND_COLOR;
 
     Evaluator m_evaluator = {};
@@ -180,7 +191,6 @@ private:
     bool update_input_string();
 
     Text create_text(String text, Color color);
-    void render_text_at(Text text, vec2 center);  // @todo
 
     bool set_eval_string(String s);
 };
