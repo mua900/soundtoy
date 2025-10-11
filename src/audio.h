@@ -12,7 +12,7 @@ struct Audio {
 
     double sample_time = 0;  // time variable used for sampling.
 
-    double m_time = 0;       // real life time since the application startup updated by the application
+    // double m_time = 0;       // real life time since the application startup updated by the application
     int m_sample_rate = 0;
     int m_channel_count = 0;
 

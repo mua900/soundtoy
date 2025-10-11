@@ -13,7 +13,7 @@
 
 struct Window {
     SDL_Window* window;
-    SDL_Renderer* renderer;
+    SDL_Renderer* renderer; // @todo custom renderer maybe?
 };
 
 struct Font {
@@ -111,6 +111,19 @@ enum {
     TEXT_COUNT,
 };
 
+#define NS_PER_SECONDS 1'000'000'000
+
+// remaining ticks (nanoseconds) for events that will have to stay alive for a certain time
+struct Event_Timeout {
+    s64 event = 0;
+    bool active = false;
+};
+
+enum Events {
+    EVENT_INVALID_EXPRESSION,
+    EVENT_COUNT,
+};
+
 class Application {
 public:
     Window m_window = {};
@@ -123,6 +136,11 @@ public:
     Color m_background_color = DEFAULT_BACKGROUND_COLOR;
 
     Evaluator m_evaluator = {};
+
+    s64 m_time = 0;
+    double m_time_seconds = 0;
+
+    Event_Timeout m_events[EVENT_COUNT] = {};
 
     Array<Text> m_rendered_text_cache = {};
 
@@ -140,6 +158,9 @@ public:
 
     void cleanup();
 private:
+    void timeout();
+    void set_event_active(int event_index, double timeout_time);
+
     bool load_assets();
 
     void draw_ui();
@@ -163,3 +184,5 @@ private:
 
     bool set_eval_string(String s);
 };
+
+void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale = vec2(0, 0));

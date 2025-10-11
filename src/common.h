@@ -94,11 +94,18 @@ struct ivec2 {
 };
 
 struct vec2 {
-    float x, y;
+    float x = 0, y = 0;
+    vec2() {}
+    vec2(float p_x, float p_y) : x(p_x), y(p_y) {}
 };
 
 struct Rectangle {
     float x, y, w, h;
+
+    Rectangle() {}
+    Rectangle(float p_x, float p_y, float p_w, float p_h)
+        : x(p_x), y(p_y), w(p_w), h(p_h)
+    {}
 
     bool contains(vec2 p);
 };

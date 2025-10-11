@@ -254,6 +254,7 @@ void Application::handle_events()
                         if (!set)
                         {
                             printf("Could not set sample expression\n");
+                            set_event_active(EVENT_INVALID_EXPRESSION, 5.0);
                         }
                         text_input_stop();
                         break;
@@ -329,15 +330,38 @@ void Application::handle_events()
 }
 
 
-#define NS_PER_SECONDS 1'000'000'000
-
 void Application::update()
 {
+    // update time
     SDL_Time time = SDL_GetTicksNS();
     double time_sec = (double)time / NS_PER_SECONDS;
-    m_audio.m_time = time_sec;
+    m_time = time;
+    m_time_seconds = time_sec;
+
+    timeout();
 
     m_evaluator.update(time_sec);
+}
+
+void Application::timeout()
+{
+    for (int i = 0; i < ARRAY_SIZE(m_events); i++)
+    {
+        if (m_events[i].active)
+        {
+            if (m_events[i].event < m_time)
+            {
+                m_events[i].active = false;
+            }
+        }
+    }
+}
+
+void Application::set_event_active(int event_index, double timeout_time)
+{
+    s64 timeout = (s64)(timeout_time * NS_PER_SECONDS);
+    m_events[event_index].active = true;
+    m_events[event_index].event = m_time + timeout;
 }
 
 void Application::cleanup()
@@ -378,7 +402,7 @@ void Application::draw_ui()
                                     slider_knob_width, slider_knob_height };
         SDL_RenderFillRect(m_window.renderer, &slider_knob);
 
-        // volume text
+        // volume text  @todo refactor
         {
             Text text = m_rendered_text_cache.data[TEXT_VOLUME_VALUE];
 
@@ -414,21 +438,12 @@ void Application::draw_ui()
 
     // paused/playing text
     {
-        Text text = m_rendered_text_cache.data[(m_audio.paused) ? TEXT_TEXT_PAUSED : TEXT_TEXT_PLAYING];
-
         Rectangle pause_button = m_ui.m_pause_button;
-
-        int measured_width = 0;
-        TTF_MeasureString(m_assets.font.font, text.string.data, text.string.size, 0, &measured_width, nullptr);
-
-        float tex_w, tex_h;
-        SDL_GetTextureSize(text.texture, &tex_w, &tex_h);
-
-        SDL_FRect src = { 0,0,tex_w,tex_h };
         const int margin = 5;
-        SDL_FRect dst = {pause_button.x - measured_width/2, pause_button.y + pause_button.h + margin, tex_w, tex_h};
-
-        SDL_RenderTexture(m_window.renderer, text.texture, &src, &dst);
+        Font font = m_assets.font;
+        render_text(m_window.renderer, font,
+            m_rendered_text_cache.data[(m_audio.paused) ? TEXT_TEXT_PAUSED : TEXT_TEXT_PLAYING],
+            vec2(pause_button.x, pause_button.y + pause_button.h + font.size/2));
     }
 
     // text field
@@ -466,6 +481,14 @@ void Application::draw_ui()
             SDL_FRect string_area = {area.x, area.y, area.w, font_size * line_count};
             SDL_FRect texture_area = {0, 0, string_area.w, string_area.h};
             SDL_RenderTexture(m_window.renderer, text_texture, &texture_area, &string_area);
+        }
+    }
+
+    // event text
+    {
+        if (m_events[EVENT_INVALID_EXPRESSION].active)
+        {
+            render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(TEXT_INVALID_EXPRESSION), vec2(300, 500));
         }
     }
 }
@@ -658,4 +681,24 @@ bool Application::set_eval_string(String eval_string)
     }
 
     return true;
+}
+
+void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale)
+{
+    int measured_width = 0;
+    TTF_MeasureString(font.font, text.string.data, text.string.size, 0, &measured_width, nullptr);
+
+    float tex_w, tex_h;
+    SDL_GetTextureSize(text.texture, &tex_w, &tex_h);
+
+
+    if (!scale.x)
+    {
+        scale = vec2(tex_w, tex_h);
+    }
+
+    SDL_FRect src = { 0,0,tex_w,tex_h };
+    SDL_FRect dst = {where.x - measured_width/2, where.y - font.size/2, scale.x, scale.y};
+
+    SDL_RenderTexture(renderer, text.texture, &src, &dst);
 }
