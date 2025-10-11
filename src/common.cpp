@@ -18,27 +18,6 @@ void panic(char const* const msg)
     exit(1);
 }
 
-// @todo get rid of this and add proper logging to the project
-void log_log(enum Log_Level ll, char const* const msg, ...)
-{
-    char buff[1024];
-    va_list vargs;
-    va_start(vargs, msg);
-    vsnprintf(buff, sizeof(buff), msg, vargs);
-    va_end(vargs);
-    switch (ll)
-    {
-    case Log_Level_Message:
-        fprintf(stderr, "[MSG]: %s\n", buff); break;
-    case Log_Level_Warning:
-        fprintf(stderr, "[WARNING]: %s\n", buff); break;
-    case Log_Level_Error:
-        fprintf(stderr, "[ERROR]: %s\n", buff); break;
-    default:
-        fprintf(stderr, "%s\n", buff); break;
-    }
-}
-
 // very simple snap function
 float snap_value(float val, float bound1, float bound2, float threshold)
 {
@@ -278,10 +257,15 @@ bool Rectangle::contains(vec2 p)
 
 void String::print()
 {
-    String_Builder sb(size);
-    sb.append(*this);
-    printf("%s\n", sb.c_string());
-    sb.free_buffer();
+    int size_nt = size + 1;
+    char* mem = (char*)malloc(size_nt);
+    if (!mem)
+    {
+        panic("Malloc fail");
+    }
+    memcpy(mem, data, size);
+    printf("%s", mem);
+    free(mem);
 }
 
 bool String::operator==(String& other)

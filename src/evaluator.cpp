@@ -163,7 +163,7 @@ DArray<Token> tokenize(String expression)
                     tokens.add(Token(s_literal, TOKEN_TYPE_LITERAL_STRING, start));
                 }
                 else {
-                    LOG_MSGF("Unknown character %c", ch);
+                    fprintf(stderr, "Unknown character %c", ch);
                     cursor++;
                 }
             }
@@ -196,7 +196,7 @@ Array<Expr*> Parser::parse(String expression_string)
     {
         if (cursor >= tokens.size)
         {
-            LOG_ERROR("Malformed token stream");
+            fprintf(stderr, "Malformed token stream");
             break;
         }
 

@@ -122,21 +122,6 @@ struct Color {
 
 #define COLOR_ARG(color) color.r,color.g,color.b,color.a
 
-enum Log_Level {
-    Log_Level_Message,
-    Log_Level_Warning,
-    Log_Level_Error,
-};
-
-void log_log(enum Log_Level ll, char const* const msg, ...);
-
-#define LOG_ERROR(msg)    log_log(Log_Level_Error, msg)
-#define LOG_WARNING(msg)  log_log(Log_Level_Warning, msg)
-#define LOG_MSG(msg)      log_log(Log_Level_Message, msg)
-#define LOG_ERRORF(msg, ...)    log_log(Log_Level_Error, msg, __VA_ARGS__)
-#define LOG_WARNINGF(msg, ...)  log_log(Log_Level_Warning, msg, __VA_ARGS__)
-#define LOG_MSGF(msg, ...)      log_log(Log_Level_Message, msg, __VA_ARGS__)
-
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
 #define MIN(x,y) (((x) > (y)) ? (y) : (x))

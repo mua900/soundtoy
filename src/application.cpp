@@ -68,7 +68,6 @@ bool Application::initialize()
     // ui
     {
         m_ui.m_sample_rate_box.m_text.append_integer(initial_sample_rate);
-        printf("%s\n", m_ui.m_sample_rate_box.m_text.c_string());
         m_ui.m_sample_rate_box.update_text(m_window.renderer, m_assets.font, false);
     }
 
@@ -178,7 +177,7 @@ bool Application::load_assets()
         m_assets.pause_texture = IMG_LoadTexture(m_window.renderer, sb.c_string());
         if (!m_assets.pause_texture)
         {
-            LOG_ERROR("Failed to load pause texture");
+            fprintf(stderr, "Failed to load pause texture\n");
             return false;
         }
         sb.remove(pause_texture.size);
@@ -190,7 +189,7 @@ bool Application::load_assets()
         m_assets.resume_texture = IMG_LoadTexture(m_window.renderer, sb.c_string());
         if (!m_assets.resume_texture)
         {
-            LOG_ERROR("Failed to load resume texture");
+            fprintf(stderr, "Failed to load resume texture\n");
             return false;
         }
         sb.remove(resume_texture.size);
@@ -677,7 +676,7 @@ bool Application::set_eval_string(String eval_string)
 
     if (!m_audio.set_sample_expression(parsed.get(0)))
     {
-        printf("Failed to set sample expression");
+        fprintf(stderr, "Failed to set sample expression\n");
         return false;
     }
 
