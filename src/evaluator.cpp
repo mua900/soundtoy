@@ -152,7 +152,7 @@ DArray<Token> tokenize(String expression)
                     {
                         if (cursor >= expression.size)
                         {
-                            printf("Unterminated string literal");
+                            fprintf(stderr, "Unterminated string literal\n");
                             break;
                         }
                         cursor++;
@@ -196,7 +196,7 @@ Array<Expr*> Parser::parse(String expression_string)
     {
         if (cursor >= tokens.size)
         {
-            fprintf(stderr, "Malformed token stream");
+            fprintf(stderr, "Malformed token stream\n");
             break;
         }
 
@@ -238,7 +238,7 @@ Expr* Parser::parse_expression()
 
         if (!expr)
         {
-            printf("Collapse expression failed\n");
+            fprintf(stderr, "Collapse expression failed\n");
         }
     }
 
@@ -686,7 +686,7 @@ void print_expr(Expr* expr, int indent)
                 case Value_Type::REAL:
                     printf("Literal: %f\n", literal->value.real); break;
                 case Value_Type::STRING:
-                    printf("Literal: %s\n", literal->value.string.data); break;
+                    literal->value.string.print(true); break;
                 case Value_Type::BOOL:
                     printf("Bool: %s\n", BOOL_STRING(literal->value.boolean)); break;
             }
@@ -695,7 +695,7 @@ void print_expr(Expr* expr, int indent)
         case Expr_Type::Variable:
         {
             auto var = static_cast<Expr_Variable*>(expr);
-            printf("Variable %s\n", var->name.data);
+            var->name.print(true);
             break;
         }
         case Expr_Type::Unary:
@@ -724,7 +724,7 @@ void print_expr(Expr* expr, int indent)
         case Expr_Type::Call:
         {
             auto call = static_cast<Expr_Call*>(expr);
-            printf("Call %s\n", call->function_name.data);
+            call->function_name.print(true);
             for (int i = 0; i < call->arguments.size; i++)
             {
                 print_expr(call->arguments.get(i), indent + 1);

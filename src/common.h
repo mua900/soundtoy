@@ -73,7 +73,7 @@ struct String {
     String (const char* d, int s) : data(d), size(s) {}
 
     bool operator==(String& other);
-    void print();
+    void print(bool newline = false);
 };
 
 #define STRING_EMPTY ((String){.data=NULL,.size=0})

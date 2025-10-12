@@ -84,14 +84,15 @@ enum Text_Input_Target : u8 {
     TEXT_INPUT_SAMPLE_RATE,
 };
 
+#define MAX_INPUT_FIELD_COUNT 4
+
 struct Ui_State {
     Rectangle m_volume_slider = { 100, 100, 100, 10 };
     vec2 m_volume_slider_knob_scale = { 0.1, 2 };
 
     Rectangle m_pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
-    Text_Field m_text_field = { { INIT_WINDOW_WIDTH / 2 - 500, INIT_WINDOW_HEIGHT * (4.0 / 5.0) - 100, 1000, 200 } };
-    Text_Field m_sample_rate_box = { { INIT_WINDOW_WIDTH * (3.0 / 5.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0),
-                                INIT_WINDOW_WIDTH / 5.0, INIT_WINDOW_HEIGHT / 5.0 } };
+    Text_Field input_text_fields[MAX_INPUT_FIELD_COUNT] = {};
+    Text_Field m_sample_rate_box = { { INIT_WINDOW_WIDTH * (3.0 / 5.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0), INIT_WINDOW_WIDTH / 5.0, INIT_WINDOW_HEIGHT / 5.0 } };
 
     Text_Input_Target m_text_input_target = TEXT_INPUT_TEXT_FIELD;
 
@@ -113,6 +114,7 @@ enum {
     // static text
     TEXT_PAUSED = 0,
     TEXT_PLAYING,
+    TEXT_SAMPLE_RATE,
     TEXT_INVALID_EXPRESSION,
     TEXT_VALID_EXPRESSION,
 

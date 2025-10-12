@@ -255,7 +255,7 @@ bool Rectangle::contains(vec2 p)
     return p.x >= x && p.y >= y && p.x <= x + w && p.y <= y + h;
 }
 
-void String::print()
+void String::print(bool newline)
 {
     int size_nt = size + 1;
     char* mem = (char*)malloc(size_nt);
@@ -264,7 +264,14 @@ void String::print()
         panic("Malloc fail");
     }
     memcpy(mem, data, size);
-    printf("%s", mem);
+    mem[size] = '\0';
+    if (newline)
+    {
+        printf("%s\n", mem);
+    }
+    else {
+        printf("%s", mem);
+    }
     free(mem);
 }
 
