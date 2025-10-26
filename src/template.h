@@ -26,6 +26,11 @@ struct DArray
 		return m_data[index];
 	}
 
+	T& get_ref(int index) {
+		if (index >= m_size) panic("Out of bounds array access");
+		return m_data[index];
+	}
+
 	int add(T elem)
 	{
 		int ret_index = m_size;

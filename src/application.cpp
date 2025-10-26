@@ -67,10 +67,13 @@ bool Application::initialize()
 
     // ui
     {
-        m_ui.m_sample_rate_box.m_text.append_integer(initial_sample_rate);
-        m_ui.m_sample_rate_box.update_text(m_window.renderer, m_assets.font, false);
+        m_ui.sample_rate_box.m_text.append_integer(initial_sample_rate);
+        m_ui.sample_rate_box.update_text(m_window.renderer, m_assets.font, false);
 
         m_ui.input_text_fields[0] = { { INIT_WINDOW_WIDTH / 2 - 500, INIT_WINDOW_HEIGHT* (4.0 / 5.0) - 100, 1000, 200 } };
+
+        m_ui.channel_count.set_area(vec2(INIT_WINDOW_WIDTH / 10, INIT_WINDOW_HEIGHT * (4.0/5.0)),
+                                    vec2(INIT_WINDOW_WIDTH / 8, INIT_WINDOW_HEIGHT / 8));
     }
 
     quit = false;
@@ -141,7 +144,7 @@ bool Application::gen_text(Color color)
 void Application::update_audio_spec()
 {
     bool conversion_success = false;
-    auto sample_rate = string_to_integer(m_ui.m_sample_rate_box.get_string(), &conversion_success);
+    auto sample_rate = string_to_integer(m_ui.sample_rate_box.get_string(), &conversion_success);
     if (conversion_success)
     {
         m_audio.reinitialize(sample_rate, m_audio.m_channel_count);
@@ -259,6 +262,7 @@ void Application::handle_events()
                             if (!set)
                             {
                                 printf("Could not set sample expression\n");
+                                set_event_active(EVENT_INVALID_EXPRESSION, 3.0);
                             }
 
                             text_input_stop();
@@ -371,6 +375,11 @@ void Application::set_event_active(int event_index, double timeout_time)
     m_events[event_index].event = m_time + timeout;
 }
 
+void Application::set_event_deactive(int event_index)
+{
+    m_events[event_index].active = false;
+}
+
 void Application::cleanup()
 {
     m_audio.cleanup();
@@ -396,8 +405,8 @@ void Application::draw_ui()
 
     // volume slider
     {
-        Rectangle volume_slider = m_ui.m_volume_slider;
-        vec2 knob_scale = m_ui.m_volume_slider_knob_scale;
+        Rectangle volume_slider = m_ui.volume_slider;
+        vec2 knob_scale = m_ui.volume_slider_knob_scale;
 
         const float slider_knob_width = volume_slider.w * knob_scale.x;
         const float slider_knob_height = volume_slider.h * knob_scale.y;
@@ -432,7 +441,7 @@ void Application::draw_ui()
 
     // pause/resume button
     {
-        Rectangle button = m_ui.m_pause_button;
+        Rectangle button = m_ui.pause_button;
 
         SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x55, 0x55, 0xff);
         SDL_FRect pbutton = { button.x, button.y, button.w, button.h };
@@ -448,7 +457,7 @@ void Application::draw_ui()
 
     // paused/playing text
     {
-        Rectangle pause_button = m_ui.m_pause_button;
+        Rectangle pause_button = m_ui.pause_button;
         const int margin = 5;
         Font font = m_assets.font;
         render_text(m_window.renderer, font,
@@ -459,14 +468,15 @@ void Application::draw_ui()
     // text field
     {
         SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x66, 0x55, 0xff);
-        Rectangle text_field_area = m_ui.input_text_fields[0].m_area;
+        const Text_Field& input_field = m_ui.input_text_fields[TEXT_INPUT_TEXT_FIELD];
+        Rectangle text_field_area = input_field.m_area;
         SDL_FRect tf_area = { text_field_area.x, text_field_area.y, text_field_area.w, text_field_area.h };
         SDL_RenderFillRect(m_window.renderer, &tf_area);
 
-        SDL_Texture* text_texture = m_ui.input_text_fields[0].m_texture;
+        SDL_Texture* text_texture = input_field.m_texture;
         if (text_texture)
         {
-            int line_count = m_ui.input_text_fields[0].m_line_count;
+            int line_count = input_field.m_line_count;
             float font_size = m_assets.font.size;
 
             SDL_FRect string_area = { tf_area.x, tf_area.y, tf_area.w, line_count * font_size };
@@ -478,11 +488,11 @@ void Application::draw_ui()
     // sample rate text box
     SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x22, 0x11, 0xff);
     {
-        Rectangle box_area = m_ui.m_sample_rate_box.m_area;
+        Rectangle box_area = m_ui.sample_rate_box.m_area;
         SDL_FRect area = {box_area.x, box_area.y, box_area.w, box_area.h};
         SDL_RenderFillRect(m_window.renderer, &area);
 
-        SDL_Texture* text_texture = m_ui.m_sample_rate_box.m_texture;
+        SDL_Texture* text_texture = m_ui.sample_rate_box.m_texture;
         if (text_texture)
         {
             const int line_count = 1;
@@ -508,9 +518,12 @@ void Application::draw_ui()
         {
             auto tf_area = m_ui.input_text_fields[0].m_area;
 
+            const vec2 text_scale = vec2(300, 100);
+
             render_text(m_window.renderer, m_assets.font,
                 m_rendered_text_cache.get(TEXT_INVALID_EXPRESSION),
-                vec2(tf_area.x + tf_area.w/2, tf_area.y - tf_area.h));
+                vec2(tf_area.x + tf_area.w/2, tf_area.y + tf_area.h),
+                text_scale);
         }
     }
 }
@@ -519,10 +532,10 @@ bool Application::mouse_input_ui()
 {
     
     
-    if (m_ui.m_volume_slider.contains(m_mouse.pos))
+    if (m_ui.volume_slider.contains(m_mouse.pos))
     {
-        float diff = m_mouse.pos.x - m_ui.m_volume_slider.x;
-        float volume = diff / m_ui.m_volume_slider.w;
+        float diff = m_mouse.pos.x - m_ui.volume_slider.x;
+        float volume = diff / m_ui.volume_slider.w;
 
         volume = snap_value(volume, 0.0, 1.0, 0.09);
 
@@ -532,7 +545,7 @@ bool Application::mouse_input_ui()
         return true;
     }
 
-    if (m_ui.m_pause_button.contains(m_mouse.pos))
+    if (m_ui.pause_button.contains(m_mouse.pos))
     {
         m_audio.toggle_pause();
 
@@ -546,19 +559,19 @@ bool Application::mouse_input_ui()
 
         toggle_text_input();
 
-        m_ui.m_text_input_target = TEXT_INPUT_TEXT_FIELD;
+        m_ui.text_input_target = TEXT_INPUT_TEXT_FIELD;
 
         return true;
     }
 
-    if (m_ui.m_sample_rate_box.m_area.contains(m_mouse.pos))
+    if (m_ui.sample_rate_box.m_area.contains(m_mouse.pos))
     {
-        const SDL_Rect area = {m_ui.m_sample_rate_box.m_area.x, m_ui.m_sample_rate_box.m_area.y, m_ui.m_sample_rate_box.m_area.w, m_ui.m_sample_rate_box.m_area.h};
-        SDL_SetTextInputArea(m_window.window, &area, m_ui.m_sample_rate_box.m_cursor_pixel);
+        const SDL_Rect area = {m_ui.sample_rate_box.m_area.x, m_ui.sample_rate_box.m_area.y, m_ui.sample_rate_box.m_area.w, m_ui.sample_rate_box.m_area.h};
+        SDL_SetTextInputArea(m_window.window, &area, m_ui.sample_rate_box.m_cursor_pixel);
 
         toggle_text_input();
 
-        m_ui.m_text_input_target = TEXT_INPUT_SAMPLE_RATE;
+        m_ui.text_input_target = TEXT_INPUT_SAMPLE_RATE;
 
         return true;
     }
@@ -573,7 +586,7 @@ void Application::text_input_stop()
 
     m_background_color = DEFAULT_BACKGROUND_COLOR;
 
-    if (m_ui.m_text_input_target == TEXT_INPUT_SAMPLE_RATE)
+    if (m_ui.text_input_target == TEXT_INPUT_SAMPLE_RATE)
     {
         update_audio_spec();
     }
@@ -604,21 +617,21 @@ void Ui_State::update(Window window)
     ivec2 window_size;
     SDL_GetWindowSize(window.window, &window_size.x, &window_size.y);
 
-    m_pause_button.x = (window_size.x - m_pause_button.w) / 2;
-    m_pause_button.y = (window_size.y - m_pause_button.h) / 2;
+    pause_button.x = (window_size.x - pause_button.w) / 2;
+    pause_button.y = (window_size.y - pause_button.h) / 2;
 
     input_text_fields[0].m_area.x = (window_size.x - input_text_fields[0].m_area.w) / 2;
     input_text_fields[0].m_area.y = ((float)window_size.y * (4.0 / 5.0)) - input_text_fields[0].m_area.h/2;
 
-    m_sample_rate_box.m_area.x = window_size.x * (3.0 / 5.0);
-    m_sample_rate_box.m_area.y = window_size.y * (1.0 / 5.0);
-    m_sample_rate_box.m_area.w = window_size.x * (1.0 / 5.0);
-    m_sample_rate_box.m_area.h = window_size.y * (1.0 / 5.0);
+    sample_rate_box.m_area.x = window_size.x * (3.0 / 5.0);
+    sample_rate_box.m_area.y = window_size.y * (1.0 / 5.0);
+    sample_rate_box.m_area.w = window_size.x * (1.0 / 5.0);
+    sample_rate_box.m_area.h = window_size.y * (1.0 / 5.0);
 }
 
 Text_Field* Ui_State::get_selected_text_field()
 {
-    return (m_text_input_target == TEXT_INPUT_TEXT_FIELD) ? &input_text_fields[0] : &m_sample_rate_box;
+    return (text_input_target == TEXT_INPUT_TEXT_FIELD) ? &input_text_fields[0] : &sample_rate_box;
 }
 
 bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, String s, Font font, bool wrapped)
@@ -666,7 +679,7 @@ bool Application::update_input_string()
     if (!text_field)
         return false;
     return text_field->update_text(m_window.renderer, m_assets.font,
-                                               (m_ui.m_text_input_target == TEXT_INPUT_TEXT_FIELD));
+                                               (m_ui.text_input_target == TEXT_INPUT_TEXT_FIELD));
 }
 
 bool Application::set_eval_string(String eval_string)
@@ -724,4 +737,13 @@ void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 
     SDL_FRect dst = {where.x - factor.x/2, where.y - factor.y/2, scale.x, scale.y};
 
     SDL_RenderTexture(renderer, text.texture, &src, &dst);
+}
+
+Drop_Down_List::Drop_Down_List(Text* p_options, int p_count)
+{
+    options = DArray<Text>(p_count);
+    for (int i = 0; i < p_count; i++)
+    {
+        options.get_ref(i) = p_options[i];
+    }
 }

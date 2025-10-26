@@ -8,8 +8,8 @@
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
-#define INIT_WINDOW_WIDTH 1440.0
-#define INIT_WINDOW_HEIGHT 810.0
+#define INIT_WINDOW_WIDTH  1440.0f
+#define INIT_WINDOW_HEIGHT 810.0f
 
 struct Window {
     SDL_Window* window;
@@ -34,6 +34,28 @@ typedef SDL_MouseButtonFlags Mouse_Flags;
 struct Mouse_State {
     vec2 pos;
     Mouse_Flags flags;
+};
+
+struct Text {
+    SDL_Texture* texture = NULL;
+    String string = {};
+
+    Text() {}
+    Text(SDL_Texture* p_texture, String p_string) : texture(p_texture), string(p_string) {}
+};
+
+enum {
+    // static text
+    TEXT_PAUSED = 0,
+    TEXT_PLAYING,
+    TEXT_SAMPLE_RATE,
+    TEXT_INVALID_EXPRESSION,
+    TEXT_VALID_EXPRESSION,
+
+    // dynamic text
+    TEXT_VOLUME_VALUE,
+
+    TEXT_COUNT,
 };
 
 struct Text_Field
@@ -79,50 +101,48 @@ private:
 };
 
 
+#define DROP_DOWN_LIST_SELECTED_SENTINEL -1
+
+struct Drop_Down_List {
+    vec2 pos = {};   // top left corner
+    vec2 scale = {};
+    int selected = DROP_DOWN_LIST_SELECTED_SENTINEL;
+    DArray<Text> options = {};
+    bool open = false;
+
+    void set_area(vec2 p_pos, vec2 p_scale)
+    {
+        pos = p_pos; scale = p_scale;
+    }
+
+    Drop_Down_List() {}
+    Drop_Down_List(Text* text, int count);
+};
+
+#define MAX_INPUT_FIELD_COUNT 4
+
 enum Text_Input_Target : u8 {
     TEXT_INPUT_TEXT_FIELD,
     TEXT_INPUT_SAMPLE_RATE,
 };
 
-#define MAX_INPUT_FIELD_COUNT 4
-
 struct Ui_State {
-    Rectangle m_volume_slider = { 100, 100, 100, 10 };
-    vec2 m_volume_slider_knob_scale = { 0.1, 2 };
+    Rectangle volume_slider = { 100, 100, 100, 10 };
+    vec2 volume_slider_knob_scale = { 0.1, 2 };
 
-    Rectangle m_pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
+    Rectangle pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
     Text_Field input_text_fields[MAX_INPUT_FIELD_COUNT] = {};
-    Text_Field m_sample_rate_box = { { INIT_WINDOW_WIDTH * (3.0 / 5.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0), INIT_WINDOW_WIDTH / 5.0, INIT_WINDOW_HEIGHT / 5.0 } };
+    Text_Field sample_rate_box = { { INIT_WINDOW_WIDTH * (3.0 / 5.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0), INIT_WINDOW_WIDTH / 5.0, INIT_WINDOW_HEIGHT / 5.0 } };
 
-    Text_Input_Target m_text_input_target = TEXT_INPUT_TEXT_FIELD;
+    Drop_Down_List channel_count = {};
+
+    Text_Input_Target text_input_target = TEXT_INPUT_TEXT_FIELD;
 
     void update(Window window);
     Text_Field* get_selected_text_field();
 };
 
 #define DEFAULT_BACKGROUND_COLOR Color{ 0x88, 0x66, 0x33, 0xff }
-
-struct Text {
-    SDL_Texture* texture = NULL;
-    String string = {};
-
-    Text() {}
-    Text(SDL_Texture* p_texture, String p_string) : texture(p_texture), string(p_string) {}
-};
-
-enum {
-    // static text
-    TEXT_PAUSED = 0,
-    TEXT_PLAYING,
-    TEXT_SAMPLE_RATE,
-    TEXT_INVALID_EXPRESSION,
-    TEXT_VALID_EXPRESSION,
-
-    // dynamic text
-    TEXT_VOLUME_VALUE,
-
-    TEXT_COUNT,
-};
 
 #define NS_PER_SECONDS 1'000'000'000
 
@@ -161,7 +181,7 @@ public:
     bool doing_text_input = false;
     bool input_valid = false;
 
-    DArray<String> m_error_log = {};
+    DArray<String> m_error_log = {};  // @todo render this onto the screen
 
     bool initialize();
 
@@ -172,7 +192,8 @@ public:
     void cleanup();
 private:
     void timeout();
-    void set_event_active(int event_index, double timeout_time);
+    void set_event_active(int event_index, double timeout_seconds);
+    void set_event_deactive(int event_index);
 
     bool load_assets();
 
