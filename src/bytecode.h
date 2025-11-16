@@ -9,17 +9,6 @@ enum Register_Type {
 	REGISTER_TYPE_FLOAT,
 };
 
-struct Bytecode_Processor {
-	Bucket_List<u32> regs;
-	Bucket_List<float> fregs;
-	u32 program_counter = 0;
-	u32 result_flags = 0;
-
-	Bytecode_Processor()
-		: regs(8), fregs(8)
-	{}
-};
-
 /*
 	opcode(32 bit) operand1(16 bit), operand2(16 bit)
 
@@ -30,8 +19,6 @@ struct Bytecode_Processor {
 	Instructions can take arguments as registers or identifiers for known constants or functions.
 	There are unlimited registers (as long as it can be addressed by the representable range of the id) and a constant block containing all the constants used in the expression for bytecode program to use.
 */
-
-// @todo function calls in bytecode. Calling conventions
 
 enum Bytecode_Opcode : u32
 {
@@ -45,6 +32,9 @@ enum Bytecode_Opcode : u32
 	INSTR_CONV_INT,		// conv freg			-- convert a floating point value to an integer
 	INSTR_CONV_F,		// conv reg				-- convert an integer to a floating point value
 /*
+
+	// We don't have a stack anymore
+
 	INSTR_PUSH,			// push reg
 	INSTR_POP,			// pop  reg
 	// read/write on to the stack. stack_offset is added to the stack pointer to find where to read/write
@@ -106,15 +96,12 @@ struct Bytecode_Instr {
 	{}
 };
 
-
-// there is space for 16 bits in the instruction
-
 // For Value_Id the first 2 bits are the type of the value. Maps directly to value types.
 // The remaining part is the index of the value in its type.
 
 using Register_Id = u16;
 using Value_Id = u16;
-using Func_Id = u16;  // @todo functions on bytecode
+using Func_Id = u16;
 
 Value_Id make_value_id(int index, Value_Type type);
 
@@ -132,41 +119,29 @@ struct Bytecode_Code {
 	DArray<Bytecode_Instr> code;
 };
 
-enum class Value_Location_Type {
-	CONSTANT_BLOCK,
-	GP_REGISTER,
-	FP_REGISTER,
-	// STACK,
-};
+struct Bytecode_Processor {
+	DArray<u32> regs;
+	DArray<float> fregs;
+	u32 program_counter = 0;
+	u32 result_flags = 0;
 
-struct Value_Info {
-	u16 location;
-	Value_Type value_type;
-	Value_Location_Type location_type;
-
-	Value_Info(u16 p_location, Value_Type p_value_type, Value_Location_Type p_location_type)
-		: location(p_location), value_type(p_value_type), location_type(p_location_type)
+	Bytecode_Processor()
+		: regs(8), fregs(8)
 	{}
-
-	Register_Id get_gp() { return (Register_Id)location; }
-	Register_Id get_fp() { return (Register_Id)location; }
-	Value_Id get_constant() { return (Value_Id)location; }
 };
 
 struct Bytecode_Program {
-	Bytecode_Processor processor = {};
-	Bytecode_Code code = {};
+	Bytecode_Processor processor = {};  // execution context
+	Bytecode_Code code = {};			// code
 	Constant_Block constant_block = {};
 
 	Bytecode_Program() : processor(), code(), constant_block() {}
 
-	Value_Info compile_expression(Expr* expr);
-private:
 	u32 allocate_gp_register();
 	u32 allocate_fp_register();
 
 	void emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg0, u16 arg1);
 };
 
-// @todo return value
-float run(Bytecode_Processor proc, Bytecode_Program program);
+Bytecode_Program bytecode_compile_expression(Expr* expr);
+float bytecode_run(Bytecode_Processor proc, Bytecode_Program program);

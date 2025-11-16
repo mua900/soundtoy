@@ -1,70 +1,19 @@
 #include "bytecode.h"
 
-Value_Info Bytecode_Program::compile_expression(Expr* expr)
+Bytecode_Program bytecode_compile_expression(Expr* expr)
 {
+	// @todo
 	switch (expr->type)
 	{
-		case Expr_Type::Literal:
-		{
-			auto literal = static_cast<Expr_Literal*>(expr);
-			Value value = literal->value;
-			Value_Id value_id = constant_block.add_constant(value);
-			return Value_Info(value_id, value.type, Value_Location_Type::CONSTANT_BLOCK);
-		}
-		case Expr_Type::Variable:
-		{
-			auto variable = static_cast<Expr_Variable*>(expr);
-			Value_Location_Type location_type = (variable->variable_type == Value_Type::REAL) ?
-				Value_Location_Type::FP_REGISTER : Value_Location_Type::GP_REGISTER;
-			Register_Id reg_id = location_type == Value_Location_Type::FP_REGISTER ? allocate_fp_register() : allocate_gp_register();
-
-			return Value_Info(reg_id, variable->variable_type, location_type);
-		}
-		case Expr_Type::Unary:
-		{
-			auto unary = static_cast<Expr_Unary*>(expr);
-			auto result = compile_expression(unary->operand);
-
-			Bytecode_Opcode opcode = {};
-
-			switch (unary->op)
-			{
-				case Unop_Negate:
-				{
-					if (result.value_type == Value_Type::REAL)
-					{
-						opcode = INSTR_NEGATE_F;
-					}
-					else {
-						opcode = INSTR_NEGATE;
-					}
-					break;
-				}
-				case Unop_Not:
-				{
-					opcode = INSTR_NOT;
-					break;
-				}
-				default:
-					panic("Unhandled unary operation compile bytecode");
-			}
-
-			emit_bytecode_instruction(opcode, result.location, 0);
-
-			return result;
-		}
-		case Expr_Type::Binary:
-		{
-			
-		}
-		case Expr_Type::Grouping:
-		{}
-		case Expr_Type::Call:
-		{}
+		case Expr_Type::Literal: { break; }
+		case Expr_Type::Variable: { break;  }
+		case Expr_Type::Unary: { break; }
+		case Expr_Type::Binary: { break; }
+		case Expr_Type::Grouping: { break; }
+		case Expr_Type::Call: { break; }
 	}
 
-	panic("Not implemented");
-	return Value_Info(0, Value_Type::INTEGER, Value_Location_Type::GP_REGISTER); // @todo
+	return Bytecode_Program();
 }
 
 Value_Id make_value_id(int index, Value_Type type)
@@ -170,10 +119,9 @@ void Bytecode_Program::emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg
 	code.code.add(Bytecode_Instr(opcode, arg0, arg1));
 }
 
-
 // -- Bytecode runner
 
-float run(Bytecode_Processor proc, Bytecode_Program block)
+float bytecode_run(Bytecode_Processor proc, Bytecode_Program block)
 {
 	// @todo
 	NOT_IMPLEMENTED("Bytecode run")

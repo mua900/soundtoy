@@ -65,6 +65,9 @@ void panic(char const* const msg);
 
 #define NOT_IMPLEMENTED(x) panic(x " not implemeneted");
 
+int pop_lsb(u64* x);
+int pop_msb(u64* x);
+
 struct String {
     const char* data = NULL;
     int size = 0;
