@@ -1,6 +1,8 @@
 #include "audio.h"
 #include "common.h"
 
+#include <math.h>
+
 void Audio::pause()
 {
     paused = true;
@@ -49,7 +51,7 @@ void SDLCALL audio_callback_default(void* userdata, SDL_AudioStream* stream, int
     {
         for (int i = 0; i < BUFFER_SIZE; i++)
         {
-            buffer[i] = sin(audio->sample_time);
+            buffer[i] = sinf(audio->sample_time);
         }
 
         SDL_PutAudioStreamData(stream, buffer, BUFFER_SIZE);
