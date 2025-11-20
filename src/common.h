@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
 #include <cstdarg>
 
 #define IS_MAX_UNSIGNED(x) ((x)+1==0)
@@ -59,6 +58,14 @@ static inline unsigned int msvc_leading_zeros(u64 x)
 #define TRAILING_ZEROS(x) __builtin_ctzll(x)
 
 #endif
+
+#define ASSERT(x)   do {    \
+        if (!(x)) {             \
+            fprintf(stderr, "-----*****----- Assertion failed at %s:%d   %s\n", __FILE__, __LINE__, #x); \
+            exit(1);    \
+        }               \
+    } while(0)
+
 
 NORETURN
 void panic(char const* const msg);

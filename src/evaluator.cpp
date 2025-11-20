@@ -488,26 +488,6 @@ Expr* Parser::parse_primary_expr()
     }
 }
 
-Op_Binary get_binop(Token_Type type)
-{
-    switch (type)
-    {
-        case TOKEN_TYPE_PLUS:               return Binop_Add;
-        case TOKEN_TYPE_MINUS:              return Binop_Sub;
-        case TOKEN_TYPE_STAR:               return Binop_Mul;
-        case TOKEN_TYPE_SLASH:              return Binop_Div;
-        case TOKEN_TYPE_PERCENT:            return Binop_Mod;
-        case TOKEN_TYPE_EQUALS_EQUALS:      return Binop_Eq;
-        case TOKEN_TYPE_EXCLAMATION_EQUALS: return Binop_Neq;
-        case TOKEN_TYPE_GREATER:            return Binop_Gt;
-        case TOKEN_TYPE_GREATER_EQUALS:     return Binop_Ge;
-        case TOKEN_TYPE_LESS:               return Binop_Lt;
-        case TOKEN_TYPE_LESS_EQUALS:        return Binop_Le;
-        default:
-            return Binop_Unknown;
-    }
-}
-
 const char* Builtin_Func_Names[BUILTIN_FUNC_COUNT] = {
     "BUILTIN_FUNC_SIN",
     "BUILTIN_FUNC_COS",
@@ -552,11 +532,6 @@ Eval Evaluator::evaluate(Expr* expr)
             else if (literal->value.type == Value_Type::REAL)
             {
                 return { literal->value.real, true };
-            }
-            else if (literal->value.type == Value_Type::STRING)
-            {
-                eval_error.message = make_string("String literals aren't used and doesn't mean anything yet");
-                return fail;
             }
             else if (literal->value.type == Value_Type::BOOL)
             {
@@ -685,8 +660,6 @@ void print_expr(Expr* expr, int indent)
                     printf("Literal: %lli\n", literal->value.integer); break;
                 case Value_Type::REAL:
                     printf("Literal: %f\n", literal->value.real); break;
-                case Value_Type::STRING:
-                    literal->value.string.print(true); break;
                 case Value_Type::BOOL:
                     printf("Bool: %s\n", BOOL_STRING(literal->value.boolean)); break;
             }
@@ -731,27 +704,6 @@ void print_expr(Expr* expr, int indent)
             }
         }
     }
-}
-
-const char* get_binop_string(Op_Binary op)
-{
-    switch (op)
-    {
-        case Binop_Unknown: return "Binop_Unknown";
-        case Binop_Add: return "Binop_Add";
-        case Binop_Sub: return "Binop_Sub";
-        case Binop_Mul: return "Binop_Mul";
-        case Binop_Div: return "Binop_Div";
-        case Binop_Mod: return "Binop_Mod";
-        case Binop_Eq: return "Binop_Eq";
-        case Binop_Neq: return "Binop_Neq";
-        case Binop_Gt: return "Binop_Gt";
-        case Binop_Ge: return "Binop_Ge";
-        case Binop_Lt: return "Binop_Lt";
-        case Binop_Le: return "Binop_Le";
-    }
-
-    return NULL;
 }
 
 // @todo cleanup
@@ -814,21 +766,6 @@ Function_ID get_function_id(String name)
     return FUNC_ID_INVALID; // @todo user defined functions
 }
 
-void get_default_builtin_functions(Builtin_Function* list)
-{
-    list[BUILTIN_FUNC_SIN] = sin;
-    list[BUILTIN_FUNC_COS] = cos;
-    list[BUILTIN_FUNC_ABS] = fabs;
-    list[BUILTIN_FUNC_SIGN] = get_sign;
-    list[BUILTIN_FUNC_ARCSIN] = asin;
-    list[BUILTIN_FUNC_ARCCOS] = acos;
-}
-
-bool is_builtin_function(Expr_Call* call)
-{
-    return call->fn_id <= BUILTIN_FUNC_COUNT;
-}
-
 Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String* error_string);
 Expr* collapse_expr(Expr* root, String* error_string)
 {
@@ -877,12 +814,6 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
         {
             Value left_value = static_cast<Expr_Literal*>(left)->value;
             Value right_value = static_cast<Expr_Literal*>(right)->value;
-
-            if (left_value.type == Value_Type::STRING || right_value.type == Value_Type::STRING)
-            {
-                *error_string = make_string("Can't do aritmetic with strings");
-                break;
-            }
 
             double left_numeric = (left_value.type == Value_Type::INTEGER) ? left_value.integer : left_value.real;
             double right_numeric = (right_value.type == Value_Type::INTEGER) ? right_value.integer : right_value.real;
@@ -1035,4 +966,19 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
     }
 
     return expr;
+}
+
+void get_default_builtin_functions(Builtin_Function* list)
+{
+    list[BUILTIN_FUNC_SIN] = sin;
+    list[BUILTIN_FUNC_COS] = cos;
+    list[BUILTIN_FUNC_ABS] = fabs;
+    list[BUILTIN_FUNC_SIGN] = get_sign;
+    list[BUILTIN_FUNC_ARCSIN] = asin;
+    list[BUILTIN_FUNC_ARCCOS] = acos;
+}
+
+bool is_builtin_function(Expr_Call* call)
+{
+    return call->fn_id <= BUILTIN_FUNC_COUNT;
 }

@@ -1,27 +1,170 @@
 #include "bytecode.h"
 
-Bytecode_Program bytecode_compile_expression(Expr* expr)
-{
-	// @todo
-	switch (expr->type)
-	{
-		case Expr_Type::Literal: { break; }
-		case Expr_Type::Variable: { break;  }
-		case Expr_Type::Unary: { break; }
-		case Expr_Type::Binary: { break; }
-		case Expr_Type::Grouping: { break; }
-		case Expr_Type::Call: { break; }
-	}
+Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program);
 
-	return Bytecode_Program();
+bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
+
+	// program.reset();
+	compile_expr(root, program);
+
+	return true;
 }
 
-Value_Id make_value_id(int index, Value_Type type)
-{
-	Value_Id value_id = index;
-	value_id >>= 2;
-	value_id |= (Value_Id)type;
-	return value_id;
+// @todo handle errors
+Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
+	switch (expr->type) {
+        case Expr_Type::Literal: {
+            auto literal = static_cast<Expr_Literal*>(expr);
+
+            Value_Location_Info location;
+            location.location_type = Value_Location_Type::CONSTANT_BLOCK;
+            location.value_id = program.constant_block.add_constant(literal->value);
+
+            return location;
+        }
+        case Expr_Type::Variable: {
+            auto variable = static_cast<Expr_Variable*>(expr);
+
+            Value_Location_Info location;
+            switch (variable->variable_type) {
+                case Value_Type::INTEGER:
+                case Value_Type::BOOL:
+                    {
+                        location.location_type = Value_Location_Type::INTEGER_REGISTER;
+                        location.integer_register = program.allocate_gp_register();
+                        break;
+                    }
+                case Value_Type::REAL:
+                    {
+                        location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+                        location.floating_point_register = program.allocate_fp_register();
+                        break;
+                    }
+            }
+
+            return location;
+        }
+        case Expr_Type::Unary: {
+            auto unary = static_cast<Expr_Unary*>(expr);
+
+            Value_Location_Info operand_location = compile_expr(unary->operand, program);
+
+            // if the operand is inside the constant block.
+            // load it and put it to a register first
+            if (operand_location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
+                operand_location = program.emit_load_constant(operand_location.value_id);
+            }
+
+            if (unary->op == Unop_Negate) {
+                if (operand_location.location_type == Value_Location_Type::INTEGER_REGISTER) {
+                    program.emit_bytecode_instruction(INSTR_NEGATE, operand_location.integer_register, 0);
+                }
+                else if (operand_location.location_type == Value_Location_Type::FLOATING_POINT_REGISTER) {
+                    program.emit_bytecode_instruction(INSTR_NEGATE_F, operand_location.floating_point_register, 0);
+                }
+            }
+            else if (unary->op == Unop_Not) {
+                program.emit_bytecode_instruction(INSTR_NOT, operand_location.integer_register, 0);
+            }
+
+            return operand_location;
+        }
+        case Expr_Type::Binary: {
+            auto binary = static_cast<Expr_Binary*>(expr);
+
+            Value_Location_Info left_location = compile_expr(binary->left, program);
+            Value_Location_Info right_location = compile_expr(binary->right, program);
+
+            if (left_location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
+                left_location = program.emit_load_constant(left_location.value_id);
+            }
+            else if (right_location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
+                right_location = program.emit_load_constant(right_location.value_id);
+            }
+
+            // if the results of the left and right branches are in different register files
+            // then we need to decide on one of them to do the operations on and move the value
+            // in the other file to that one.
+
+            // we pick floating point registers since the other way around loses data and
+            // we would be mostly dealing with floating point.
+
+            if (right_location.location_type != left_location.location_type) {
+                if (left_location.location_type == Value_Location_Type::INTEGER_REGISTER) {
+                    left_location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+                    left_location.floating_point_register = program.allocate_fp_register();
+                }
+                if (right_location.location_type == Value_Location_Type::INTEGER_REGISTER) {
+                    right_location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+                    right_location.floating_point_register = program.allocate_fp_register();
+                }
+            }
+
+            bool is_using_integer_registers = left_location.location_type == Value_Location_Type::INTEGER_REGISTER;
+
+            Bytecode_Opcode opcode;
+
+            if (binary->op == Binop_Unknown) {
+                panic("Unknown binary operation");
+                break;
+            }
+
+            if (binop_is_arithmetic(binary->op))
+            {
+                if (is_using_integer_registers) {
+                    program.emit_bytecode_instruction(opcode, left_location.integer_register, right_location.integer_register);
+                }
+                else {
+                    program.emit_bytecode_instruction(opcode, left_location.floating_point_register, right_location.floating_point_register);
+                }
+            }
+            else if (binop_is_comparison(binary->op))
+            {
+                opcode = (is_using_integer_registers) ? INSTR_CMP : INSTR_CMPF;
+
+                if (is_using_integer_registers) {
+                    program.emit_bytecode_instruction(opcode, left_location.integer_register, right_location.integer_register);
+                }
+                else {
+                    program.emit_bytecode_instruction(opcode, left_location.floating_point_register, right_location.floating_point_register);
+                }
+
+                u16 test = 0;
+                switch (binary->op) {
+                    case Binop_Eq:  test = COMPARISON_RESULT_EQUALS; break;
+                    case Binop_Neq: test = COMPARISON_RESULT_NOT_EQUALS; break;
+                    case Binop_Gt:  test = COMPARISON_RESULT_GREATER_THAN; break;
+                    case Binop_Ge:  test = COMPARISON_RESULT_GREATER_THAN | COMPARISON_RESULT_EQUALS; break;
+                    case Binop_Lt:  test = COMPARISON_RESULT_LESS_THAN; break;
+                    case Binop_Le:  test = COMPARISON_RESULT_LESS_THAN | COMPARISON_RESULT_EQUALS; break;
+                }
+
+                program.emit_bytecode_instruction(INSTR_TEST_RESULT, test, 0);
+            }
+
+            return left_location;
+        }
+        case Expr_Type::Grouping: {
+            auto grouping = static_cast<Expr_Grouping*>(expr);
+            return compile_expr(grouping->expr, program);
+        }
+        case Expr_Type::Call: {
+            auto call = static_cast<Expr_Call*>(expr);
+
+            Value_Location_Info location;
+
+            // @todo
+            // program.emit_bytecode_instruction(INSTR_CALL, call->fn_id, freg);
+
+            /*
+            for (auto& arg : call->arguments) {
+                program.emit_bytecode_instruction(INSTR_PUSH);
+            }
+            */
+
+            return location;
+        }
+	}
 }
 
 Value_Id Constant_Block::add_constant(Value value)
@@ -30,24 +173,15 @@ Value_Id Constant_Block::add_constant(Value value)
 
 	switch (value.type)
 	{
+        case Value_Type::BOOL:  // fallthrough
 		case Value_Type::INTEGER:
 			{
-				index = m_integer.add_unique(value.integer);
+				index = integer.add_unique(value.integer);
 				break;
 			}
 		case Value_Type::REAL:
 			{
-				index = m_real.add_unique(value.real);
-				break;
-			}
-		case Value_Type::BOOL:
-			{
-				index = m_bool.add_unique(value.boolean);
-				break;
-			}
-		case Value_Type::STRING:
-			{
-				index = m_string.add_unique(value.string);
+				index = real.add_unique(value.real);
 				break;
 			}
 		default:
@@ -56,11 +190,12 @@ Value_Id Constant_Block::add_constant(Value value)
 		}
 	}
 
-	Value_Id value_id = make_value_id(index, value.type);
+	Value_Id value_id;
+    value_id.value_type = value.type;
+    value_id.value_index = index;
 
 	return value_id;
 }
-
 
 Bytecode_Opcode bytecode_get_floating_point_version(Bytecode_Opcode opcode)
 {
@@ -85,38 +220,52 @@ Bytecode_Opcode bytecode_get_floating_point_version(Bytecode_Opcode opcode)
 		case INSTR_NEGATE:
 			return INSTR_NEGATE_F;
 
-		case INSTR_MOV_FG:
-		case INSTR_MOV_GF:
-		case INSTR_CONV_INT:
-		case INSTR_CONV_F:
-		case INSTR_CALL:
-		case INSTR_NOT:
-		case INSTR_JMP:
-		case INSTR_TEST_ZERO:
-		case INSTR_TEST_NEGATIVE:
-		case INSTR_JMP_COND:
-		case INSTR_RET:
-			return INSTR_SENTINEL;
+        default:
+            return INSTR_SENTINEL;
 	}
 
 	panic("Unhandled instruction for bytecode_get_floating_point_version");
 }
 
-u32 Bytecode_Program::allocate_gp_register()
-{
-	// @todo
-	return u32();
+// @todo proper register allocation
+
+u32 Bytecode_Program::allocate_gp_register() {
+	return processor.regs.add(0);
 }
 
-u32 Bytecode_Program::allocate_fp_register()
-{
-	// @todo
-	return u32();
+u32 Bytecode_Program::allocate_fp_register() {
+	return processor.fregs.add(0.0);
 }
 
-void Bytecode_Program::emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg0, u16 arg1)
-{
+void Bytecode_Program::emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg0, u16 arg1) {
 	code.code.add(Bytecode_Instr(opcode, arg0, arg1));
+}
+
+Value_Location_Info Bytecode_Program::emit_load_constant(Value_Id value_id)
+{
+    Value_Location_Info location;
+
+    switch (value_id.value_type) {
+        case Value_Type::BOOL:
+        case Value_Type::INTEGER:
+            {
+                u32 reg = allocate_gp_register();
+                emit_bytecode_instruction(INSTR_LOAD, reg, value_id.value_index);
+                location.location_type = Value_Location_Type::INTEGER_REGISTER;
+                location.floating_point_register = reg;
+                break;
+            }
+        case Value_Type::REAL:
+            {
+                u32 freg = allocate_fp_register();
+                emit_bytecode_instruction(INSTR_LOADF, freg, value_id.value_index);
+                location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+                location.floating_point_register = freg;
+                break;
+            }
+    }
+
+    return location;
 }
 
 // -- Bytecode runner

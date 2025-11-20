@@ -4,11 +4,6 @@
 #include "template.h"
 #include "expr.h"
 
-enum Register_Type {
-	REGISTER_TYPE_INT,
-	REGISTER_TYPE_FLOAT,
-};
-
 /*
 	opcode(32 bit) operand1(16 bit), operand2(16 bit)
 
@@ -20,27 +15,31 @@ enum Register_Type {
 	There are unlimited registers (as long as it can be addressed by the representable range of the id) and a constant block containing all the constants used in the expression for bytecode program to use.
 */
 
+// For Value_Id the last 2 bits are the type of the value. Maps directly to value types.
+// The remaining part is the index of the value in its type.
+
+struct Value_Id {
+	Value_Type value_type;
+	u16 value_index;
+};
+
+using Func_Id = u16;
+
 enum Bytecode_Opcode : u32
 {
 	INSTR_LOAD,			// load reg, const_int
 	INSTR_LOADF,		// load freg, const_float
 	INSTR_MOV,			// mov  reg, reg
 	INSTR_MOVF,			// mov  freg, freg
-	INSTR_MOV_FG,		// mov  freg, reg		-- bitwise copy of the value
-	INSTR_MOV_GF,		// mov  reg, freg		-- bitwise copy of the value
+	INSTR_MOV_FG,		// mov  freg, reg		   -- bitwise copy of the value
+	INSTR_MOV_GF,		// mov  reg, freg		   -- bitwise copy of the value
 
-	INSTR_CONV_INT,		// conv freg			-- convert a floating point value to an integer
-	INSTR_CONV_F,		// conv reg				-- convert an integer to a floating point value
-/*
+	INSTR_CONV_TO_INT,	// conv freg			   -- convert a floating point value to an integer
+	INSTR_CONV_TO_F,	// conv reg				   -- convert an integer to a floating point value
 
-	// We don't have a stack anymore
+	INSTR_MOV_CONV_INT, // mov_and_conv freg, reg  -- MOV_FG freg, reg CONV_TO_INT freg
+	INSTR_MOV_CONV_F,	// mov_and_conv reg, freg  -- MOV_GF reg, freg CONV_TO_F reg
 
-	INSTR_PUSH,			// push reg
-	INSTR_POP,			// pop  reg
-	// read/write on to the stack. stack_offset is added to the stack pointer to find where to read/write
-	INSTR_STACK_READ,	// read reg stack_offset
-	INSTR_STACK_WRITE,	// wrt  reg stack_offset
-*/
 	INSTR_ADD,			// add reg1, reg2
 	INSTR_SUB,			// sub reg1, reg2
 	INSTR_MUL,			// mul reg1, reg2
@@ -53,26 +52,45 @@ enum Bytecode_Opcode : u32
 	INSTR_DIVF,			// div freg1, freg2
 	INSTR_MODF,			// mod freg1, freg2
 
-	INSTR_CALL,			// call   func_id
 	INSTR_NEGATE,		// negate reg
 	INSTR_NOT,			// not 	  reg
 
 	INSTR_NEGATE_F,		// negate freg
 
+	// the result of the comparison is stored in the flags register.
+	INSTR_CMP,			// cmp reg0, reg1
+	INSTR_CMPF,			// cmpf freg0, freg1
+
+	// test sets the condition flag of the processor
+	INSTR_TEST_RESULT,	// test immediate16
+
 	// jump
-	INSTR_JMP,			// jmp op1
+	INSTR_JMP,			// jmp  address
+	// jump if the condition bit is true (1)
+	INSTR_JMP_COND,		// cjmp address
 
-	// @note do we need carry or overflow information?
-	INSTR_TEST_ZERO,	// tz reg
-	INSTR_TEST_NEGATIVE,// tn reg
-
-	INSTR_JMP_COND,		// jump if the last result of the last test was true
+	// calls the builtin function identified by func_id and place the result in freg
+	INSTR_CALL_BUILTIN,	// call_builtin func_id freg
 
 	INSTR_RET,			// ret
 
 	INSTR_COUNT,
 
 	INSTR_SENTINEL,
+};
+
+enum Value_Location_Type {
+	INTEGER_REGISTER,
+	FLOATING_POINT_REGISTER,
+	CONSTANT_BLOCK,
+};
+
+struct Value_Location_Info {
+	u32 integer_register = 0;
+	u32 floating_point_register = 0;
+	Value_Id value_id;
+
+	Value_Location_Type location_type;
 };
 
 Bytecode_Opcode bytecode_get_floating_point_version(Bytecode_Opcode opcode);
@@ -96,28 +114,25 @@ struct Bytecode_Instr {
 	{}
 };
 
-// For Value_Id the first 2 bits are the type of the value. Maps directly to value types.
-// The remaining part is the index of the value in its type.
-
-using Register_Id = u16;
-using Value_Id = u16;
-using Func_Id = u16;
-
-Value_Id make_value_id(int index, Value_Type type);
-
 // @todo we don't need to create this from expression tree when we can build it at parse time and replace values in the literals on the tree with simple ids.
 struct Constant_Block {
-	DArray<double> m_real = {};
-	DArray<String> m_string = {};
-	DArray<s64> m_integer = {};
-	DArray<bool> m_bool = {};
+	DArray<float> real = {};
+	DArray<s32> integer = {};
 
 	Value_Id add_constant(Value value);
+	Value get_value(Value_Id val_id);
 };
 
 struct Bytecode_Code {
 	DArray<Bytecode_Instr> code;
 };
+
+#define CONDITION_RESULT				BIT(0)
+
+#define COMPARISON_RESULT_EQUALS		BIT(4)
+#define COMPARISON_RESULT_NOT_EQUALS	BIT(5)
+#define COMPARISON_RESULT_GREATER_THAN	BIT(6)
+#define COMPARISON_RESULT_LESS_THAN		BIT(7)
 
 struct Bytecode_Processor {
 	DArray<u32> regs;
@@ -141,7 +156,9 @@ struct Bytecode_Program {
 	u32 allocate_fp_register();
 
 	void emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg0, u16 arg1);
+
+	Value_Location_Info emit_load_constant(Value_Id value_id);
 };
 
-Bytecode_Program bytecode_compile_expression(Expr* expr);
+bool bytecode_compile_expression(Bytecode_Program& program, Expr* expr);
 float bytecode_run(Bytecode_Processor proc, Bytecode_Program program);

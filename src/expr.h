@@ -1,6 +1,7 @@
 #pragma once
 
 #include "token.h"
+#include "template.h"
 
 enum Op_Unary {
     Unop_Negate, Unop_Not
@@ -26,7 +27,6 @@ enum class Value_Type {
     INTEGER,
     REAL,
     BOOL,
-    STRING,
 };
 
 struct Value {
@@ -36,7 +36,6 @@ struct Value {
         bool boolean;
         s64 integer;
         double real;
-        String string;
     };
 
 
@@ -49,12 +48,8 @@ struct Value {
     Value(double real) : real(real) {
         type = Value_Type::REAL;
     }
-    Value(String string) : string(string) {
-        type = Value_Type::STRING;
-    }
 
-    bool is_numeric()
-    {
+    bool is_numeric() {
         return type == Value_Type::INTEGER || type == Value_Type::REAL;
     }
 };
@@ -86,9 +81,6 @@ struct Expr_Literal : Expr {
     Expr_Literal(double real) : value(real) {
         type = Expr_Type::Literal;
     }
-    Expr_Literal(String string) : value(string) {
-        type = Expr_Type::Literal;
-    }
 };
 
 struct Expr_Unary : Expr {
@@ -112,6 +104,8 @@ struct Expr_Binary : Expr {
 
 Op_Binary get_binop(Token_Type type);
 const char* get_binop_string(Op_Binary op);
+bool binop_is_arithmetic(Op_Binary op);
+bool binop_is_comparison(Op_Binary op);
 
 struct Expr_Grouping : Expr {
     Expr* expr = NULL;

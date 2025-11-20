@@ -96,6 +96,10 @@ struct DArray
 		return m_data[m_size - 1];
 	}
 
+	T& top() {
+		return m_data[m_size - 1];
+	}
+
 	void free()
 	{
 		if (m_data)
