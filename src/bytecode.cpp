@@ -1,4 +1,5 @@
 #include "bytecode.h"
+#include "builtin.h"
 
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program);
 
@@ -6,6 +7,7 @@ bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
 
 	// program.reset();
 	compile_expr(root, program);
+    bytecode_optimize(program);
 
 	return true;
 }
@@ -153,14 +155,16 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 
             Value_Location_Info location;
 
-            // @todo
-            // program.emit_bytecode_instruction(INSTR_CALL, call->fn_id, freg);
+            if (is_builtin_function(call)) {
+                u32 freg = program.allocate_fp_register();
+                program.emit_bytecode_instruction(INSTR_CALL_BUILTIN, call->fn_id, freg);
 
-            /*
-            for (auto& arg : call->arguments) {
-                program.emit_bytecode_instruction(INSTR_PUSH);
+                location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+                location.floating_point_register = freg;
             }
-            */
+            else {
+                panic("User defined functions not implemented");
+            }
 
             return location;
         }
@@ -268,10 +272,36 @@ Value_Location_Info Bytecode_Program::emit_load_constant(Value_Id value_id)
     return location;
 }
 
+void Bytecode_Program::print_program() {
+    printf("Processor\n");
+    printf("Integers registers:\n");
+    for (int i = 0; i < processor.regs.size(); i++) {
+        printf("%d: %d\n", i, processor.regs.get(i));
+    }
+    printf("Floating point registers:\n");
+    for (int i = 0; i < processor.regs.size(); i++) {
+        printf("%d: %f\n", i, processor.fregs.get(i));
+    }
+
+    printf("Constant Block\n");
+    printf("Integer constants:\n");
+    for (int i = 0; i < constant_block.real.size(); i++) {
+        printf("%d\n", constant_block.integer.get(i));
+    }
+    printf("Float constants:\n");
+    for (int i = 0; i < constant_block.real.size(); i++) {
+        printf("%f\n", constant_block.real.get(i));
+    }
+}
+
 // -- Bytecode runner
 
 float bytecode_run(Bytecode_Processor proc, Bytecode_Program block)
 {
 	// @todo
 	NOT_IMPLEMENTED("Bytecode run")
+}
+
+void bytecode_optimize(Bytecode_Program& program) {
+    // not implemented
 }

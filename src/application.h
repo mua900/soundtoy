@@ -117,6 +117,7 @@ struct Drop_Down_List {
 
     Drop_Down_List() {}
     Drop_Down_List(Text* text, int count);
+    ~Drop_Down_List();
 };
 
 #define MAX_INPUT_FIELD_COUNT 4

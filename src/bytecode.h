@@ -70,6 +70,9 @@ enum Bytecode_Opcode : u32
 	INSTR_JMP_COND,		// cjmp address
 
 	// calls the builtin function identified by func_id and place the result in freg
+	// all builtin functions take a single floating point number as argument and return a single floating point number
+	// the calling convention is that the register carrying the arguments gets passed in the instruction
+	// and that register is overwriten with the result of the call to return the value
 	INSTR_CALL_BUILTIN,	// call_builtin func_id freg
 
 	INSTR_RET,			// ret
@@ -158,7 +161,13 @@ struct Bytecode_Program {
 	void emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg0, u16 arg1);
 
 	Value_Location_Info emit_load_constant(Value_Id value_id);
+
+	void print_program();
 };
 
 bool bytecode_compile_expression(Bytecode_Program& program, Expr* expr);
 float bytecode_run(Bytecode_Processor proc, Bytecode_Program program);
+
+// - register usage
+// - common subexpression elimination
+void bytecode_optimize(Bytecode_Program& program);

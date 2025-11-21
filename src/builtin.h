@@ -12,6 +12,13 @@ enum Builtin_Func_Type {
     BUILTIN_FUNC_ARCSIN,
     BUILTIN_FUNC_ARCCOS,
 
+    // @todo
+    /*
+    CEIL,
+    FLOOR,
+    SMOOTHSTEP,
+    */
+
     BUILTIN_FUNC_COUNT,
 
     BUILTIN_FUNC_UNKNOWN,

@@ -747,3 +747,7 @@ Drop_Down_List::Drop_Down_List(Text* p_options, int p_count)
         options.get_ref(i) = p_options[i];
     }
 }
+
+Drop_Down_List::~Drop_Down_List() {
+    options.free();
+}

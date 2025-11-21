@@ -70,13 +70,11 @@ void SDLCALL audio_callback_sample(void* userdata, SDL_AudioStream* stream, int 
 
     double inv_sample_rate = 1.0 / audio->m_sample_rate;
 
-    Evaluator evaluator = audio->evaluator;
-
     for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
     {
         for (int sample = 0; sample < SAMPLE_BUFFER_SIZE; sample++)
         {
-            Eval eval = evaluator.evaluate(expr);
+            Eval eval = audio->evaluator.evaluate(expr);
 
             /*
                 we assume the evaluator is able to evaluate the expression here since
@@ -86,7 +84,7 @@ void SDLCALL audio_callback_sample(void* userdata, SDL_AudioStream* stream, int 
             float value = SDL_clamp(eval.value, 0.0, 1.0);
             g_sample_buffer[sample] = value;
 
-            evaluator.step_time(inv_sample_rate);
+            audio->evaluator.step_time(inv_sample_rate);
         }
 
         SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);

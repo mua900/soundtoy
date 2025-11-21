@@ -10,9 +10,14 @@ struct Find_Result {
 template <typename T>
 struct DArray
 {
+private:
 	T* m_data = NULL;
 	int m_size = 0;
 	int m_cap = 0;
+
+public:
+	T* data() { return m_data; }
+	int size() { return m_size; }
 
 	DArray() {}
 	DArray(int cap) {
@@ -20,8 +25,7 @@ struct DArray
 		m_cap = cap;
 	}
 
-	T get(int index)
-	{
+	T get(int index) {
 		if (index >= m_size) panic("Out of bounds array access");
 		return m_data[index];
 	}
@@ -31,8 +35,7 @@ struct DArray
 		return m_data[index];
 	}
 
-	int add(T elem)
-	{
+	int add(T elem)	{
 		int ret_index = m_size;
 		if (m_size + 1 >= m_cap)
 		{
@@ -44,8 +47,7 @@ struct DArray
 		return ret_index;
 	}
 
-	int add_unique(T elem)
-	{
+	int add_unique(T elem) {
 		Find_Result find_result = find(elem);
 		if (find_result.found)
 		{
@@ -67,8 +69,7 @@ struct DArray
 		return Find_Result {0, false};
 	}
 
-	void resize()
-	{
+	void resize() {
 		int ncap = m_cap ? (m_cap * 2) : 8;
 		T* ndata = new T[ncap];
 		for (int i = 0; i < m_size; i++)
@@ -80,28 +81,21 @@ struct DArray
 		m_cap = ncap;
 	}
 
-	bool is_empty()
-	{
+	bool is_empty()	{
 		return m_size == 0;
 	}
 
-	T pop()
-	{
+	T pop()	{
 		if (is_empty())
 		{
-			return nullptr;
+			panic("Trying to pop from empty array");
 		}
 
 		m_size -= 1;
 		return m_data[m_size - 1];
 	}
 
-	T& top() {
-		return m_data[m_size - 1];
-	}
-
-	void free()
-	{
+	void free()	{
 		if (m_data)
 		{
 			delete[](m_data);
@@ -121,7 +115,7 @@ struct Array
 
 	Array() {}
 	Array(T* data, int size) : data(data), size(size) {}
-	Array(DArray<T> darray) : data(darray.m_data), size(darray.m_size) {}
+	Array(DArray<T> darray) : data(darray.data()), size(darray.size()) {}
 
 	T get(int index)
 	{
