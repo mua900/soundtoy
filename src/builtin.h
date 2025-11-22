@@ -2,6 +2,9 @@
 
 #include "expr.h"
 
+#define CONSTANT_PI 3.14159265359
+#define CONSTANT_E  2.71828182846
+
 // @todo higher level builtins for audio
 
 // @todo support functions with different signatures.
@@ -39,7 +42,6 @@ enum Builtin_Variable : int {
     BUILTIN_VARIABLE_COUNT
 };
 
-// @todo use these
 enum Builtin_Constants {
     // constant
     BUILTIN_CONSTANT_PI,

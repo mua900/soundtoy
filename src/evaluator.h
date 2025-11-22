@@ -51,6 +51,7 @@ using Function_ID = unsigned int;
 // @todo user defined variables and functions
 Var_ID get_var_id(String name);
 Function_ID get_function_id(String name);
+double get_builtin_constant(String name);  // returns 0.0 if no constant name matches
 
 struct Eval {
     double value = 0.0;

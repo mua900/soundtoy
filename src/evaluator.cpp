@@ -1,5 +1,8 @@
 #include "evaluator.h"
 
+extern const double PI;
+extern const double E;
+
 DArray<Token> tokenize(String expression)
 {
     auto tokens = DArray<Token>(8);
@@ -463,8 +466,14 @@ Expr* Parser::parse_primary_expr()
         case TOKEN_TYPE_IDENT:
         {
             cursor++;
-            Var_ID var_id = get_var_id(token.token_string);
-            return new Expr_Variable(token.token_string, var_id);
+            double builtin_constant = get_builtin_constant(token.token_string);
+            if (builtin_constant != 0.0) {
+                return new Expr_Literal(builtin_constant);
+            }
+            else {
+                Var_ID var_id = get_var_id(token.token_string);
+                return new Expr_Variable(token.token_string, var_id);
+            }
         }
         case TOKEN_TYPE_PAREN_OPEN:
         {
@@ -705,7 +714,6 @@ void print_expr(Expr* expr, int indent)
     }
 }
 
-// @todo builtin constants
 Var_ID get_var_id(String name)
 {
     if (string_compare(make_string("time"), name) ||
@@ -723,6 +731,23 @@ Var_ID get_var_id(String name)
     else
     {
         return VAR_ID_INVALID;
+    }
+}
+
+// returns 0 if no constant matches
+double get_builtin_constant(String name) {
+    if (string_compare(name, make_string("pi")) ||
+        string_compare(name, make_string("PI"))
+        ) {
+        return CONSTANT_PI;
+    }
+    else if (string_compare(name, make_string("e")) ||
+            string_compare(name, make_string("E"))
+        ) {
+        return CONSTANT_E;
+    }
+    else {
+        return 0.0;
     }
 }
 

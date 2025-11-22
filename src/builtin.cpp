@@ -5,10 +5,7 @@
 double get_sign(double x);
 double smoothstep(double x);
 double clamp_range_normal(double x);
-double clamp_range_audio(double x);
-
-const double PI = 3.14159265359;
-const double E = 2.71828182846;
+double clamp_range_audio(double x);  // @todo get rid
 
 void get_default_builtin_functions(Builtin_Function* list)
 {
