@@ -21,6 +21,8 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
             location.location_type = Value_Location_Type::CONSTANT_BLOCK;
             location.value_id = program.constant_block.add_constant(literal->value);
 
+            program.emit_load_constant(location.value_id);
+
             return location;
         }
         case Expr_Type::Variable: {
