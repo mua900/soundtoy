@@ -7,7 +7,12 @@
 // @todo support functions with different signatures.
 using Builtin_Function = double (*) (double);
 
+// it is trivial to add new builtin functions as long as they have the above signature.
+// add an enum entry here
+// go to get_function_id and add a new case for the name of the function to match
+// and finaly go to get_default_builtin_functions and add an implementaion of your function to the list
 enum Builtin_Func_Type {
+    BUILTIN_FUNC_EXP,
     BUILTIN_FUNC_ABS,
     BUILTIN_FUNC_SIGN,
     BUILTIN_FUNC_CEIL,
@@ -34,10 +39,11 @@ enum Builtin_Variable : int {
     BUILTIN_VARIABLE_COUNT
 };
 
+// @todo use these
 enum Builtin_Constants {
     // constant
-    BUILTIN_CONSTANT_PISS,
-    BUILTIN_CONSTANT_ESS,
+    BUILTIN_CONSTANT_PI,
+    BUILTIN_CONSTANT_E,
 
     BUILTIN_CONSTANT_COUNT,
 };

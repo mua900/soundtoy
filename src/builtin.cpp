@@ -23,6 +23,7 @@ void get_default_builtin_functions(Builtin_Function* list)
     list[BUILTIN_FUNC_COS] = cos;
     list[BUILTIN_FUNC_ARCSIN] = asin;
     list[BUILTIN_FUNC_ARCCOS] = acos;
+    list[BUILTIN_FUNC_EXP] = exp;
 }
 
 bool is_builtin_function(const Expr_Call* call)

@@ -762,6 +762,9 @@ Function_ID get_function_id(String name)
     else if (string_compare(name, make_string("clamp_audio"))) {  // @todo get rid
         return BUILTIN_FUNC_CLAMP_RANGE_AUDIO;
     }
+    else if (string_compare(name, make_string("exp"))) {
+        return BUILTIN_FUNC_EXP;
+    }
 
     return FUNC_ID_INVALID; // @todo user defined functions
 }
