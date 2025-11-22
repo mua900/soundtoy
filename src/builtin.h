@@ -24,16 +24,20 @@ enum Builtin_Func_Type {
     BUILTIN_FUNC_UNKNOWN,
 };
 
-enum Builtin_Variable {
+enum Builtin_Variable : int {
     // constant per evaluation
-    BUILTIN_TIME = 0,
-    BUILTIN_SAMPLE_RATE,
+    BUILTIN_VARIABLE_TIME = 0,
+    BUILTIN_VARIABLE_SAMPLE_RATE,
 
+    BUILTIN_VARIABLE_COUNT
+};
+
+enum Builtin_Constants {
     // constant
-    BUILTIN_CONST_PI,
-    BUILTIN_CONST_E,
+    BUILTIN_CONSTANT_PISS,
+    BUILTIN_CONSTANT_ESS,
 
-    BUILTIN_COUNT
+    BUILTIN_CONSTANT_COUNT,
 };
 
 using Builtin_Function_List = Builtin_Function[BUILTIN_FUNC_COUNT];
@@ -41,4 +45,5 @@ using Builtin_Function_List = Builtin_Function[BUILTIN_FUNC_COUNT];
 // the argument must be an array of pointers of size BUILTIN_FUNC_COUNT
 void get_default_builtin_functions(Builtin_Function* func_list);
 
-bool is_builtin_function(Expr_Call* call);
+bool is_builtin_function(const Expr_Call* call);
+bool is_builtin_variable(const Expr_Variable* var);

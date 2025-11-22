@@ -3,6 +3,7 @@
 #include "common.h"
 #include "template.h"
 #include "expr.h"
+#include "builtin.h"
 
 /*
 	opcode(32 bit) operand1(16 bit), operand2(16 bit)
@@ -82,16 +83,20 @@ enum Bytecode_Opcode : u32
 	INSTR_SENTINEL,
 };
 
+const char* opcode_string(Bytecode_Opcode opcode);
+
 enum Value_Location_Type {
 	INTEGER_REGISTER,
 	FLOATING_POINT_REGISTER,
 	CONSTANT_BLOCK,
+	BUILTIN_VARIABLE,
 };
 
 struct Value_Location_Info {
 	u32 integer_register = 0;
 	u32 floating_point_register = 0;
 	Value_Id value_id;
+	u32 builtin_id;
 
 	Value_Location_Type location_type;
 };
@@ -121,9 +126,9 @@ struct Bytecode_Instr {
 struct Constant_Block {
 	DArray<float> real = {};
 	DArray<s32> integer = {};
+	float builtin_variable[BUILTIN_VARIABLE_COUNT];
 
 	Value_Id add_constant(Value value);
-	Value get_value(Value_Id val_id);
 };
 
 struct Bytecode_Code {
@@ -162,11 +167,13 @@ struct Bytecode_Program {
 
 	Value_Location_Info emit_load_constant(Value_Id value_id);
 
+	void step_time(float step);
+
 	void print_program();
 };
 
 bool bytecode_compile_expression(Bytecode_Program& program, Expr* expr);
-float bytecode_run(Bytecode_Processor proc, Bytecode_Program program);
+float bytecode_run(Bytecode_Program& program);
 
 // - register usage
 // - common subexpression elimination

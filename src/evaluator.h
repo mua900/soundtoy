@@ -63,7 +63,7 @@ struct Evaluator
     Evaluator();
 
     Builtin_Function_List builtin_functions = {};
-    double builtins[BUILTIN_COUNT] = {};
+    double builtins[BUILTIN_VARIABLE_COUNT] = {};
     Error eval_error = {};
 
     void set(double sample_rate, double time);
@@ -76,10 +76,10 @@ struct Evaluator
         eval_error = Error();
     }
 
-    double get_time() { return builtins[BUILTIN_TIME]; }
-    double get_sample_rate() { return builtins[BUILTIN_SAMPLE_RATE]; }
+    double get_time() { return builtins[BUILTIN_VARIABLE_TIME]; }
+    double get_sample_rate() { return builtins[BUILTIN_VARIABLE_SAMPLE_RATE]; }
 
-    void step_time(double step) { builtins[BUILTIN_TIME] += step; }
+    void step_time(double step) { builtins[BUILTIN_VARIABLE_TIME] += step; }
 };
 
 // collapse the expression (constant fold) and return the new root node of the collapsed expression

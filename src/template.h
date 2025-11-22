@@ -105,6 +105,14 @@ public:
 			m_cap = 0;
 		}
 	}
+
+	T* begin() {
+		return m_data;
+	}
+
+	T* end() {
+		return m_data + m_size;
+	}
 };
 
 template <typename T>
@@ -121,5 +129,13 @@ struct Array
 	{
 		if (index >= size) panic("Out of bounds array access");
 		return data[index];
+	}
+
+	T* begin() {
+		return data;
+	}
+
+	T* end() {
+		return data + size;
 	}
 };

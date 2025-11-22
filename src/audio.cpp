@@ -61,7 +61,7 @@ void SDLCALL audio_callback_default(void* userdata, SDL_AudioStream* stream, int
 #define SAMPLE_BUFFER_SIZE 512
 float g_sample_buffer[SAMPLE_BUFFER_SIZE];
 
-void SDLCALL audio_callback_sample(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+void SDLCALL audio_callback_sample_tree(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
 {
     total_amount /= sizeof(float);
 
@@ -81,10 +81,34 @@ void SDLCALL audio_callback_sample(void* userdata, SDL_AudioStream* stream, int 
                 we are in the callback and we shouldn't be here if we have an invalid expression.
                 And we don't want to check in the callback.
             */ 
-            float value = SDL_clamp(eval.value, 0.0, 1.0);
+            float value = SDL_clamp(eval.value, -1.0, 1.0);
             g_sample_buffer[sample] = value;
 
             audio->evaluator.step_time(inv_sample_rate);
+        }
+
+        SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
+    }
+}
+
+void SDLCALL audio_callback_sample_bytecode(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+{
+    total_amount /= sizeof(float);
+
+    Audio* audio = (Audio*)userdata;
+
+    double inv_sample_rate = 1.0 / audio->m_sample_rate;
+
+    for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
+    {
+        for (int sample_index = 0; sample_index < SAMPLE_BUFFER_SIZE; sample_index++)
+        {
+            float sample = bytecode_run(audio->bytecode_program);
+
+            float value = SDL_clamp(sample, -1.0, 1.0);
+            g_sample_buffer[sample_index] = value;
+
+            audio->bytecode_program.step_time(inv_sample_rate);
         }
 
         SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
@@ -97,10 +121,20 @@ bool Audio::set_sample_expression(Expr* expr)
     if (eval.success) {
         printf("%f\n", eval.value);
 
+        printf("Compiling expression\n");
+        bool compile_success = bytecode_compile_expression(bytecode_program, expr);
+        if (compile_success) {
+            printf("Bytecode compilation success\n");
+            // bytecode_program.print_program(); @fix crash
+        }
+        else {
+            printf("Bytecode compilation failure\n");
+        }
+
         sample_expression = expr;
         evaluator.reset(m_sample_rate, 0.0);
 
-        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_sample, this);
+        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_sample_tree, this);
 
         return true;
     }

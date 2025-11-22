@@ -1,5 +1,4 @@
 #include "bytecode.h"
-#include "builtin.h"
 
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program);
 
@@ -272,6 +271,11 @@ Value_Location_Info Bytecode_Program::emit_load_constant(Value_Id value_id)
     return location;
 }
 
+void Bytecode_Program::step_time(float step)
+{
+    constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] += step;
+}
+
 void Bytecode_Program::print_program() {
     printf("Processor\n");
     printf("Integers registers:\n");
@@ -292,11 +296,17 @@ void Bytecode_Program::print_program() {
     for (int i = 0; i < constant_block.real.size(); i++) {
         printf("%f\n", constant_block.real.get(i));
     }
+
+    printf("\n");
+    printf("Code:\n");
+    for (auto instr : code.code) {
+        printf("%s %x %x\n", opcode_string(instr.opcode), instr.op0, instr.op1);
+    }
 }
 
 // -- Bytecode runner
 
-float bytecode_run(Bytecode_Processor proc, Bytecode_Program block)
+float bytecode_run(Bytecode_Program& block)
 {
 	// @todo
 	NOT_IMPLEMENTED("Bytecode run")
@@ -304,4 +314,54 @@ float bytecode_run(Bytecode_Processor proc, Bytecode_Program block)
 
 void bytecode_optimize(Bytecode_Program& program) {
     // not implemented
+}
+
+
+const char* opcode_string(Bytecode_Opcode opcode) {
+    switch (opcode) {
+        case INSTR_LOAD: return "INSTR_LOAD";
+        case INSTR_LOADF: return "INSTR_LOADF";
+        case INSTR_MOV: return "INSTR_MOV";
+        case INSTR_MOVF: return "INSTR_MOVF";
+        case INSTR_MOV_FG: return "INSTR_MOV_FG";
+        case INSTR_MOV_GF: return "INSTR_MOV_GF";
+
+        case INSTR_CONV_TO_INT: return "INSTR_CONV_TO_INT";
+        case INSTR_CONV_TO_F: return "INSTR_CONV_TO_F";
+
+        case INSTR_MOV_CONV_INT: return "INSTR_MOV_CONV_INT";
+        case INSTR_MOV_CONV_F: return "INSTR_MOV_CONV_F";
+
+        case INSTR_ADD: return "INSTR_ADD";
+        case INSTR_SUB: return "INSTR_SUB";
+        case INSTR_MUL: return "INSTR_MUL";
+        case INSTR_DIV: return "INSTR_DIV";
+        case INSTR_MOD: return "INSTR_MOD";
+
+        case INSTR_ADDF: return "INSTR_ADDF";
+        case INSTR_SUBF: return "INSTR_SUBF";
+        case INSTR_MULF: return "INSTR_MULF";
+        case INSTR_DIVF: return "INSTR_DIVF";
+        case INSTR_MODF: return "INSTR_MODF";
+
+        case INSTR_NEGATE: return "INSTR_NEGATE";
+        case INSTR_NOT: return "INSTR_NOT";
+
+        case INSTR_NEGATE_F: return "INSTR_NEGATE_F";
+
+        case INSTR_CMP: return "INSTR_CMP";
+        case INSTR_CMPF: return "INSTR_CMPF";
+
+        case INSTR_TEST_RESULT: return "INSTR_TEST_RESULT";
+
+        case INSTR_JMP: return "INSTR_JMP";
+        case INSTR_JMP_COND: "INSTR_JMP_COND";
+
+        case INSTR_CALL_BUILTIN: return "INSTR_CALL_BUILTIN";
+
+        case INSTR_RET: return "INSTR_RET";
+
+        case INSTR_COUNT: return "INSTR_COUNT";
+        case INSTR_SENTINEL: return "INSTR_SENTINEL";
+    }
 }

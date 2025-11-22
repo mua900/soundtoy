@@ -505,13 +505,13 @@ Evaluator::Evaluator()
 
 void Evaluator::set(double sample_rate, double time)
 {
-    builtins[BUILTIN_TIME] = time;
-    builtins[BUILTIN_SAMPLE_RATE] = sample_rate;
+    builtins[BUILTIN_VARIABLE_TIME] = time;
+    builtins[BUILTIN_VARIABLE_SAMPLE_RATE] = sample_rate;
 }
 
 void Evaluator::update(double time)
 {
-    builtins[BUILTIN_TIME] = time;
+    builtins[BUILTIN_VARIABLE_TIME] = time;
 }
 
 // simple depth first recursive tree traversal
@@ -545,6 +545,7 @@ Eval Evaluator::evaluate(Expr* expr)
             auto var = static_cast<Expr_Variable*>(expr);
 
             // builtin variables
+            if (is_builtin_variable(var))
             {
                 return { builtins[var->var_id], true };
             }
@@ -715,27 +716,20 @@ double get_sign(double x)
     return (x > 0) - (x < 0);
 }
 
+// @todo builtin constants
 Var_ID get_var_id(String name)
 {
     if (string_compare(make_string("time"), name) ||
         string_compare(make_string("t"), name)
         )
     {
-        return BUILTIN_TIME;
+        return BUILTIN_VARIABLE_TIME;
     }
     else if (string_compare(make_string("sample_rate"), name) ||
              string_compare(make_string("sr"), name)
             )
     {
-        return BUILTIN_SAMPLE_RATE;
-    }
-    else if (string_compare(make_string("pi"), name))
-    {
-        return BUILTIN_CONST_PI;
-    }
-    else if (string_compare(make_string("e"), name))
-    {
-        return BUILTIN_CONST_E;
+        return BUILTIN_VARIABLE_SAMPLE_RATE;
     }
     else
     {
@@ -980,8 +974,13 @@ void get_default_builtin_functions(Builtin_Function* list)
     list[BUILTIN_FUNC_ARCCOS] = acos;
 }
 
-bool is_builtin_function(Expr_Call* call)
+bool is_builtin_function(const Expr_Call* call)
 {
     ASSERT(call->arguments.size == 1);  // builtin functions should have a parameter count of 1
     return call->fn_id <= BUILTIN_FUNC_COUNT;
+}
+
+bool is_builtin_variable(const Expr_Variable* var)
+{
+    return var->var_id <= BUILTIN_VARIABLE_COUNT;
 }

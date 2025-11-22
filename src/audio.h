@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL.h>
 #include "evaluator.h"
+#include "bytecode.h"
 
 struct Audio {
     SDL_AudioDeviceID m_playback = 0;
@@ -9,6 +10,7 @@ struct Audio {
 
     Expr* sample_expression = nullptr;
     Evaluator evaluator = {};
+    Bytecode_Program bytecode_program = {};
 
     double sample_time = 0;  // time variable used for sampling.
 
