@@ -125,7 +125,7 @@ bool Audio::set_sample_expression(Expr* expr)
         bool compile_success = bytecode_compile_expression(bytecode_program, expr);
         if (compile_success) {
             printf("Bytecode compilation success\n");
-            // bytecode_program.print_program(); @fix crash
+            bytecode_program.print_program();  // @fix crash
         }
         else {
             printf("Bytecode compilation failure\n");

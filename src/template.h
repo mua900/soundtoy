@@ -25,6 +25,17 @@ public:
 		m_cap = cap;
 	}
 
+	void reset() {
+		if (m_data)
+		{
+			delete[](m_data);
+			m_data = nullptr;
+
+			m_size = 0;
+			m_cap = 0;
+		}
+	}
+
 	T get(int index) {
 		if (index >= m_size) panic("Out of bounds array access");
 		return m_data[index];
@@ -96,14 +107,7 @@ public:
 	}
 
 	void free()	{
-		if (m_data)
-		{
-			delete[](m_data);
-			m_data = nullptr;
-
-			m_size = 0;
-			m_cap = 0;
-		}
+		reset();
 	}
 
 	T* begin() {

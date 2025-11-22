@@ -122,11 +122,11 @@ struct Bytecode_Instr {
 	{}
 };
 
-// @todo we don't need to create this from expression tree when we can build it at parse time and replace values in the literals on the tree with simple ids.
 struct Constant_Block {
 	DArray<float> real = {};
 	DArray<s32> integer = {};
 	float builtin_variable[BUILTIN_VARIABLE_COUNT];
+	Builtin_Function_List builtin_function;
 
 	Value_Id add_constant(Value value);
 };
@@ -160,6 +160,8 @@ struct Bytecode_Program {
 
 	Bytecode_Program() : processor(), code(), constant_block() {}
 
+	void reset();
+
 	u32 allocate_gp_register();
 	u32 allocate_fp_register();
 
@@ -167,6 +169,8 @@ struct Bytecode_Program {
 
 	Value_Location_Info emit_load_constant(Value_Id value_id);
 
+	void set_builtin_variable(double value, u32 builtin_id);
+	void set_builtin_function(Builtin_Function implementation, u32 builtin_function);
 	void step_time(float step);
 
 	void print_program();

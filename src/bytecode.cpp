@@ -4,7 +4,7 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program);
 
 bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
 
-	// program.reset();
+	program.reset();
 	compile_expr(root, program);
     bytecode_optimize(program);
 
@@ -276,6 +276,28 @@ void Bytecode_Program::step_time(float step)
     constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] += step;
 }
 
+void Bytecode_Program::reset() {
+    processor.regs.reset();
+    processor.fregs.reset();
+    processor.program_counter = 0;
+    processor.result_flags = 0;
+    code.code.reset();
+    constant_block.real.reset();
+    constant_block.integer.reset();
+    for (float& var : constant_block.builtin_variable) {
+        var = 0;
+    }
+    get_default_builtin_functions(constant_block.builtin_function);
+}
+
+void Bytecode_Program::set_builtin_variable(double value, u32 builtin_variable) {
+    constant_block.builtin_variable[builtin_variable] = value;
+}
+
+void Bytecode_Program::set_builtin_function(Builtin_Function implementation, u32 builtin_function) {
+    constant_block.builtin_function[builtin_function] = implementation;
+}
+
 void Bytecode_Program::print_program() {
     printf("Processor\n");
     printf("Integers registers:\n");
@@ -289,7 +311,7 @@ void Bytecode_Program::print_program() {
 
     printf("Constant Block\n");
     printf("Integer constants:\n");
-    for (int i = 0; i < constant_block.real.size(); i++) {
+    for (int i = 0; i < constant_block.integer.size(); i++) {
         printf("%d\n", constant_block.integer.get(i));
     }
     printf("Float constants:\n");
