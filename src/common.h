@@ -136,6 +136,7 @@ struct Color {
 
 #define MIN(x,y) (((x) > (y)) ? (y) : (x))
 #define MAX(x,y) (((x) > (y)) ? (x) : (y))
+#define CLAMP(x, lower, upper) (MIN(upper, MAX(x, lower)))
 
 struct String_Builder {
     char* buffer = NULL;

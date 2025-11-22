@@ -2,22 +2,24 @@
 
 #include "expr.h"
 
+// @todo higher level builtins for audio
+
+// @todo support functions with different signatures.
 using Builtin_Function = double (*) (double);
 
 enum Builtin_Func_Type {
-    BUILTIN_FUNC_SIN,
-    BUILTIN_FUNC_COS,
     BUILTIN_FUNC_ABS,
     BUILTIN_FUNC_SIGN,
+    BUILTIN_FUNC_CEIL,
+    BUILTIN_FUNC_FLOOR,
+    // @todo get rid of different versions of the same function
+    BUILTIN_FUNC_CLAMP_RANGE_NORMAL,    // clamp between 0 and 1
+    BUILTIN_FUNC_CLAMP_RANGE_AUDIO,     // clamp between -1 and 1
+    BUILTIN_FUNC_SMOOTHSTEP,            // smoothstep between 0 and 1
+    BUILTIN_FUNC_SIN,
+    BUILTIN_FUNC_COS,
     BUILTIN_FUNC_ARCSIN,
     BUILTIN_FUNC_ARCCOS,
-
-    // @todo
-    /*
-    CEIL,
-    FLOOR,
-    SMOOTHSTEP,
-    */
 
     BUILTIN_FUNC_COUNT,
 

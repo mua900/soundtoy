@@ -24,6 +24,7 @@ add_executable(soundtoy
     src/evaluator.h
     src/evaluator.cpp
     src/builtin.h
+    src/builtin.cpp
     src/token.h
     src/expr.h
     src/expr.cpp

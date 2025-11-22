@@ -1,8 +1,4 @@
 #include "evaluator.h"
-#include <math.h>
-
-const double PI = 3.14159265359;
-const double E = 2.71828182846;
 
 DArray<Token> tokenize(String expression)
 {
@@ -709,13 +705,6 @@ void print_expr(Expr* expr, int indent)
     }
 }
 
-// @todo cleanup
-
-double get_sign(double x)
-{
-    return (x > 0) - (x < 0);
-}
-
 // @todo builtin constants
 Var_ID get_var_id(String name)
 {
@@ -749,7 +738,7 @@ Function_ID get_function_id(String name)
         return BUILTIN_FUNC_ABS;
     }
     else if (string_compare(name, make_string("sign"))
-         || string_compare(name, make_string("sgn"))) {  // @xxx is this a good idea to allow multiple keywords to mean the same thing?
+         || string_compare(name, make_string("sgn"))) {
         return BUILTIN_FUNC_SIGN;
     }
     else if (string_compare(name, make_string("asin"))) {
@@ -757,6 +746,21 @@ Function_ID get_function_id(String name)
     }
     else if (string_compare(name, make_string("acos"))) {
         return BUILTIN_FUNC_ARCCOS;
+    }
+    else if (string_compare(name, make_string("ceil"))) {
+        return BUILTIN_FUNC_CEIL;
+    }
+    else if (string_compare(name, make_string("floor"))) {
+        return BUILTIN_FUNC_FLOOR;
+    }
+    else if (string_compare(name, make_string("smoothstep"))) {
+        return BUILTIN_FUNC_SMOOTHSTEP;
+    }
+    else if (string_compare(name, make_string("clamp"))) {
+        return BUILTIN_FUNC_CLAMP_RANGE_NORMAL;
+    }
+    else if (string_compare(name, make_string("clamp_audio"))) {  // @todo get rid
+        return BUILTIN_FUNC_CLAMP_RANGE_AUDIO;
     }
 
     return FUNC_ID_INVALID; // @todo user defined functions
@@ -775,6 +779,8 @@ Expr* collapse_expr(Expr* root, String* error_string)
 
     return collapse_expr_real(root, builtin_functions, error_string);
 }
+
+// @todo it might not be the best idea to do optimizations on the tree as we do here.
 
 // recursive depth first
 Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String* error_string)
@@ -839,60 +845,38 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
     {
         auto call = static_cast<Expr_Call*>(expr);
 
+        // @todo typechecking for arguments
+
         bool all_literals = true;
         bool all_reals = true;
         for (int i = 0; i < call->arguments.size; i++)
         {
             call->arguments.data[i] = collapse_expr_real(call->arguments.data[i], builtin_functions, error_string);
-            if (call->arguments.data[i]->type != Expr_Type::Literal)
+            if (call->arguments.data[i]->type == Expr_Type::Literal)
             {
-                all_literals = false;
-            }
-            else
-            {
-                if (static_cast<Expr_Literal*>(call->arguments.data[0])->value.type != Value_Type::REAL)
+                if (static_cast<Expr_Literal*>(call->arguments.data[i])->value.type != Value_Type::REAL)
                 {
                     all_reals = false;
                 }
             }
+            else
+            {
+                all_literals = false;
+            }
         }
 
-        if (all_literals && all_reals)
+        if (is_builtin_function(call) && all_literals && all_reals)
         {
             if (call->arguments.size != 1)
             {
-                // @todo when you are able to define your own functions which can take arguments how much ever it wants to this needs to be fixed
-                *error_string = make_string("No known function with arity not equal to 1");
-                return NULL;
-            }
-
-            Builtin_Func_Type func_type = BUILTIN_FUNC_UNKNOWN;
-
-            if (string_compare(call->function_name, make_string("sin")))
-                func_type = BUILTIN_FUNC_SIN;
-            else if (string_compare(call->function_name, make_string("cos")))
-                func_type = BUILTIN_FUNC_COS;
-            else if (string_compare(call->function_name, make_string("abs")))
-                func_type = BUILTIN_FUNC_ABS;
-            else if (string_compare(call->function_name, make_string("sign")) || string_compare(call->function_name, make_string("sgn")))  // @xxx is this a good idea?
-                func_type = BUILTIN_FUNC_SIGN;
-            else if (string_compare(call->function_name, make_string("asin")))
-                func_type = BUILTIN_FUNC_ARCSIN;
-            else if (string_compare(call->function_name, make_string("acos")))
-                func_type = BUILTIN_FUNC_ARCCOS;
-
-            if (func_type == BUILTIN_FUNC_UNKNOWN)
-            {
-                String_Builder sb(64);
-                sb.append(make_string("No such function as "));
-                sb.append(call->function_name);
-                *error_string = sb.to_string();  // lifetime outside of this function
+                *error_string = make_string("Builtin functions take 1 parameter");
                 return NULL;
             }
 
             Expr_Literal* lit = static_cast<Expr_Literal*>(call->arguments.data[0]);
             double arg = lit->value.real;
-            return new Expr_Literal(builtin_functions[func_type](arg));
+            double bake_value = builtin_functions[call->fn_id](arg);
+            return new Expr_Literal(bake_value);
         }
 
         break;
@@ -918,7 +902,7 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
             {
                 case Unop_Negate:
                 {
-                    if (operand->value.is_numeric())
+                    if (!operand->value.is_numeric())
                     {
                         *error_string = make_string("Can not negate non numeric value");
                         return NULL;
@@ -962,25 +946,4 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
     }
 
     return expr;
-}
-
-void get_default_builtin_functions(Builtin_Function* list)
-{
-    list[BUILTIN_FUNC_SIN] = sin;
-    list[BUILTIN_FUNC_COS] = cos;
-    list[BUILTIN_FUNC_ABS] = fabs;
-    list[BUILTIN_FUNC_SIGN] = get_sign;
-    list[BUILTIN_FUNC_ARCSIN] = asin;
-    list[BUILTIN_FUNC_ARCCOS] = acos;
-}
-
-bool is_builtin_function(const Expr_Call* call)
-{
-    ASSERT(call->arguments.size == 1);  // builtin functions should have a parameter count of 1
-    return call->fn_id <= BUILTIN_FUNC_COUNT;
-}
-
-bool is_builtin_variable(const Expr_Variable* var)
-{
-    return var->var_id <= BUILTIN_VARIABLE_COUNT;
 }
