@@ -387,7 +387,7 @@ Expr* Parser::parse_call_expr()
     cursor++;  // (
 
     int arg_count = 0;
-    int paren_close = 0;
+    int paren_close = cursor;
     DArray<Expr*> arguments;
 
     // count and collect the arguments
@@ -807,8 +807,6 @@ Expr* collapse_expr(Expr* root, String* error_string)
 
     return collapse_expr_real(root, builtin_functions, error_string);
 }
-
-// @todo it might not be the best idea to do optimizations on the tree as we do here.
 
 // recursive depth first
 Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String* error_string)

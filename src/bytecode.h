@@ -159,8 +159,10 @@ struct Bytecode_Program {
 
 	void reset();
 
-	u32 allocate_gp_register();
-	u32 allocate_fp_register();
+	u16 allocate_gp_register();
+	u16 allocate_fp_register();
+
+	u16 get_value_to_fp_register(Value_Location_Info val_info);
 
 	void emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg0, u16 arg1);
 

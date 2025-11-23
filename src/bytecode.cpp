@@ -40,24 +40,19 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
         case Expr_Type::Variable: {
             auto variable = static_cast<Expr_Variable*>(expr);
 
-            Value_Location_Info location;
-            switch (variable->variable_type) {
-                case Value_Type::INTEGER:
-                case Value_Type::BOOL:
-                    {
-                        location.location_type = Value_Location_Type::INTEGER_REGISTER;
-                        location.integer_register = program.allocate_gp_register();
-                        break;
-                    }
-                case Value_Type::REAL:
-                    {
-                        location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
-                        location.floating_point_register = program.allocate_fp_register();
-                        break;
-                    }
-            }
+            if (is_builtin_variable(variable)) {
+                u16 freg = program.allocate_fp_register();
+                program.emit_bytecode_instruction(INSTR_LOAD_BUILTIN, freg, variable->var_id);
 
-            return location;
+                Value_Location_Info builtin_location_info;
+                builtin_location_info.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+                builtin_location_info.floating_point_register = freg;
+
+                return builtin_location_info;
+            }
+            else {
+                NOT_IMPLEMENTED("User defined variables");
+            }
         }
         case Expr_Type::Unary: {
             auto unary = static_cast<Expr_Unary*>(expr);
@@ -171,7 +166,11 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
             Value_Location_Info location;
 
             if (is_builtin_function(call)) {
-                u32 freg = program.allocate_fp_register();
+                Expr* argument = call->arguments.get(0);
+                Value_Location_Info arg_location = compile_expr(argument, program);
+
+                u16 freg = program.get_value_to_fp_register(arg_location);
+
                 program.emit_bytecode_instruction(INSTR_CALL_BUILTIN, call->fn_id, freg);
 
                 location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
@@ -246,12 +245,30 @@ Bytecode_Opcode bytecode_get_floating_point_version(Bytecode_Opcode opcode)
 
 // @todo proper register allocation
 
-u32 Bytecode_Program::allocate_gp_register() {
+u16 Bytecode_Program::allocate_gp_register() {
 	return processor.regs.add(0);
 }
 
-u32 Bytecode_Program::allocate_fp_register() {
+u16 Bytecode_Program::allocate_fp_register() {
 	return processor.fregs.add(0.0);
+}
+
+u16 Bytecode_Program::get_value_to_fp_register(Value_Location_Info val_info)
+{
+    if (val_info.location_type == Value_Location_Type::FLOATING_POINT_REGISTER) {
+        return val_info.floating_point_register;
+    }
+    else {
+        u16 freg = allocate_fp_register();
+        if (val_info.location_type == Value_Location_Type::CONSTANT_BLOCK) {
+            emit_load_constant(val_info.const_id);
+        }
+        else if (val_info.location_type == Value_Location_Type::INTEGER_REGISTER) {
+            emit_bytecode_instruction(INSTR_MOV_I_TO_F, freg, val_info.integer_register);
+        }
+
+        return freg;
+    }
 }
 
 void Bytecode_Program::emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg0, u16 arg1) {
@@ -618,6 +635,7 @@ const char* opcode_string(Bytecode_Opcode opcode) {
     switch (opcode) {
         case INSTR_LOAD: return "INSTR_LOAD";
         case INSTR_LOADF: return "INSTR_LOADF";
+        case INSTR_LOAD_BUILTIN: return "INSTR_LOAD_BUILTIN";
         case INSTR_MOV: return "INSTR_MOV";
         case INSTR_MOVF: return "INSTR_MOVF";
         case INSTR_MOV_I_TO_F: return "INSTR_MOV_I_TO_F";
