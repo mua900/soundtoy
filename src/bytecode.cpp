@@ -1,11 +1,23 @@
 #include "bytecode.h"
 
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program);
+static Bytecode_Opcode get_arithmetic_binop_opcode_integer(Op_Binary binary);
+static Bytecode_Opcode get_arithmetic_binop_opcode_float(Op_Binary binary);
 
 bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
 
 	program.reset();
-	compile_expr(root, program);
+	Value_Location_Info location = compile_expr(root, program);
+    if (location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
+        u16 freg = program.allocate_fp_register();
+        program.emit_bytecode_instruction(INSTR_LOADF, freg, location.const_id.constant_index);
+    }
+    else if (location.location_type == Value_Location_Type::INTEGER_REGISTER) {
+        u16 freg = program.allocate_fp_register();
+        program.emit_bytecode_instruction(INSTR_MOV_I_TO_F, freg, location.integer_register);
+    }
+    program.emit_bytecode_instruction(INSTR_RET, location.floating_point_register, 0);
+
     bytecode_optimize(program);
 
 	return true;
@@ -19,9 +31,9 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 
             Value_Location_Info location;
             location.location_type = Value_Location_Type::CONSTANT_BLOCK;
-            location.value_id = program.constant_block.add_constant(literal->value);
+            location.const_id = program.constant_block.add_constant(literal->value);
 
-            program.emit_load_constant(location.value_id);
+            program.emit_load_constant(location.const_id);
 
             return location;
         }
@@ -55,7 +67,7 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
             // if the operand is inside the constant block.
             // load it and put it to a register first
             if (operand_location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-                operand_location = program.emit_load_constant(operand_location.value_id);
+                operand_location = program.emit_load_constant(operand_location.const_id);
             }
 
             if (unary->op == Unop_Negate) {
@@ -79,10 +91,10 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
             Value_Location_Info right_location = compile_expr(binary->right, program);
 
             if (left_location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-                left_location = program.emit_load_constant(left_location.value_id);
+                left_location = program.emit_load_constant(left_location.const_id);
             }
             else if (right_location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-                right_location = program.emit_load_constant(right_location.value_id);
+                right_location = program.emit_load_constant(right_location.const_id);
             }
 
             // if the results of the left and right branches are in different register files
@@ -115,9 +127,11 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
             if (binop_is_arithmetic(binary->op))
             {
                 if (is_using_integer_registers) {
+                    opcode = get_arithmetic_binop_opcode_integer(binary->op);
                     program.emit_bytecode_instruction(opcode, left_location.integer_register, right_location.integer_register);
                 }
                 else {
+                    opcode = get_arithmetic_binop_opcode_float(binary->op);
                     program.emit_bytecode_instruction(opcode, left_location.floating_point_register, right_location.floating_point_register);
                 }
             }
@@ -172,21 +186,23 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 	}
 }
 
-Value_Id Constant_Block::add_constant(Value value)
+Constant_Id Constant_Block::add_constant(Value value)
 {
-	int index = 0;
+    Constant_Id const_id;
 
 	switch (value.type)
 	{
         case Value_Type::BOOL:  // fallthrough
 		case Value_Type::INTEGER:
 			{
-				index = integer.add_unique(value.integer);
+				const_id.constant_index = integer.add_unique(value.integer);
+                const_id.constant_type = CONSTANT_TYPE_INTEGER;
 				break;
 			}
 		case Value_Type::REAL:
 			{
-				index = real.add_unique(value.real);
+				const_id.constant_index = real.add_unique(value.real);
+                const_id.constant_type = CONSTANT_TYPE_REAL;
 				break;
 			}
 		default:
@@ -195,11 +211,7 @@ Value_Id Constant_Block::add_constant(Value value)
 		}
 	}
 
-	Value_Id value_id;
-    value_id.value_type = value.type;
-    value_id.value_index = index;
-
-	return value_id;
+	return const_id;
 }
 
 Bytecode_Opcode bytecode_get_floating_point_version(Bytecode_Opcode opcode)
@@ -246,28 +258,32 @@ void Bytecode_Program::emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg
 	code.code.add(Bytecode_Instr(opcode, arg0, arg1));
 }
 
-Value_Location_Info Bytecode_Program::emit_load_constant(Value_Id value_id)
+Value_Location_Info Bytecode_Program::emit_load_constant(Constant_Id const_id)
 {
     Value_Location_Info location;
 
-    switch (value_id.value_type) {
-        case Value_Type::BOOL:
-        case Value_Type::INTEGER:
-            {
+    switch (const_id.constant_type) {
+        case CONSTANT_TYPE_INTEGER: {
                 u32 reg = allocate_gp_register();
-                emit_bytecode_instruction(INSTR_LOAD, reg, value_id.value_index);
+                emit_bytecode_instruction(INSTR_LOAD, reg, const_id.constant_index);
                 location.location_type = Value_Location_Type::INTEGER_REGISTER;
                 location.floating_point_register = reg;
                 break;
             }
-        case Value_Type::REAL:
-            {
+        case CONSTANT_TYPE_REAL: {
                 u32 freg = allocate_fp_register();
-                emit_bytecode_instruction(INSTR_LOADF, freg, value_id.value_index);
+                emit_bytecode_instruction(INSTR_LOADF, freg, const_id.constant_index);
                 location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
                 location.floating_point_register = freg;
                 break;
             }
+        case CONSTANT_TYPE_BUILTIN: {
+            u32 freg = allocate_gp_register();
+            emit_bytecode_instruction(INSTR_LOAD_BUILTIN, freg, const_id.constant_index);
+            location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+            location.floating_point_register = freg;
+            break;
+        }
     }
 
     return location;
@@ -281,7 +297,7 @@ void Bytecode_Program::step_time(float step)
 void Bytecode_Program::reset() {
     processor.regs.reset();
     processor.fregs.reset();
-    processor.program_counter = 0;
+    processor.pc = 0;
     processor.result_flags = 0;
     code.code.reset();
     constant_block.real.reset();
@@ -330,10 +346,267 @@ void Bytecode_Program::print_program() {
 
 // -- Bytecode runner
 
-float bytecode_run(Bytecode_Program& block)
+float bytecode_run(Bytecode_Program& program)
 {
 	// @todo
-	NOT_IMPLEMENTED("Bytecode run")
+    Bytecode_Processor& processor = program.processor;
+    Constant_Block& constant_block = program.constant_block;
+    Bytecode_Code& code = program.code;
+
+#define BYTECODE_PROGRAM_MAXIMUM_ITERATION_COUNT 2000
+    int iteration_count = 0;
+
+    while (processor.pc < code.code.size()) {
+        if (iteration_count >= BYTECODE_PROGRAM_MAXIMUM_ITERATION_COUNT) {
+            panic("Too many iterations in bytecode program");
+        }
+
+        Bytecode_Instr instr = code.code.get(processor.pc);
+
+        processor.pc += 1;
+        iteration_count += 1;
+
+        switch (instr.opcode) {
+            case INSTR_LOAD: {
+                u16 reg = instr.op0;
+                u16 const_index = instr.op1;
+
+                processor.regs.get_ref(reg) = constant_block.integer.get(const_index);
+                break;
+            }
+            case INSTR_LOADF: {
+                u16 freg = instr.op0;
+                u16 const_index = instr.op1;
+
+                processor.regs.get_ref(freg) = constant_block.real.get(const_index);
+                break;
+            }
+            case INSTR_LOAD_BUILTIN: {
+                u16 freg = instr.op0;
+                u16 builtin_index = instr.op1;
+
+                processor.fregs.get_ref(freg) = constant_block.builtin_variable[builtin_index];
+
+                break;
+            }
+            case INSTR_MOV: {
+                u16 reg_0 = instr.op0;
+                u16 reg_1 = instr.op1;
+
+                processor.regs.get_ref(reg_0) = processor.regs.get(reg_1);
+                break;
+            }
+            case INSTR_MOVF: {
+                u16 freg_0 = instr.op0;
+                u16 freg_1 = instr.op1;
+
+                processor.fregs.get_ref(freg_0) = processor.fregs.get(freg_1);
+                break;
+            }
+
+            case INSTR_MOV_I_TO_F: {
+                u16 freg = instr.op0;
+                u16 ireg = instr.op1;
+
+                processor.fregs.get_ref(freg) = (float)processor.regs.get(ireg);
+                break;
+            }
+            case INSTR_MOV_F_TO_I: {
+                u16 ireg = instr.op0;
+                u16 freg = instr.op1;
+
+                processor.regs.get_ref(ireg) = (s32)processor.fregs.get(freg);
+                break;
+            }
+
+            case INSTR_ADD: {
+                s32 op0 = processor.regs.get(instr.op0);
+                s32 op1 = processor.regs.get(instr.op1);
+
+                processor.regs.get_ref(instr.op0) = op0 + op1;
+                break;
+            }
+            case INSTR_SUB: {
+                s32 op0 = processor.regs.get(instr.op0);
+                s32 op1 = processor.regs.get(instr.op1);
+
+                processor.regs.get_ref(instr.op0) = op0 - op1;
+                break;
+            }
+            case INSTR_MUL: {
+                s32 op0 = processor.regs.get(instr.op0);
+                s32 op1 = processor.regs.get(instr.op1);
+
+                processor.regs.get_ref(instr.op0) = op0 * op1;
+                break;
+            }
+            case INSTR_DIV: {
+                s32 op0 = processor.regs.get(instr.op0);
+                s32 op1 = processor.regs.get(instr.op1);
+
+                processor.regs.get_ref(instr.op0) = op0 / op1;
+                break;
+            }
+            case INSTR_MOD: {
+                s32 op0 = processor.regs.get(instr.op0);
+                s32 op1 = processor.regs.get(instr.op1);
+
+                processor.regs.get_ref(instr.op0) = op0 % op1;
+
+                break;
+            }
+
+            case INSTR_ADDF: {
+                float op0 = processor.fregs.get(instr.op0);
+                float op1 = processor.fregs.get(instr.op1);
+
+                processor.fregs.get_ref(instr.op0) = op0 + op1;
+
+                break;
+            }
+            case INSTR_SUBF: {
+                float op0 = processor.fregs.get(instr.op0);
+                float op1 = processor.fregs.get(instr.op1);
+
+                processor.fregs.get_ref(instr.op0) = op0 - op1;
+
+                break;
+            }
+            case INSTR_MULF: {
+                float op0 = processor.fregs.get(instr.op0);
+                float op1 = processor.fregs.get(instr.op1);
+
+                processor.fregs.get_ref(instr.op0) = op0 * op1;
+                break;
+            }
+            case INSTR_DIVF: {
+                float op0 = processor.fregs.get(instr.op0);
+                float op1 = processor.fregs.get(instr.op1);
+
+                processor.fregs.get_ref(instr.op0) = op0 / op1;
+
+                break;
+            }
+            case INSTR_MODF: {
+                float op0 = processor.fregs.get(instr.op0);
+                float op1 = processor.fregs.get(instr.op1);
+
+                processor.fregs.get_ref(instr.op0) = fmodf(op0, op1);
+
+                break;
+            }
+
+            case INSTR_NEGATE: {
+                s32 value = processor.regs.get(instr.op0);
+                processor.regs.get_ref(instr.op0) = - value;
+                break;
+            }
+            case INSTR_NOT: {
+                s32 value = processor.regs.get(instr.op0);
+                processor.regs.get_ref(instr.op0) = (value == 0);
+                break;
+            }
+
+            case INSTR_NEGATE_F: {
+                float value = processor.fregs.get(instr.op0);
+                processor.fregs.get_ref(instr.op0) = - value;
+                break;
+            }
+
+            case INSTR_CMP: {
+                s32 left = processor.regs.get(instr.op0);
+                s32 right = processor.regs.get(instr.op1);
+                if (left == right) {
+                    processor.result_flags |= COMPARISON_RESULT_EQUALS;
+                    processor.result_flags &= ~COMPARISON_RESULT_NOT_EQUALS;
+                }
+                else {
+                    processor.result_flags |= COMPARISON_RESULT_NOT_EQUALS;
+                    processor.result_flags &= ~COMPARISON_RESULT_EQUALS;
+                }
+
+                if (left > right) {
+                    processor.result_flags |= COMPARISON_RESULT_GREATER_THAN;
+                    processor.result_flags &= ~COMPARISON_RESULT_LESS_THAN;
+                }
+                else {
+                    processor.result_flags |= COMPARISON_RESULT_LESS_THAN;
+                    processor.result_flags &= ~COMPARISON_RESULT_GREATER_THAN;
+                }
+
+                break;
+            }
+            case INSTR_CMPF: {
+                float left = processor.fregs.get(instr.op0);
+                float right = processor.fregs.get(instr.op1);
+                if (left == right) {
+                    processor.result_flags |= COMPARISON_RESULT_EQUALS;
+                    processor.result_flags &= ~COMPARISON_RESULT_NOT_EQUALS;
+                }
+                else {
+                    processor.result_flags |= COMPARISON_RESULT_NOT_EQUALS;
+                    processor.result_flags &= ~COMPARISON_RESULT_EQUALS;
+                }
+
+                if (left > right) {
+                    processor.result_flags |= COMPARISON_RESULT_GREATER_THAN;
+                    processor.result_flags &= ~COMPARISON_RESULT_LESS_THAN;
+                }
+                else {
+                    processor.result_flags |= COMPARISON_RESULT_LESS_THAN;
+                    processor.result_flags &= ~COMPARISON_RESULT_GREATER_THAN;
+                }
+
+                break;
+            }
+
+            case INSTR_TEST_RESULT: {
+                u32 test_value = (u32)instr.op0;
+
+                u32 result = test_value & processor.result_flags;
+                if (result) {
+                    processor.result_flags |= CONDITION_RESULT;
+                }
+                else {
+                    processor.result_flags &= ~CONDITION_RESULT;
+                }
+
+                break;
+            }
+
+            case INSTR_JMP: {
+                u16 address = instr.op0;
+                processor.pc = address;
+
+                break;
+            }
+            case INSTR_JMP_COND: {
+                if (processor.result_flags & CONDITION_RESULT) {
+                    u16 address = instr.op0;
+                    processor.pc = address;
+                }
+
+                break;
+            }
+
+            case INSTR_CALL_BUILTIN: {
+                u16 fn_id = instr.op0;
+                u16 freg = instr.op1;
+
+                float result = program.constant_block.builtin_function[fn_id](processor.fregs.get(freg));
+                processor.fregs.get_ref(freg) = result;
+                break;
+            }
+
+            case INSTR_RET: {
+                return processor.fregs.get(instr.op0);
+            }
+
+            default: {
+                panic("Invalid instruction opcode");
+            }
+        }
+    }
 }
 
 void bytecode_optimize(Bytecode_Program& program) {
@@ -347,14 +620,8 @@ const char* opcode_string(Bytecode_Opcode opcode) {
         case INSTR_LOADF: return "INSTR_LOADF";
         case INSTR_MOV: return "INSTR_MOV";
         case INSTR_MOVF: return "INSTR_MOVF";
-        case INSTR_MOV_FG: return "INSTR_MOV_FG";
-        case INSTR_MOV_GF: return "INSTR_MOV_GF";
-
-        case INSTR_CONV_TO_INT: return "INSTR_CONV_TO_INT";
-        case INSTR_CONV_TO_F: return "INSTR_CONV_TO_F";
-
-        case INSTR_MOV_CONV_INT: return "INSTR_MOV_CONV_INT";
-        case INSTR_MOV_CONV_F: return "INSTR_MOV_CONV_F";
+        case INSTR_MOV_I_TO_F: return "INSTR_MOV_I_TO_F";
+        case INSTR_MOV_F_TO_I: return "INSTR_MOV_F_TO_I";
 
         case INSTR_ADD: return "INSTR_ADD";
         case INSTR_SUB: return "INSTR_SUB";
@@ -387,5 +654,27 @@ const char* opcode_string(Bytecode_Opcode opcode) {
 
         case INSTR_COUNT: return "INSTR_COUNT";
         case INSTR_SENTINEL: return "INSTR_SENTINEL";
+    }
+}
+
+static Bytecode_Opcode get_arithmetic_binop_opcode_integer(Op_Binary binary) {
+    switch (binary) {
+        case Binop_Add: return INSTR_ADD;
+        case Binop_Sub: return INSTR_SUB;
+        case Binop_Mul: return INSTR_MUL;
+        case Binop_Div: return INSTR_DIV;
+        case Binop_Mod: return INSTR_MOD;
+        default: panic("Invalid arithmetic binary operation");
+    }
+}
+
+static Bytecode_Opcode get_arithmetic_binop_opcode_float(Op_Binary binary) {
+    switch (binary) {
+        case Binop_Add: return INSTR_ADDF;
+        case Binop_Sub: return INSTR_SUBF;
+        case Binop_Mul: return INSTR_MULF;
+        case Binop_Div: return INSTR_DIVF;
+        case Binop_Mod: return INSTR_MODF;
+        default: panic("Invalid arithmetic binary operation");
     }
 }

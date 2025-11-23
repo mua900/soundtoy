@@ -16,30 +16,29 @@
 	There are unlimited registers (as long as it can be addressed by the representable range of the id) and a constant block containing all the constants used in the expression for bytecode program to use.
 */
 
-// For Value_Id the last 2 bits are the type of the value. Maps directly to value types.
-// The remaining part is the index of the value in its type.
+enum Constant_Type {
+	CONSTANT_TYPE_INTEGER,
+	CONSTANT_TYPE_REAL,
+	CONSTANT_TYPE_BUILTIN,
+};
 
-struct Value_Id {
-	Value_Type value_type;
-	u16 value_index;
+struct Constant_Id {
+	Constant_Type constant_type;
+	u16 constant_index;
 };
 
 using Func_Id = u16;
 
 enum Bytecode_Opcode : u32
 {
+	// destination source syntax
 	INSTR_LOAD,			// load reg, const_int
 	INSTR_LOADF,		// load freg, const_float
+	INSTR_LOAD_BUILTIN,	// load_builtin freg builtin_id
 	INSTR_MOV,			// mov  reg, reg
 	INSTR_MOVF,			// mov  freg, freg
-	INSTR_MOV_FG,		// mov  freg, reg		   -- bitwise copy of the value
-	INSTR_MOV_GF,		// mov  reg, freg		   -- bitwise copy of the value
-
-	INSTR_CONV_TO_INT,	// conv freg			   -- convert a floating point value to an integer
-	INSTR_CONV_TO_F,	// conv reg				   -- convert an integer to a floating point value
-
-	INSTR_MOV_CONV_INT, // mov_and_conv freg, reg  -- MOV_FG freg, reg CONV_TO_INT freg
-	INSTR_MOV_CONV_F,	// mov_and_conv reg, freg  -- MOV_GF reg, freg CONV_TO_F reg
+	INSTR_MOV_I_TO_F,	// mov  freg, reg		   -- bitwise copy of the value
+	INSTR_MOV_F_TO_I,	// mov  reg, freg		   -- bitwise copy of the value
 
 	INSTR_ADD,			// add reg1, reg2
 	INSTR_SUB,			// sub reg1, reg2
@@ -58,11 +57,11 @@ enum Bytecode_Opcode : u32
 
 	INSTR_NEGATE_F,		// negate freg
 
-	// the result of the comparison is stored in the flags register.
+	// the result of the comparison is stored in the relevant bits of the flags register.
 	INSTR_CMP,			// cmp reg0, reg1
 	INSTR_CMPF,			// cmpf freg0, freg1
 
-	// test sets the condition flag of the processor
+	// commit the result of the previous generic compare operation for a specific case to the condition bit
 	INSTR_TEST_RESULT,	// test immediate16
 
 	// jump
@@ -76,7 +75,7 @@ enum Bytecode_Opcode : u32
 	// and that register is overwriten with the result of the call to return the value
 	INSTR_CALL_BUILTIN,	// call_builtin func_id freg
 
-	INSTR_RET,			// ret
+	INSTR_RET,			// ret freg  -- return the floating point value in the freg the result of the expression
 
 	INSTR_COUNT,
 
@@ -89,16 +88,14 @@ enum Value_Location_Type {
 	INTEGER_REGISTER,
 	FLOATING_POINT_REGISTER,
 	CONSTANT_BLOCK,
-	BUILTIN_VARIABLE,
 };
 
 struct Value_Location_Info {
 	u32 integer_register = 0;
 	u32 floating_point_register = 0;
-	Value_Id value_id;
-	u32 builtin_id;
+	Constant_Id const_id = {};
 
-	Value_Location_Type location_type;
+	Value_Location_Type location_type = {};
 };
 
 Bytecode_Opcode bytecode_get_floating_point_version(Bytecode_Opcode opcode);
@@ -125,10 +122,10 @@ struct Bytecode_Instr {
 struct Constant_Block {
 	DArray<float> real = {};
 	DArray<s32> integer = {};
-	float builtin_variable[BUILTIN_VARIABLE_COUNT];
-	Builtin_Function_List builtin_function;
+	float builtin_variable[BUILTIN_VARIABLE_COUNT] = {};
+	Builtin_Function_List builtin_function = {};
 
-	Value_Id add_constant(Value value);
+	Constant_Id add_constant(Value value);
 };
 
 struct Bytecode_Code {
@@ -143,9 +140,9 @@ struct Bytecode_Code {
 #define COMPARISON_RESULT_LESS_THAN		BIT(7)
 
 struct Bytecode_Processor {
-	DArray<u32> regs;
+	DArray<s32> regs;
 	DArray<float> fregs;
-	u32 program_counter = 0;
+	u32 pc = 0;
 	u32 result_flags = 0;
 
 	Bytecode_Processor()
@@ -167,7 +164,7 @@ struct Bytecode_Program {
 
 	void emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg0, u16 arg1);
 
-	Value_Location_Info emit_load_constant(Value_Id value_id);
+	Value_Location_Info emit_load_constant(Constant_Id value_id);
 
 	void set_builtin_variable(double value, u32 builtin_id);
 	void set_builtin_function(Builtin_Function implementation, u32 builtin_function);
