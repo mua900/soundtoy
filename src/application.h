@@ -44,13 +44,16 @@ struct Text {
     Text(SDL_Texture* p_texture, String p_string) : texture(p_texture), string(p_string) {}
 };
 
-enum {
+enum Text_Id : int {
     // static text
     TEXT_PAUSED = 0,
     TEXT_PLAYING,
     TEXT_SAMPLE_RATE,
     TEXT_INVALID_EXPRESSION,
     TEXT_VALID_EXPRESSION,
+    TEXT_MONO,
+    TEXT_STEREO,
+    TEXT_CHANNEL_COUNT,
 
     // dynamic text
     TEXT_VOLUME_VALUE,
@@ -107,20 +110,33 @@ struct Drop_Down_List {
     vec2 pos = {};   // top left corner
     vec2 scale = {};
     int selected = DROP_DOWN_LIST_SELECTED_SENTINEL;
-    DArray<Text> options = {};
+    Text_Id title = {};
+    DArray<Text_Id> options = {};
     bool open = false;
+
+    void toggle() {
+        open = !open;
+    }
 
     void set_area(vec2 p_pos, vec2 p_scale)
     {
         pos = p_pos; scale = p_scale;
     }
 
-    Drop_Down_List() {}
-    Drop_Down_List(Text* text, int count);
-    ~Drop_Down_List();
-};
+    void set_title(Text_Id text_id) {
+        title = text_id;
+    }
 
-#define MAX_INPUT_FIELD_COUNT 4
+    void add_option(Text_Id text_id) {
+        options.add(text_id);
+    }
+
+    Drop_Down_List() {}
+    Drop_Down_List(vec2 p_pos, vec2 p_scale) : pos(p_pos), scale(p_scale) {}
+    ~Drop_Down_List() {
+        options.reset();
+    }
+};
 
 enum Text_Input_Target : u8 {
     TEXT_INPUT_TEXT_FIELD,
@@ -132,7 +148,7 @@ struct Ui_State {
     vec2 volume_slider_knob_scale = { 0.1, 2 };
 
     Rectangle pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
-    Text_Field input_text_fields[MAX_INPUT_FIELD_COUNT] = {};
+    Text_Field input_text_field = { { INIT_WINDOW_WIDTH / 2 - 500, INIT_WINDOW_HEIGHT * (4.0 / 5.0) - 100, 1000, 200 } };
     Text_Field sample_rate_box = { { INIT_WINDOW_WIDTH * (3.0 / 5.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0), INIT_WINDOW_WIDTH / 5.0, INIT_WINDOW_HEIGHT / 5.0 } };
 
     Drop_Down_List channel_count = {};

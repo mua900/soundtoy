@@ -70,10 +70,11 @@ bool Application::initialize()
         m_ui.sample_rate_box.m_text.append_integer(initial_sample_rate);
         m_ui.sample_rate_box.update_text(m_window.renderer, m_assets.font, false);
 
-        m_ui.input_text_fields[0] = { { INIT_WINDOW_WIDTH / 2 - 500, INIT_WINDOW_HEIGHT* (4.0 / 5.0) - 100, 1000, 200 } };
+        m_ui.update(m_window);
 
-        m_ui.channel_count.set_area(vec2(INIT_WINDOW_WIDTH / 10, INIT_WINDOW_HEIGHT * (4.0/5.0)),
-                                    vec2(INIT_WINDOW_WIDTH / 8, INIT_WINDOW_HEIGHT / 8));
+        m_ui.channel_count.set_title(TEXT_CHANNEL_COUNT);
+        m_ui.channel_count.add_option(TEXT_MONO);
+        m_ui.channel_count.add_option(TEXT_STEREO);
     }
 
     quit = false;
@@ -107,10 +108,19 @@ bool Application::gen_static_text(Color color)
     Text invalid_expression = create_text(make_string("Invalid Expression"), color);
     Text valid_expression = create_text(make_string("Valid Expression"), color);
     Text sample_rate = create_text(make_string("sample rate"), color);
+    Text channel_count = create_text(make_string("channel count"), color);
+    Text mono = create_text(make_string("mono"), color);
+    Text stereo = create_text(make_string("stereo"), color);
 
     if (!paused.texture ||
         !playing.texture ||
-        !invalid_expression.texture)
+        !invalid_expression.texture ||
+        !valid_expression.texture ||
+        !sample_rate.texture ||
+        !channel_count.texture ||
+        !mono.texture ||
+        !stereo.texture
+        )
     {
         return false;
     }
@@ -120,6 +130,9 @@ bool Application::gen_static_text(Color color)
     m_rendered_text_cache.data[TEXT_SAMPLE_RATE] = sample_rate;
     m_rendered_text_cache.data[TEXT_INVALID_EXPRESSION] = invalid_expression;
     m_rendered_text_cache.data[TEXT_VALID_EXPRESSION] = valid_expression;
+    m_rendered_text_cache.data[TEXT_CHANNEL_COUNT] = channel_count;
+    m_rendered_text_cache.data[TEXT_MONO] = mono;
+    m_rendered_text_cache.data[TEXT_STEREO] = stereo;
 
     return true;
 }
@@ -468,7 +481,7 @@ void Application::draw_ui()
     // text field
     {
         SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x66, 0x55, 0xff);
-        const Text_Field& input_field = m_ui.input_text_fields[TEXT_INPUT_TEXT_FIELD];
+        const Text_Field& input_field = m_ui.input_text_field;
         Rectangle text_field_area = input_field.m_area;
         SDL_FRect tf_area = { text_field_area.x, text_field_area.y, text_field_area.w, text_field_area.h };
         SDL_RenderFillRect(m_window.renderer, &tf_area);
@@ -512,11 +525,42 @@ void Application::draw_ui()
         }
     }
 
+    // channel count -- dropdown
+    {
+        Drop_Down_List& channel_count = m_ui.channel_count;
+
+        if (channel_count.open) {
+            SDL_SetRenderDrawColor(m_window.renderer, 0x55, 0x33, 0x88, 0xff);
+        }
+        else {
+            SDL_SetRenderDrawColor(m_window.renderer, 0x33, 0x55, 0x88, 0xff);
+        }
+
+        SDL_FRect header_area = {
+            channel_count.pos.x - channel_count.scale.x/2, channel_count.pos.y - channel_count.scale.y / 2,
+            channel_count.scale.x, channel_count.scale.y
+        };
+        SDL_RenderFillRect(m_window.renderer, &header_area);
+
+        render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(TEXT_CHANNEL_COUNT),
+            vec2(header_area.x + header_area.w / 2, header_area.y + header_area.h / 2), vec2(header_area.w, header_area.h));
+
+        if (channel_count.open) {
+            SDL_SetRenderDrawColor(m_window.renderer, 0x33, 0x55, 0x88, 0xff);
+
+            for (int i = 0; i < channel_count.options.size(); i++) {
+                SDL_FRect area = header_area;
+                area.y += area.h * (i + 1);
+                SDL_RenderFillRect(m_window.renderer, &area);
+            }
+        }
+    }
+
     // event text
     {
         if (m_events[EVENT_INVALID_EXPRESSION].active)
         {
-            auto tf_area = m_ui.input_text_fields[0].m_area;
+            auto tf_area = m_ui.input_text_field.m_area;
 
             const vec2 text_scale = vec2(300, 100);
 
@@ -530,8 +574,6 @@ void Application::draw_ui()
 
 bool Application::mouse_input_ui()
 {
-    
-    
     if (m_ui.volume_slider.contains(m_mouse.pos))
     {
         float diff = m_mouse.pos.x - m_ui.volume_slider.x;
@@ -552,10 +594,18 @@ bool Application::mouse_input_ui()
         return true;
     }
 
-    if (m_ui.input_text_fields[0].m_area.contains(m_mouse.pos))
+    Rectangle channel_count_header = Rectangle(
+        m_ui.channel_count.pos.x - m_ui.channel_count.scale.x / 2, m_ui.channel_count.pos.y - m_ui.channel_count.scale.y / 2,
+        m_ui.channel_count.scale.x, m_ui.channel_count.scale.y
+    );
+    if (channel_count_header.contains(m_mouse.pos)) {
+        m_ui.channel_count.toggle();
+    }
+
+    if (m_ui.input_text_field.m_area.contains(m_mouse.pos))
     {
-        const SDL_Rect area = {m_ui.input_text_fields[0].m_area.x, m_ui.input_text_fields[0].m_area.y, m_ui.input_text_fields[0].m_area.w, m_ui.input_text_fields[0].m_area.h};
-        SDL_SetTextInputArea(m_window.window, &area, m_ui.input_text_fields[0].m_cursor_pixel);
+        const SDL_Rect area = {m_ui.input_text_field.m_area.x, m_ui.input_text_field.m_area.y, m_ui.input_text_field.m_area.w, m_ui.input_text_field.m_area.h};
+        SDL_SetTextInputArea(m_window.window, &area, m_ui.input_text_field.m_cursor_pixel);
 
         toggle_text_input();
 
@@ -620,18 +670,23 @@ void Ui_State::update(Window window)
     pause_button.x = (window_size.x - pause_button.w) / 2;
     pause_button.y = (window_size.y - pause_button.h) / 2;
 
-    input_text_fields[0].m_area.x = (window_size.x - input_text_fields[0].m_area.w) / 2;
-    input_text_fields[0].m_area.y = ((float)window_size.y * (4.0 / 5.0)) - input_text_fields[0].m_area.h/2;
+    input_text_field.m_area.x = (window_size.x - input_text_field.m_area.w) / 2;
+    input_text_field.m_area.y = ((float)window_size.y * (4.0 / 5.0)) - input_text_field.m_area.h/2;
 
     sample_rate_box.m_area.x = window_size.x * (3.0 / 5.0);
     sample_rate_box.m_area.y = window_size.y * (1.0 / 5.0);
     sample_rate_box.m_area.w = window_size.x * (1.0 / 5.0);
     sample_rate_box.m_area.h = window_size.y * (1.0 / 5.0);
+
+    channel_count.set_area(
+        vec2(window_size.x / 2, window_size.y * (1.0 / 4.0)),
+        vec2((float)window_size.x * (1.0 / 5.0), (float)window_size.y * (1.0 / 8.0))
+    );
 }
 
 Text_Field* Ui_State::get_selected_text_field()
 {
-    return (text_input_target == TEXT_INPUT_TEXT_FIELD) ? &input_text_fields[0] : &sample_rate_box;
+    return (text_input_target == TEXT_INPUT_TEXT_FIELD) ? &input_text_field : &sample_rate_box;
 }
 
 bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, String s, Font font, bool wrapped)
@@ -686,7 +741,7 @@ bool Application::set_eval_string(String eval_string)
 {
     Parser parser = {};
 
-    auto parsed = parser.parse(m_ui.input_text_fields[0].get_string());
+    auto parsed = parser.parse(m_ui.input_text_field.get_string());
     if (parsed.size == 0)
     {
         return false;
@@ -737,17 +792,4 @@ void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 
     SDL_FRect dst = {where.x - factor.x/2, where.y - factor.y/2, scale.x, scale.y};
 
     SDL_RenderTexture(renderer, text.texture, &src, &dst);
-}
-
-Drop_Down_List::Drop_Down_List(Text* p_options, int p_count)
-{
-    options = DArray<Text>(p_count);
-    for (int i = 0; i < p_count; i++)
-    {
-        options.get_ref(i) = p_options[i];
-    }
-}
-
-Drop_Down_List::~Drop_Down_List() {
-    options.free();
 }

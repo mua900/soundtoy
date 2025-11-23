@@ -113,6 +113,7 @@ struct Rectangle {
     float x, y, w, h;
 
     Rectangle() {}
+    Rectangle(vec2 pos, vec2 scale) : x(pos.x), y(pos.y), w(scale.x), h(scale.y) {}
     Rectangle(float p_x, float p_y, float p_w, float p_h)
         : x(p_x), y(p_y), w(p_w), h(p_h)
     {}
