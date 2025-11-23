@@ -107,7 +107,7 @@ private:
 #define DROP_DOWN_LIST_SELECTED_SENTINEL -1
 
 struct Drop_Down_List {
-    vec2 pos = {};   // top left corner
+    vec2 pos = {};
     vec2 scale = {};
     int selected = DROP_DOWN_LIST_SELECTED_SENTINEL;
     Text_Id title = {};
@@ -222,6 +222,7 @@ private:
     bool gen_text(Color color);
 
     void update_audio_spec();
+    bool update_channel_count(int count);
 
     void set_volume(float volume);
 

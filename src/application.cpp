@@ -168,6 +168,12 @@ void Application::update_audio_spec()
     }
 }
 
+bool Application::update_channel_count(int channels)
+{
+    bool success = m_audio.reinitialize(m_audio.m_sample_rate, channels);
+    return success;
+}
+
 void Application::set_volume(float volume)
 {
     m_audio.set_volume(volume);
@@ -545,6 +551,10 @@ void Application::draw_ui()
         render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(TEXT_CHANNEL_COUNT),
             vec2(header_area.x + header_area.w / 2, header_area.y + header_area.h / 2), vec2(header_area.w, header_area.h));
 
+        Text_Id option_names[] = {
+            TEXT_MONO, TEXT_STEREO
+        };
+
         if (channel_count.open) {
             SDL_SetRenderDrawColor(m_window.renderer, 0x33, 0x55, 0x88, 0xff);
 
@@ -552,6 +562,8 @@ void Application::draw_ui()
                 SDL_FRect area = header_area;
                 area.y += area.h * (i + 1);
                 SDL_RenderFillRect(m_window.renderer, &area);
+                render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(option_names[i]),
+                    vec2(area.x + area.w/2, area.y + area.h/2), vec2(area.w, area.h));
             }
         }
     }
@@ -594,12 +606,30 @@ bool Application::mouse_input_ui()
         return true;
     }
 
-    Rectangle channel_count_header = Rectangle(
-        m_ui.channel_count.pos.x - m_ui.channel_count.scale.x / 2, m_ui.channel_count.pos.y - m_ui.channel_count.scale.y / 2,
-        m_ui.channel_count.scale.x, m_ui.channel_count.scale.y
-    );
-    if (channel_count_header.contains(m_mouse.pos)) {
-        m_ui.channel_count.toggle();
+    {
+        Rectangle channel_count_header = Rectangle(
+            m_ui.channel_count.pos.x - m_ui.channel_count.scale.x / 2, m_ui.channel_count.pos.y - m_ui.channel_count.scale.y / 2,
+            m_ui.channel_count.scale.x, m_ui.channel_count.scale.y
+        );
+
+        if (channel_count_header.contains(m_mouse.pos)) {
+            m_ui.channel_count.toggle();
+            return true;
+        }
+
+        if (m_ui.channel_count.open) {
+            for (int i = 0; i < m_ui.channel_count.options.size(); i++) {
+                Rectangle area = channel_count_header;
+                area.y += area.h * (i + 1);
+                if (area.contains(m_mouse.pos)) {
+                    int channel_count = (i + 1);  // @todo @fix hacky. store a mapping somewhere everyone can access
+                    update_channel_count(channel_count);
+
+                    m_ui.channel_count.open = false;
+                    return true;
+                }
+            }
+        }
     }
 
     if (m_ui.input_text_field.m_area.contains(m_mouse.pos))
@@ -679,8 +709,10 @@ void Ui_State::update(Window window)
     sample_rate_box.m_area.h = window_size.y * (1.0 / 5.0);
 
     channel_count.set_area(
-        vec2(window_size.x / 2, window_size.y * (1.0 / 4.0)),
-        vec2((float)window_size.x * (1.0 / 5.0), (float)window_size.y * (1.0 / 8.0))
+        vec2(window_size.x / 2,
+             window_size.y * (1.0 / 5.0)),
+        vec2((float)window_size.x * (1.0 / 5.0),
+             (float)window_size.y * (1.0 / 10.0))
     );
 }
 
