@@ -24,6 +24,9 @@ struct Audio {
     bool reinitialize(int freq, int channels);
     void cleanup();
 
+    int get_channel_count() const { return m_channel_count; }
+    int get_sample_rate() const { return m_sample_rate; }
+
     void pause();
     void unpause();
     void toggle_pause();

@@ -53,7 +53,6 @@ enum Text_Id : int {
     TEXT_VALID_EXPRESSION,
     TEXT_MONO,
     TEXT_STEREO,
-    TEXT_CHANNEL_COUNT,
 
     // dynamic text
     TEXT_VOLUME_VALUE,

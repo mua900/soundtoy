@@ -72,7 +72,7 @@ bool Application::initialize()
 
         m_ui.update(m_window);
 
-        m_ui.channel_count.set_title(TEXT_CHANNEL_COUNT);
+        m_ui.channel_count.set_title(TEXT_MONO);
         m_ui.channel_count.add_option(TEXT_MONO);
         m_ui.channel_count.add_option(TEXT_STEREO);
     }
@@ -108,7 +108,6 @@ bool Application::gen_static_text(Color color)
     Text invalid_expression = create_text(make_string("Invalid Expression"), color);
     Text valid_expression = create_text(make_string("Valid Expression"), color);
     Text sample_rate = create_text(make_string("sample rate"), color);
-    Text channel_count = create_text(make_string("channel count"), color);
     Text mono = create_text(make_string("mono"), color);
     Text stereo = create_text(make_string("stereo"), color);
 
@@ -117,7 +116,6 @@ bool Application::gen_static_text(Color color)
         !invalid_expression.texture ||
         !valid_expression.texture ||
         !sample_rate.texture ||
-        !channel_count.texture ||
         !mono.texture ||
         !stereo.texture
         )
@@ -130,7 +128,6 @@ bool Application::gen_static_text(Color color)
     m_rendered_text_cache.data[TEXT_SAMPLE_RATE] = sample_rate;
     m_rendered_text_cache.data[TEXT_INVALID_EXPRESSION] = invalid_expression;
     m_rendered_text_cache.data[TEXT_VALID_EXPRESSION] = valid_expression;
-    m_rendered_text_cache.data[TEXT_CHANNEL_COUNT] = channel_count;
     m_rendered_text_cache.data[TEXT_MONO] = mono;
     m_rendered_text_cache.data[TEXT_STEREO] = stereo;
 
@@ -548,12 +545,14 @@ void Application::draw_ui()
         };
         SDL_RenderFillRect(m_window.renderer, &header_area);
 
-        render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(TEXT_CHANNEL_COUNT),
-            vec2(header_area.x + header_area.w / 2, header_area.y + header_area.h / 2), vec2(header_area.w, header_area.h));
-
         Text_Id option_names[] = {
             TEXT_MONO, TEXT_STEREO
         };
+
+        auto option_index = m_audio.get_channel_count() - 1;
+
+        render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(option_names[option_index]),
+            vec2(header_area.x + header_area.w / 2, header_area.y + header_area.h / 2), vec2(header_area.w, header_area.h));
 
         if (channel_count.open) {
             SDL_SetRenderDrawColor(m_window.renderer, 0x33, 0x55, 0x88, 0xff);
@@ -618,16 +617,29 @@ bool Application::mouse_input_ui()
         }
 
         if (m_ui.channel_count.open) {
-            for (int i = 0; i < m_ui.channel_count.options.size(); i++) {
-                Rectangle area = channel_count_header;
-                area.y += area.h * (i + 1);
-                if (area.contains(m_mouse.pos)) {
-                    int channel_count = (i + 1);  // @todo @fix hacky. store a mapping somewhere everyone can access
-                    update_channel_count(channel_count);
+            Rectangle mono_area = channel_count_header;
+            Rectangle stereo_area = channel_count_header;
+            mono_area.y += channel_count_header.h;
+            stereo_area.y += channel_count_header.h * 2;
 
-                    m_ui.channel_count.open = false;
-                    return true;
+            bool got_clikcked = true;
+            if (mono_area.contains(m_mouse.pos)) {
+                if (!update_channel_count(1)) {
+                    fprintf(stderr, "Could not update channel count\n");
                 }
+            }
+            else if (stereo_area.contains(m_mouse.pos)) {
+                if (!update_channel_count(2)) {
+                    fprintf(stderr, "Could not update channel count\n");
+                }
+            }
+            else {
+                got_clikcked = false;
+            }
+
+            if (got_clikcked) {
+                m_ui.channel_count.open = false;
+                return true;
             }
         }
     }

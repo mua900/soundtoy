@@ -3,6 +3,11 @@
 
 #include <math.h>
 
+void SDLCALL audio_callback_sample_tree_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
+void SDLCALL audio_callback_sample_tree_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
+void SDLCALL audio_callback_sample_bytecode_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
+void SDLCALL audio_callback_sample_bytecode_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
+
 void Audio::pause()
 {
     paused = true;
@@ -58,63 +63,6 @@ void SDLCALL audio_callback_default(void* userdata, SDL_AudioStream* stream, int
     }
 }
 
-#define SAMPLE_BUFFER_SIZE 512
-float g_sample_buffer[SAMPLE_BUFFER_SIZE];
-
-void SDLCALL audio_callback_sample_tree(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
-{
-    total_amount /= sizeof(float);
-
-    Audio* audio = (Audio*)userdata;
-    Expr* expr = audio->sample_expression;
-
-    double inv_sample_rate = 1.0 / audio->m_sample_rate;
-
-    for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
-    {
-        for (int sample = 0; sample < SAMPLE_BUFFER_SIZE; sample++)
-        {
-            Eval eval = audio->evaluator.evaluate(expr);
-
-            /*
-                we assume the evaluator is able to evaluate the expression here since
-                we are in the callback and we shouldn't be here if we have an invalid expression.
-                And we don't want to check in the callback.
-            */ 
-            float value = SDL_clamp(eval.value, -1.0, 1.0);
-            g_sample_buffer[sample] = value;
-
-            audio->evaluator.step_time(inv_sample_rate);
-        }
-
-        SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
-    }
-}
-
-void SDLCALL audio_callback_sample_bytecode(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
-{
-    total_amount /= sizeof(float);
-
-    Audio* audio = (Audio*)userdata;
-
-    double inv_sample_rate = 1.0 / audio->m_sample_rate;
-
-    for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
-    {
-        for (int sample_index = 0; sample_index < SAMPLE_BUFFER_SIZE; sample_index++)
-        {
-            float sample = bytecode_run(audio->bytecode_program);
-
-            float value = SDL_clamp(sample, -1.0, 1.0);
-            g_sample_buffer[sample_index] = value;
-
-            audio->bytecode_program.step_time(inv_sample_rate);
-        }
-
-        SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
-    }
-}
-
 bool Audio::set_sample_expression(Expr* expr)
 {
     Eval eval = evaluator.evaluate(expr);
@@ -134,7 +82,18 @@ bool Audio::set_sample_expression(Expr* expr)
         sample_expression = expr;
         evaluator.reset(m_sample_rate, 0.0);
 
-        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_sample_tree, this);
+        SDL_AudioStreamCallback audio_callback;
+        if (m_channel_count == 1) {
+            audio_callback = audio_callback_sample_tree_mono;
+        }
+        else if (m_channel_count == 2) {
+            audio_callback = audio_callback_sample_tree_stereo;
+        }
+        else {
+            panic("Invalid amount of channels");
+        }
+
+        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback, this);
 
         return true;
     }
@@ -172,6 +131,8 @@ bool Audio::create_audio_stream(int freq, int channels)
     SDL_SetAudioStreamGetCallback(stream, audio_callback_default, this);
 
     m_audio_stream = stream;
+    m_channel_count = channels;
+    m_sample_rate = freq;
 
     return true;
 }
@@ -227,4 +188,114 @@ bool Audio::reinitialize(int freq, int channels)
     evaluator.set(freq, 0.0);
 
     return create_audio_stream(freq, channels);
+}
+
+
+#define SAMPLE_BUFFER_SIZE 512
+float g_sample_buffer[SAMPLE_BUFFER_SIZE];
+
+void SDLCALL audio_callback_sample_tree_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+{
+    total_amount /= sizeof(float);
+
+    Audio* audio = (Audio*)userdata;
+    Expr* expr = audio->sample_expression;
+
+    double inv_sample_rate = 1.0 / audio->m_sample_rate;
+
+    for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
+    {
+        for (int sample = 0; sample < SAMPLE_BUFFER_SIZE; sample++)
+        {
+            Eval eval = audio->evaluator.evaluate(expr);
+
+            /*
+                we assume the evaluator is able to evaluate the expression here since
+                we are in the callback and we shouldn't be here if we have an invalid expression.
+                And we don't want to check in the callback.
+            */
+            float value = SDL_clamp(eval.value, -1.0, 1.0);
+            g_sample_buffer[sample] = value;
+
+            audio->evaluator.step_time(inv_sample_rate);
+        }
+
+        SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
+    }
+}
+
+void SDLCALL audio_callback_sample_tree_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+{
+    total_amount /= sizeof(float);
+    Audio* audio = (Audio*)userdata;
+
+    double inv_sample_rate = 1.0 / audio->m_sample_rate;
+
+    for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
+    {
+        for (int sample = 0; sample < SAMPLE_BUFFER_SIZE; sample += 2)
+        {
+            Eval left = audio->evaluator.evaluate(audio->sample_expression);
+            Eval right = audio->evaluator.evaluate(audio->sample_expression);
+
+            left.value = SDL_clamp(left.value, -1.0, 1.0);
+            right.value = SDL_clamp(right.value, -1.0, 1.0);
+            g_sample_buffer[sample + 0] = left.value;
+            g_sample_buffer[sample + 1] = right.value;
+
+            audio->evaluator.step_time(inv_sample_rate);
+        }
+
+        SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
+    }
+}
+
+void SDLCALL audio_callback_sample_bytecode_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+{
+    total_amount /= sizeof(float);
+
+    Audio* audio = (Audio*)userdata;
+
+    double inv_sample_rate = 1.0 / audio->m_sample_rate;
+
+    for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
+    {
+        for (int sample_index = 0; sample_index < SAMPLE_BUFFER_SIZE; sample_index++)
+        {
+            float sample = bytecode_run(audio->bytecode_program);
+
+            float value = SDL_clamp(sample, -1.0, 1.0);
+            g_sample_buffer[sample_index] = value;
+
+            audio->bytecode_program.step_time(inv_sample_rate);
+        }
+
+        SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
+    }
+}
+
+void SDLCALL audio_callback_sample_bytecode_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+{
+    total_amount /= sizeof(float);
+    Audio* audio = (Audio*)userdata;
+
+    double inv_sample_rate = 1.0 / audio->m_sample_rate;
+
+    for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
+    {
+        for (int sample = 0; sample < SAMPLE_BUFFER_SIZE; sample += 2)
+        {
+            float left = bytecode_run(audio->bytecode_program);
+            float right = bytecode_run(audio->bytecode_program);
+
+            left = SDL_clamp(left, -1.0, 1.0);
+            right = SDL_clamp(right, -1.0, 1.0);
+            g_sample_buffer[sample + 0] = left;
+            g_sample_buffer[sample + 1] = right;
+
+            audio->bytecode_program.step_time(inv_sample_rate);
+        }
+
+        SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
+    }
 }
