@@ -67,7 +67,7 @@ struct Expr {
     Expr_Type type;
 };
 
-void print_expr(Expr* expr, int indent);
+void print_expr(const Expr* expr, int indent);
 
 struct Expr_Literal : Expr {
     Value value;

@@ -267,7 +267,7 @@ bool Rectangle::contains(vec2 p)
     return p.x >= x && p.y >= y && p.x <= x + w && p.y <= y + h;
 }
 
-void String::print(bool newline)
+void String::print(bool newline) const
 {
     int size_nt = size + 1;
     char* mem = (char*)malloc(size_nt);
@@ -287,7 +287,7 @@ void String::print(bool newline)
     free(mem);
 }
 
-bool String::operator==(String& other)
+bool String::operator==(String& other) const
 {
     return string_compare(*this, other);
 }

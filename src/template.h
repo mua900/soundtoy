@@ -129,7 +129,7 @@ struct Array
 	Array(T* data, int size) : data(data), size(size) {}
 	Array(DArray<T> darray) : data(darray.data()), size(darray.size()) {}
 
-	T get(int index)
+	T get(int index) const
 	{
 		if (index >= size) panic("Out of bounds array access");
 		return data[index];

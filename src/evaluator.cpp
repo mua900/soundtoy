@@ -493,16 +493,6 @@ Expr* Parser::parse_primary_expr()
     }
 }
 
-const char* Builtin_Func_Names[BUILTIN_FUNC_COUNT] = {
-    "BUILTIN_FUNC_SIN",
-    "BUILTIN_FUNC_COS",
-    "BUILTIN_FUNC_ABS",
-    "BUILTIN_FUNC_SIGN",
-    "BUILTIN_FUNC_ARCSIN",
-    "BUILTIN_FUNC_ARCCOS",
-};
-
-
 Evaluator::Evaluator()
 {
     get_default_builtin_functions(builtin_functions);
@@ -519,7 +509,6 @@ void Evaluator::update(double time)
     builtins[BUILTIN_VARIABLE_TIME] = time;
 }
 
-// simple depth first recursive tree traversal
 Eval Evaluator::evaluate(Expr* expr)
 {
     Eval fail = { 0.0, false };
@@ -542,8 +531,9 @@ Eval Evaluator::evaluate(Expr* expr)
             {
                 NOT_IMPLEMENTED("Logical operations")
             }
-            else
+            else {
                 panic("Unknown value type");  // @todo cleanup
+            }
         }
         case Expr_Type::Variable:
         {
@@ -561,21 +551,29 @@ Eval Evaluator::evaluate(Expr* expr)
         case Expr_Type::Unary:
         {
             auto unary = static_cast<Expr_Unary*>(expr);
+            Eval eval = evaluate(unary->operand);
+
+            if (eval.success == false)
+                return fail;
+
             switch (unary->op)
             {
                 case Unop_Negate:
                 {
-                    Eval eval = evaluate(unary->operand);
-                    if (eval.success == false)
-                        return fail;
-
                     eval.value = -eval.value;
                     return eval;
                 }
                 case Unop_Not:
                 {
-                    NOT_IMPLEMENTED("Logical operations")
+                    if (eval.value == 0) {
+                        return Eval{1, true};
+                    }
+                    else {
+                        return Eval{0, true};
+                    }
                 }
+                default:
+                    panic("Unknown unary operator");
             }
         }
         case Expr_Type::Binary:
@@ -591,32 +589,25 @@ Eval Evaluator::evaluate(Expr* expr)
 
             switch (binary->op)
             {
-                case Binop_Unknown: {
+                // arithmetic
+                case Binop_Add: return Eval{ left.value + right.value, true };
+                case Binop_Sub: return Eval{ left.value - right.value, true };
+                case Binop_Mul: return Eval{ left.value * right.value, true };
+                case Binop_Div: return Eval{ left.value / right.value, true };
+                case Binop_Mod: return Eval{ fmod(left.value, right.value), true };  // @todo integer arithmetic
+
+                // comparison
+                case Binop_Eq: return Eval{ double(left.value == right.value), true };
+                case Binop_Neq: return Eval{ double(left.value != right.value), true };
+                case Binop_Gt: return Eval{ double(left.value > right.value), true };
+                case Binop_Ge: return Eval{ double(left.value >= right.value), true };
+                case Binop_Lt: return Eval{ double(left.value < right.value), true };
+                case Binop_Le: return Eval{ double(left.value <= right.value), true };
+
+                case Binop_Unknown: // fallthrough
+                default: {
                     eval_error.message = make_string("Invalid binary operator"); // @todo bug case
                     return fail;
-                }
-                case Binop_Add: {
-                    return { left.value + right.value, true };
-                }
-                case Binop_Sub: {
-                    return { left.value - right.value, true };
-                }
-                case Binop_Mul: {
-                    return { left.value * right.value, true };
-                }
-                case Binop_Div: {
-                    return { left.value / right.value, true };
-                }
-                case Binop_Mod: {
-                    return { fmod(left.value, right.value), true };  // @todo integer arithmetic
-                }
-                case Binop_Eq:
-                case Binop_Neq:
-                case Binop_Gt:
-                case Binop_Ge:
-                case Binop_Lt:
-                case Binop_Le: {
-                    NOT_IMPLEMENTED("Logical operations")
                 }
             }
         }
@@ -644,13 +635,13 @@ Eval Evaluator::evaluate(Expr* expr)
                 NOT_IMPLEMENTED("User defined functions")
             }
         }
+        default:
+            panic("Unknown expression type");
     }
-
-    return fail;
 }
 
 // @todo string builder here
-void print_expr(Expr* expr, int indent)
+void print_expr(const Expr* expr, int indent)
 {
     for (int i = 0; i < indent; i++)
     {
@@ -661,7 +652,7 @@ void print_expr(Expr* expr, int indent)
     {
         case Expr_Type::Literal:
         {
-            auto literal = static_cast<Expr_Literal*>(expr);
+            const auto literal = static_cast<const Expr_Literal*>(expr);
             switch (literal->value.type)
             {
                 case Value_Type::INTEGER:
@@ -675,13 +666,13 @@ void print_expr(Expr* expr, int indent)
         }
         case Expr_Type::Variable:
         {
-            auto var = static_cast<Expr_Variable*>(expr);
+            const auto var = static_cast<const Expr_Variable*>(expr);
             var->name.print(true);
             break;
         }
         case Expr_Type::Unary:
         {
-            auto unary = static_cast<Expr_Unary*>(expr);
+            const auto unary = static_cast<const Expr_Unary*>(expr);
             const char* operator_string = (unary->op == Unop_Negate) ? "Negate" : "Not";
             printf("Unary %s\n", operator_string);
             print_expr(unary->operand, indent + 1);
@@ -689,7 +680,7 @@ void print_expr(Expr* expr, int indent)
         }
         case Expr_Type::Binary:
         {
-            auto binary = static_cast<Expr_Binary*>(expr);
+            const auto binary = static_cast<const Expr_Binary*>(expr);
             printf("Binary %s\n", get_binop_string(binary->op));
             print_expr(binary->left, indent + 1);
             print_expr(binary->right, indent + 1);
@@ -697,20 +688,24 @@ void print_expr(Expr* expr, int indent)
         }
         case Expr_Type::Grouping:
         {
-            auto grouping = static_cast<Expr_Grouping*>(expr);
+            const auto grouping = static_cast<const Expr_Grouping*>(expr);
             printf("Grouping\n");
             print_expr(grouping->expr, indent + 1);
             break;
         }
         case Expr_Type::Call:
         {
-            auto call = static_cast<Expr_Call*>(expr);
+            const auto call = static_cast<const Expr_Call*>(expr);
             call->function_name.print(true);
             for (int i = 0; i < call->arguments.size; i++)
             {
                 print_expr(call->arguments.get(i), indent + 1);
             }
+
+            break;
         }
+        default:
+            panic("Unknown expression type");
     }
 }
 
@@ -808,7 +803,6 @@ Expr* collapse_expr(Expr* root, String* error_string)
     return collapse_expr_real(root, builtin_functions, error_string);
 }
 
-// recursive depth first
 Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String* error_string)
 {
     Expr* expr = root;
