@@ -41,6 +41,11 @@ public:
 		return m_data[index];
 	}
 
+	T get_or_default(int index) {
+		if (index >= size) return T();
+		return data[index];
+	}
+
 	T& get_ref(int index) {
 		if (index >= m_size) panic("Out of bounds array access");
 		return m_data[index];
@@ -132,6 +137,11 @@ struct Array
 	T get(int index) const
 	{
 		if (index >= size) panic("Out of bounds array access");
+		return data[index];
+	}
+
+	T get_or_default(int index) {
+		if (index >= size) return T();
 		return data[index];
 	}
 

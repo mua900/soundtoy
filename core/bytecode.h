@@ -170,7 +170,11 @@ struct Bytecode_Program {
 
 	void set_builtin_variable(double value, u32 builtin_id);
 	void set_builtin_function(Builtin_Function implementation, u32 builtin_function);
-	void step_time(float step);
+	void step_time(double time);
+	void set_sample_time(float sample_time);
+	void set_sample_rate(float sample_rate);
+	float get_sample_rate();
+	float get_sample_time();
 
 	void print_program();
 };

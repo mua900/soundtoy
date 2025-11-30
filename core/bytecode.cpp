@@ -1,5 +1,7 @@
 #include "bytecode.h"
 
+// @todo get rid of panics
+
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program);
 static Bytecode_Opcode get_arithmetic_binop_opcode_integer(Op_Binary binary);
 static Bytecode_Opcode get_arithmetic_binop_opcode_float(Op_Binary binary);
@@ -306,9 +308,25 @@ Value_Location_Info Bytecode_Program::emit_load_constant(Constant_Id const_id)
     return location;
 }
 
-void Bytecode_Program::step_time(float step)
+void Bytecode_Program::step_time(double step)
 {
     constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] += step;
+}
+
+void Bytecode_Program::set_sample_rate(float sample_rate) {
+    constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE] = sample_rate;
+}
+
+float Bytecode_Program::get_sample_rate() {
+    return constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE];
+}
+
+void Bytecode_Program::set_sample_time(float sample_time) {
+    constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] = sample_time;
+}
+
+float Bytecode_Program::get_sample_time() {
+    return constant_block.builtin_variable[BUILTIN_VARIABLE_TIME];
 }
 
 void Bytecode_Program::reset() {

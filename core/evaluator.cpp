@@ -3,6 +3,8 @@
 extern const double PI;
 extern const double E;
 
+// @todo get rid of panics
+
 DArray<Token> tokenize(String expression)
 {
     auto tokens = DArray<Token>(8);
@@ -185,6 +187,7 @@ bool Parser::consume(Token_Type type)
     return match;
 }
 
+// @fix return a single expression
 Array<Expr*> Parser::parse(String expression_string)
 {
     tokens = tokenize(expression_string);

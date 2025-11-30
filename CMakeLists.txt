@@ -36,6 +36,9 @@ add_library(core STATIC
     core/bytecode.h
     core/bytecode.cpp
     core/template.h
+
+    core/api.h
+    core/api.cpp
 )
 
 target_include_directories(soundtoy PRIVATE core)
