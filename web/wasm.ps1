@@ -1,0 +1,1 @@
+emcc -O3 ..\core\api.cpp ..\core\bytecode.cpp ..\core\evaluator.cpp ..\core\builtin.cpp -sEXPORTED_RUNTIME_METHODS="[ccall, cwrap]"

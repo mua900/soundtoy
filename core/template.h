@@ -42,8 +42,8 @@ public:
 	}
 
 	T get_or_default(int index) {
-		if (index >= size) return T();
-		return data[index];
+		if (index >= m_size) return T();
+		return m_data[index];
 	}
 
 	T& get_ref(int index) {

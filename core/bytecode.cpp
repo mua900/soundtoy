@@ -1,5 +1,7 @@
 #include "bytecode.h"
 
+#include <math.h>
+
 // @todo get rid of panics
 
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program);
@@ -151,6 +153,8 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
                     case Binop_Ge:  test = COMPARISON_RESULT_GREATER_THAN | COMPARISON_RESULT_EQUALS; break;
                     case Binop_Lt:  test = COMPARISON_RESULT_LESS_THAN; break;
                     case Binop_Le:  test = COMPARISON_RESULT_LESS_THAN | COMPARISON_RESULT_EQUALS; break;
+                    default:
+                        panic("Bytecode Compilation: Unexpected binary comparison");
                 }
 
                 program.emit_bytecode_instruction(INSTR_TEST_RESULT, test, 0);
@@ -642,6 +646,9 @@ float bytecode_run(Bytecode_Program& program)
             }
         }
     }
+
+    fprintf(stderr, "Bytecode Runner: No return instruction at the end of the bytecode program!");
+    return 0.0;
 }
 
 void bytecode_optimize(Bytecode_Program& program) {
@@ -682,7 +689,7 @@ const char* opcode_string(Bytecode_Opcode opcode) {
         case INSTR_TEST_RESULT: return "INSTR_TEST_RESULT";
 
         case INSTR_JMP: return "INSTR_JMP";
-        case INSTR_JMP_COND: "INSTR_JMP_COND";
+        case INSTR_JMP_COND: return "INSTR_JMP_COND";
 
         case INSTR_CALL_BUILTIN: return "INSTR_CALL_BUILTIN";
 
