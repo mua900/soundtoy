@@ -1,1 +1,1 @@
-emcc -O3 ..\core\api.cpp ..\core\bytecode.cpp ..\core\evaluator.cpp ..\core\builtin.cpp -sEXPORTED_RUNTIME_METHODS="[ccall, cwrap]"
+emcc -O3 ..\core\api.cpp ..\core\bytecode.cpp ..\core\evaluator.cpp ..\core\builtin.cpp -sEXPORTED_RUNTIME_METHODS="[ccall, cwrap]" -sALLOW_MEMORY_GROWTH=1 -sWASM=1 -sEXPORT_NAME="SoundtoyCore" -o soundtoy.js

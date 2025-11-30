@@ -2,7 +2,7 @@
 
 extern "C" {
 
-    enum Evaluator_Type {
+    enum Evaluator_Type : int {
         BYTECODE_INTERPRETER = 0,
         TREE_INTERPRETER = 1,
     };
