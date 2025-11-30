@@ -13,28 +13,36 @@ foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
 endforeach()
 
 add_executable(soundtoy
-    src/main.cpp
+    desktop/main.cpp
     
-    src/common.h
-    src/common.cpp
-    src/application.h
-    src/application.cpp
-    src/audio.h
-    src/audio.cpp
-    src/evaluator.h
-    src/evaluator.cpp
-    src/builtin.h
-    src/builtin.cpp
-    src/token.h
-    src/expr.h
-    src/expr.cpp
-    src/bytecode.h
-    src/bytecode.cpp
-    src/template.h
+    desktop/application.h
+    desktop/application.cpp
+    desktop/audio.h
+    desktop/audio.cpp
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT soundtoy)
 
+add_library(core STATIC
+    core/common.h
+    core/common.cpp
+    core/evaluator.h
+    core/evaluator.cpp
+    core/builtin.h
+    core/builtin.cpp
+    core/token.h
+    core/expr.h
+    core/expr.cpp
+    core/bytecode.h
+    core/bytecode.cpp
+    core/template.h
+)
+
+target_include_directories(soundtoy PRIVATE core)
+target_link_libraries(soundtoy PRIVATE core)
+
+
+# SDL
 add_subdirectory(vendor/SDL)
 add_subdirectory(vendor/SDL_image)
 add_subdirectory(vendor/SDL_ttf)
@@ -50,5 +58,3 @@ target_link_libraries(
     SDL3_image::SDL3_image
     SDL3_ttf::SDL3_ttf
 )
-
-set(CMAKE_BUILD_TYPE Debug)
