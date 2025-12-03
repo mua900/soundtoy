@@ -653,6 +653,8 @@ float bytecode_run(Bytecode_Program& program)
 
 void bytecode_optimize(Bytecode_Program& program) {
     // not implemented
+
+    // @todo
 }
 
 

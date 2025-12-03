@@ -124,7 +124,7 @@ struct Constant_Block {
 	DArray<s32> integer = {};
 	float builtin_variable[BUILTIN_VARIABLE_COUNT] = {};
 	Builtin_Function_List builtin_function = {};
-
+	
 	Constant_Id add_constant(Value value);
 };
 
@@ -155,6 +155,10 @@ struct Bytecode_Program {
 	Bytecode_Code code = {};			// code
 	Constant_Block constant_block = {};
 
+	DArray<String> symbols;
+	// @todo instructions for these
+	DArray<float> variables = {};
+
 	Bytecode_Program() : processor(), code(), constant_block() {}
 
 	void reset();
@@ -167,6 +171,11 @@ struct Bytecode_Program {
 	void emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg0, u16 arg1);
 
 	Value_Location_Info emit_load_constant(Constant_Id value_id);
+
+    int add_symbol(String symbol) {
+        symbols.add(symbol);
+        return variables.add(0.0);
+    }
 
 	void set_builtin_variable(double value, u32 builtin_id);
 	void set_builtin_function(Builtin_Function implementation, u32 builtin_function);
