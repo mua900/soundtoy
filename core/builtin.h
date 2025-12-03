@@ -49,7 +49,7 @@ static const char* Builtin_Func_Names[BUILTIN_FUNC_COUNT] = {
     "BUILTIN_FUNC_ARCCOS",
 };
 
-enum Builtin_Variable : int {
+enum Builtin_Variable : unsigned int {
     // constant per evaluation
     BUILTIN_VARIABLE_TIME = 0,
     BUILTIN_VARIABLE_SAMPLE_RATE,

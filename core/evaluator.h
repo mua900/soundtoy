@@ -13,18 +13,30 @@ DArray<Token> tokenize(String expression);
 struct Error {
     String message = {};
     int offset = 0;
+
+    Error() {}
+    Error(String msg, int off) : message(msg), offset(off) {}
 };
 
 struct Parser {
     Parser() {}
 
-    int cursor = 0;
-    Error parser_error = {};
+    Expr* parse(String expression);
 
-    Array<Expr*> parse(String expression);
+    void set_symbols(Array<String> p_symbols) { symbols = p_symbols; }
+
+    // @todo
+    bool syntax_check(String expression);
+    bool check_expression_string(String expression, Array<String> symbols);
+
+    Error get_error() const { return parser_error; }
 
 private:
+    Array<String> symbols = {};
     Array<Token> tokens;
+
+    int cursor = 0;
+    Error parser_error = {};
 
     Expr* parse_expression();
 
@@ -42,14 +54,14 @@ private:
     void report_error();  // @todo
 };
 
-using Var_ID = unsigned int;
+using BuiltinVar_ID = unsigned int;
 using Function_ID = unsigned int;
 
-#define VAR_ID_INVALID (Var_ID)(-1)
+#define BUILTIN_VAR_ID_INVALID (BuiltinVar_ID)(-1)
 #define FUNC_ID_INVALID (Function_ID)(-1)
 
 // @todo user defined variables and functions
-Var_ID get_var_id(String name);
+BuiltinVar_ID get_builtin_var_id(String name);
 Function_ID get_function_id(String name);
 double get_builtin_constant(String name);  // returns 0.0 if no constant name matches
 
@@ -59,18 +71,29 @@ struct Eval {
 };
 
 // on tree evaluator
-struct Evaluator
+struct Tree_Evaluator
 {
-    Evaluator();
+    Tree_Evaluator();
+
+    Expr* expression = nullptr;
+
+    DArray<float> variables = {};
+    DArray<String> symbols = {};
 
     Builtin_Function_List builtin_functions = {};
     double builtins[BUILTIN_VARIABLE_COUNT] = {};
     Error eval_error = {};
 
+    int add_symbol(String symbol) {
+        symbols.add(symbol);
+        return variables.add(0.0);
+    }
+
     void set(double sample_rate, double time);
     void update(double time);
 
-    Eval evaluate(Expr* expr);
+    Eval evaluate() const { return evaluate_expression(expression); }
+    Eval evaluate_expression(Expr* expr) const;
 
     void reset(double sample_rate, double time) {
         set(sample_rate, time);

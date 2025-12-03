@@ -9,7 +9,7 @@ struct Audio {
     SDL_AudioStream* m_audio_stream = nullptr;
 
     Expr* sample_expression = nullptr;
-    Evaluator evaluator = {};
+    Tree_Evaluator evaluator = {};
     Bytecode_Program bytecode_program = {};
 
     double sample_time = 0;  // time variable used for sampling.

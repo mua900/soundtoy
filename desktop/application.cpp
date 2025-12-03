@@ -785,29 +785,25 @@ bool Application::set_eval_string(String eval_string)
 {
     Parser parser = {};
 
-    auto parsed = parser.parse(m_ui.input_text_field.get_string());
-    if (parsed.size == 0)
+    Expr* expression = parser.parse(m_ui.input_text_field.get_string());
+    if (!expression)
     {
         return false;
     }
 
-    for (int i = 0; i < parsed.size; i++)
+    print_expr(expression, 0);
+    auto eval = m_evaluator.evaluate_expression(expression);
+    if (eval.success)
     {
-        Expr* expr = parsed.get(i);
-        print_expr(expr, 0);
-        auto eval = m_evaluator.evaluate(expr);
-        if (eval.success)
-        {
-            printf("%f\n", eval.value);
-        }
-
-        if (!eval.success)
-        {
-            return false;
-        }
+        printf("%f\n", eval.value);
     }
 
-    if (!m_audio.set_sample_expression(parsed.get(0)))
+    if (!eval.success)
+    {
+        return false;
+    }
+
+    if (!m_audio.set_sample_expression(expression))
     {
         fprintf(stderr, "Failed to set sample expression\n");
         return false;

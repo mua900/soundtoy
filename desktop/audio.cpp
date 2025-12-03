@@ -65,7 +65,7 @@ void SDLCALL audio_callback_default(void* userdata, SDL_AudioStream* stream, int
 
 bool Audio::set_sample_expression(Expr* expr)
 {
-    Eval eval = evaluator.evaluate(expr);
+    Eval eval = evaluator.evaluate_expression(expr);
     if (eval.success) {
         printf("%f\n", eval.value);
 
@@ -207,7 +207,7 @@ void SDLCALL audio_callback_sample_tree_mono(void* userdata, SDL_AudioStream* st
     {
         for (int sample = 0; sample < SAMPLE_BUFFER_SIZE; sample++)
         {
-            Eval eval = audio->evaluator.evaluate(expr);
+            Eval eval = audio->evaluator.evaluate_expression(expr);
 
             /*
                 we assume the evaluator is able to evaluate the expression here since
@@ -235,8 +235,8 @@ void SDLCALL audio_callback_sample_tree_stereo(void* userdata, SDL_AudioStream* 
     {
         for (int sample = 0; sample < SAMPLE_BUFFER_SIZE; sample += 2)
         {
-            Eval left = audio->evaluator.evaluate(audio->sample_expression);
-            Eval right = audio->evaluator.evaluate(audio->sample_expression);
+            Eval left = audio->evaluator.evaluate_expression(audio->sample_expression);
+            Eval right = audio->evaluator.evaluate_expression(audio->sample_expression);
 
             left.value = SDL_clamp(left.value, -1.0, 1.0);
             right.value = SDL_clamp(right.value, -1.0, 1.0);

@@ -36,6 +36,11 @@ public:
 		}
 	}
 
+
+	bool in_bounds(int index) {
+		return index < m_size && index >= 0;
+	}
+
 	T get(int index) {
 		if (index >= m_size) panic("Out of bounds array access");
 		return m_data[index];
@@ -143,6 +148,18 @@ struct Array
 	T get_or_default(int index) {
 		if (index >= size) return T();
 		return data[index];
+	}
+
+	Find_Result find(T& elem) {
+		for (int i = 0; i < size; i++)
+		{
+			if (data[i] == elem)
+			{
+				return Find_Result {i, true};
+			}
+		}
+
+		return Find_Result {0, false};
 	}
 
 	T* begin() {

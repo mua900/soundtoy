@@ -189,49 +189,30 @@ bool Parser::consume(Token_Type type)
     return match;
 }
 
-// @fix return a single expression
-Array<Expr*> Parser::parse(String expression_string)
+Expr* Parser::parse(String expression_string)
 {
     tokens = tokenize(expression_string);
 
-    DArray<Expr*> expressions(8);
+    Expr* expression = nullptr;
 
-    while (true)
+    expression = parse_expression();
+
+    if (tokens.get(cursor).type != TOKEN_TYPE_END)
     {
-        if (cursor >= tokens.size)
-        {
-            fprintf(stderr, "Malformed token stream\n");
-            break;
+        if (expression) {
+            parser_error = Error(make_string("Trailing tokens in expression"), cursor);
         }
 
-        if (tokens.get(cursor).type == TOKEN_TYPE_END)
-        {
-            break;
-        }
+        if (expression)
+            delete expression;
 
-        Expr* expr = parse_expression();
-        if (!expr)
-        {
-            break;
-        }
-
-        expressions.add(expr);
-
-        if (!consume(TOKEN_TYPE_SEMICOLON))
-        {
-            if (!consume(TOKEN_TYPE_END))
-            {
-                parser_error.message = make_string("Consecuent expressions should be seperated by ';'");
-                parser_error.offset = tokens.get(cursor).offset;
-            }
-
-            break;
-        }
+        return nullptr;
     }
 
-    return Array<Expr*>(expressions);
+    return expression;
 }
 
+// @fix memory leaks
 Expr* Parser::parse_expression()
 {
     Expr* expr = parse_equality_expr();
@@ -471,13 +452,23 @@ Expr* Parser::parse_primary_expr()
         case TOKEN_TYPE_IDENT:
         {
             cursor++;
+            BuiltinVar_ID builtin_var_id = get_builtin_var_id(token.token_string);
             double builtin_constant = get_builtin_constant(token.token_string);
-            if (builtin_constant != 0.0) {
+            if (builtin_var_id != BUILTIN_VAR_ID_INVALID) {
+                return new Expr_Variable(token.token_string, builtin_var_id);
+            }
+            else if (builtin_constant != 0.0) {
                 return new Expr_Literal(builtin_constant);
             }
             else {
-                Var_ID var_id = get_var_id(token.token_string);
-                return new Expr_Variable(token.token_string, var_id);
+                Find_Result variable = symbols.find(token.token_string);
+                if (variable.found) {
+                    return new Expr_Variable(token.token_string, variable.index);
+                }
+                else {
+                    parser_error = Error(make_string("Undefined variable"), token.offset);
+                    return nullptr;
+                }
             }
         }
         case TOKEN_TYPE_PAREN_OPEN:
@@ -498,23 +489,23 @@ Expr* Parser::parse_primary_expr()
     }
 }
 
-Evaluator::Evaluator()
+Tree_Evaluator::Tree_Evaluator()
 {
     get_default_builtin_functions(builtin_functions);
 }
 
-void Evaluator::set(double sample_rate, double time)
+void Tree_Evaluator::set(double sample_rate, double time)
 {
     builtins[BUILTIN_VARIABLE_TIME] = time;
     builtins[BUILTIN_VARIABLE_SAMPLE_RATE] = sample_rate;
 }
 
-void Evaluator::update(double time)
+void Tree_Evaluator::update(double time)
 {
     builtins[BUILTIN_VARIABLE_TIME] = time;
 }
 
-Eval Evaluator::evaluate(Expr* expr)
+Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
 {
     Eval fail = { 0.0, false };
 
@@ -550,13 +541,13 @@ Eval Evaluator::evaluate(Expr* expr)
                 return { builtins[var->var_id], true };
             }
 
-            eval_error.message = make_string("Variable not defined"); // @todo error message
+            // eval_error.message = make_string("Variable not defined"); // @todo error message
             return fail;
         }
         case Expr_Type::Unary:
         {
             auto unary = static_cast<Expr_Unary*>(expr);
-            Eval eval = evaluate(unary->operand);
+            Eval eval = evaluate_expression(unary->operand);
 
             if (eval.success == false)
                 return fail;
@@ -584,8 +575,8 @@ Eval Evaluator::evaluate(Expr* expr)
         case Expr_Type::Binary:
         {
             auto binary = static_cast<Expr_Binary*>(expr);
-            Eval left = evaluate(binary->left);
-            Eval right = evaluate(binary->right);
+            Eval left = evaluate_expression(binary->left);
+            Eval right = evaluate_expression(binary->right);
 
             if (left.success == false || right.success == false)
             {
@@ -611,7 +602,7 @@ Eval Evaluator::evaluate(Expr* expr)
 
                 case Binop_Unknown: // fallthrough
                 default: {
-                    eval_error.message = make_string("Invalid binary operator"); // @todo bug case
+                    // eval_error.message = make_string("Invalid binary operator"); // @todo bug case
                     return fail;
                 }
             }
@@ -619,14 +610,14 @@ Eval Evaluator::evaluate(Expr* expr)
         case Expr_Type::Grouping:
         {
             auto grouping = static_cast<Expr_Grouping*>(expr);
-            return evaluate(grouping->expr);
+            return evaluate_expression(grouping->expr);
         }
         case Expr_Type::Call:
         {
             auto call = static_cast<Expr_Call*>(expr);
             if (is_builtin_function(call))
             {
-                Eval arg = evaluate(call->arguments.data[0]);
+                Eval arg = evaluate_expression(call->arguments.data[0]);
                 if (!arg.success)
                 {
                     return fail;
@@ -714,7 +705,7 @@ void print_expr(const Expr* expr, int indent)
     }
 }
 
-Var_ID get_var_id(String name)
+BuiltinVar_ID get_builtin_var_id(String name)
 {
     if (string_compare(make_string("time"), name) ||
         string_compare(make_string("t"), name)
@@ -730,7 +721,7 @@ Var_ID get_var_id(String name)
     }
     else
     {
-        return VAR_ID_INVALID;
+        return BUILTIN_VAR_ID_INVALID;
     }
 }
 
@@ -962,7 +953,7 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
     }
     case Expr_Type::Variable:
         auto var = static_cast<Expr_Variable*>(expr);
-        if (var->var_id == VAR_ID_INVALID)
+        if (var->var_id == BUILTIN_VAR_ID_INVALID)
         {
             *error_string = make_string("Undefined variable");
             return NULL;
