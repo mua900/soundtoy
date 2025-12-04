@@ -1,5 +1,7 @@
 #include "common.h"
 
+#include <math.h>
+
 unsigned int pop_count(u64 x)
 {
     x = (x & (u64)0x5555555555555555) + ((x >> 1)  & (u64)0x5555555555555555);
@@ -18,17 +20,19 @@ void panic(char const* const msg)
     exit(1);
 }
 
-// very simple snap function
 float snap_value(float val, float bound1, float bound2, float threshold)
 {
-    if (abs(val - bound1) <= threshold)
-        val = bound1;
-    else if (abs(val - bound2) <= threshold)
-        val = bound2;
-    else if (abs(val - (bound1 + bound2) / 2) <= threshold)
-        val = (bound1 + bound2) / 2;
+  if (fabsf(val - bound1) <= threshold) {
+    val = bound1;
+  }
+  else if (fabsf(val - bound2) <= threshold) {
+    val = bound2;
+  }
+  else if (fabsf(val - (bound1 + bound2) / 2) <= threshold) {
+    val = (bound1 + bound2) / 2;
+  }
 
-    return val;
+  return val;
 }
 
 int pop_lsb(u64* x) {

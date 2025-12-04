@@ -188,6 +188,9 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 
             return location;
         }
+        default: {
+            panic("Unknown expression type");
+        }
 	}
 }
 
@@ -697,6 +700,7 @@ const char* opcode_string(Bytecode_Opcode opcode) {
 
         case INSTR_COUNT: return "INSTR_COUNT";
         case INSTR_SENTINEL: return "INSTR_SENTINEL";
+        default: panic("Unknown instruction");
     }
 }
 

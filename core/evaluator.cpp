@@ -189,7 +189,6 @@ bool Parser::consume(Token_Type type)
     return match;
 }
 
-// @fix return a single expression
 Array<Expr*> Parser::parse(String expression_string)
 {
     tokens = tokenize(expression_string);
@@ -661,7 +660,7 @@ void print_expr(const Expr* expr, int indent)
             switch (literal->value.type)
             {
                 case Value_Type::INTEGER:
-                    printf("Literal: %lli\n", literal->value.integer); break;
+                    printf("Literal: %li\n", literal->value.integer); break;
                 case Value_Type::REAL:
                     printf("Literal: %f\n", literal->value.real); break;
                 case Value_Type::BOOL:
