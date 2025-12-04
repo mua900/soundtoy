@@ -189,6 +189,35 @@ bool Parser::consume(Token_Type type)
     return match;
 }
 
+// @fixme this is not an optimal way to this probably
+bool Parser::syntax_check(String expression_string) {
+  auto save_symbols = symbols;
+  symbols = Array<String>();
+  Expr* expression = parse(expression_string);
+  symbols = save_symbols;
+
+  if (expression) {
+    delete expression;
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+bool Parser::check_expression_string(String expression_string) {
+  Expr* expression = parse(expression_string);
+
+  if (expression) {
+    delete expression;
+    return true;
+  }
+  else {
+    return false;
+  }  
+}
+
+
 Expr* Parser::parse(String expression_string)
 {
     tokens = tokenize(expression_string);
@@ -498,11 +527,6 @@ void Tree_Evaluator::set(double sample_rate, double time)
 {
     builtins[BUILTIN_VARIABLE_TIME] = time;
     builtins[BUILTIN_VARIABLE_SAMPLE_RATE] = sample_rate;
-}
-
-void Tree_Evaluator::update(double time)
-{
-    builtins[BUILTIN_VARIABLE_TIME] = time;
 }
 
 Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
@@ -852,6 +876,8 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
             case Binop_Ge:      return new Expr_Literal(left_numeric >= right_numeric);
             case Binop_Lt:      return new Expr_Literal(left_numeric < right_numeric);
             case Binop_Le:      return new Expr_Literal(left_numeric <= right_numeric);
+	    default:
+	      panic("Unknown binary operator");
             }
         }
 

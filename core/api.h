@@ -98,6 +98,14 @@ extern "C" {
     float st_sampler_evaluate(const St_Sampler* sampler);
 
     /**
+     * @brief Moves the sampler's sample time forward by step_size in seconds.
+     *
+     * @param sampler   Target sampler.
+     * @param step_size step size for sample time to move forward.
+     */
+    void st_sampler_step_time(St_Sampler* sampler, float step_size);
+
+    /**
      * @brief Sets the sampler's sample rate in Hz (samples per second).
      *
      * @param sampler  Target sampler.
@@ -106,7 +114,7 @@ extern "C" {
     void st_sampler_set_sample_rate(St_Sampler* sampler, float sample_rate);
 
     /**
-     * @brief Sets the sampler's internal sample time measured in seconds.
+     * @brief Sets the sampler's sample time measured in seconds.
      *
      * @param sampler  Target sampler.
      * @param sample_time  New sample time value.

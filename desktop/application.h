@@ -1,8 +1,9 @@
 #pragma once
 
 #include "common.h"
+#include "template.h"
 #include "audio.h"
-#include "evaluator.h"
+#include "api.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
@@ -183,8 +184,6 @@ public:
 
     Ui_State m_ui = {};
     Color m_background_color = DEFAULT_BACKGROUND_COLOR;
-
-    Tree_Evaluator m_evaluator = {};
 
     s64 m_time = 0;
     double m_time_seconds = 0;

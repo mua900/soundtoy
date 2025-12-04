@@ -1,20 +1,23 @@
 #pragma once
 
 #include <SDL3/SDL.h>
-#include "evaluator.h"
-#include "bytecode.h"
+#include "common.h"
+#include "api.h"
 
 struct Audio {
     SDL_AudioDeviceID m_playback = 0;
     SDL_AudioStream* m_audio_stream = nullptr;
 
-    Expr* sample_expression = nullptr;
-    Tree_Evaluator evaluator = {};
-    Bytecode_Program bytecode_program = {};
+    St_Sampler* sampler = nullptr;
+    St_Sampler* sampler2 = nullptr;
 
-    double sample_time = 0;  // time variable used for sampling.
+    // time variable used for sampling.
+    // Incremented 1 / sample_rate after each sample.
+    // This isn't real time, this is the the point we are about the sample.
+    double get_sample_time_left();
+    double get_sample_time_right();
+    double get_sample_time_mono();
 
-    // double m_time = 0;       // real life time since the application startup updated by the application
     int m_sample_rate = 0;
     int m_channel_count = 0;
 
@@ -23,6 +26,8 @@ struct Audio {
     bool initialize(int freq, int channels);
     bool reinitialize(int freq, int channels);
     void cleanup();
+
+    bool set_channel_count(int channel_count);
 
     int get_channel_count() const { return m_channel_count; }
     int get_sample_rate() const { return m_sample_rate; }
@@ -34,7 +39,7 @@ struct Audio {
     float get_volume();
     void set_volume(float volume);
 
-    bool set_sample_expression(Expr* expr);
+    bool set_sample_expression(String expr);
 
     bool create_audio_stream(int freq, int channels);
 };

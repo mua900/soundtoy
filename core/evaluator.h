@@ -27,7 +27,7 @@ struct Parser {
 
     // @todo
     bool syntax_check(String expression);
-    bool check_expression_string(String expression, Array<String> symbols);
+    bool check_expression_string(String expression);
 
     Error get_error() const { return parser_error; }
 
@@ -70,7 +70,6 @@ struct Eval {
     bool success = false;
 };
 
-// on tree evaluator
 struct Tree_Evaluator
 {
     Tree_Evaluator();
@@ -90,7 +89,6 @@ struct Tree_Evaluator
     }
 
     void set(double sample_rate, double time);
-    void update(double time);
 
     Eval evaluate() const { return evaluate_expression(expression); }
     Eval evaluate_expression(Expr* expr) const;

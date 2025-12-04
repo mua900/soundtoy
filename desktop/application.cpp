@@ -53,8 +53,10 @@ bool Application::initialize()
     }
 
     {
-        get_default_builtin_functions(m_evaluator.builtin_functions);
-        m_evaluator.set(initial_sample_rate, 0.0);
+      if (!st_initialize()) {
+	std::cerr << "Could not initialize soundtoy library\n";
+	return false;
+      }
     }
 
     // info string
@@ -167,7 +169,7 @@ void Application::update_audio_spec()
 
 bool Application::update_channel_count(int channels)
 {
-    bool success = m_audio.reinitialize(m_audio.m_sample_rate, channels);
+    bool success = m_audio.reinitialize(m_audio.get_sample_rate(), channels);
     return success;
 }
 
@@ -366,8 +368,6 @@ void Application::update()
     m_time_seconds = time_sec;
 
     timeout();
-
-    m_evaluator.update(time_sec);
 }
 
 void Application::timeout()
@@ -783,27 +783,7 @@ bool Application::update_input_string()
 
 bool Application::set_eval_string(String eval_string)
 {
-    Parser parser = {};
-
-    Expr* expression = parser.parse(m_ui.input_text_field.get_string());
-    if (!expression)
-    {
-        return false;
-    }
-
-    print_expr(expression, 0);
-    auto eval = m_evaluator.evaluate_expression(expression);
-    if (eval.success)
-    {
-        printf("%f\n", eval.value);
-    }
-
-    if (!eval.success)
-    {
-        return false;
-    }
-
-    if (!m_audio.set_sample_expression(expression))
+    if (!m_audio.set_sample_expression(eval_string))
     {
         fprintf(stderr, "Failed to set sample expression\n");
         return false;

@@ -159,7 +159,9 @@ struct Bytecode_Program {
 	// @todo instructions for these
 	DArray<float> variables = {};
 
-	Bytecode_Program() : processor(), code(), constant_block() {}
+	Bytecode_Program() : processor(), code(), constant_block() {
+		get_default_builtin_functions(constant_block.builtin_function);
+	}
 
 	void reset();
 
