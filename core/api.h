@@ -9,7 +9,7 @@ extern "C" {
 
     /**
      * @enum Evaluator_Type
-     * @brief Selects the underlying evaluation backend for all samplers.
+     * @brief evaluator implementation type.
      */
     enum Evaluator_Type : int {
         BYTECODE_INTERP,
@@ -18,24 +18,20 @@ extern "C" {
 
     /**
      * @struct St_Sampler
-     * @brief Represents a single expression evaluator instance.
+     * @brief Represents a sampler instance.
      *
-     * Each sampler owns an evaluator implementation whose type is determined at the time of creation.
+     * Each sampler owns an evaluator implementation whose type is determined at the time of creation (st_sampler_create).
      */
-    struct St_Sampler {
-        Evaluator_Type evaluator_type;  /**< Evaluator backend used by this sampler. */
-        void* evaluator;                /**< Opaque pointer to evaluator state. */
-    };
+    struct St_Sampler;
 
     /**
-     * @brief Initializes the soundtoy core library and selects an evaluator implementation to use.
+     * @brief Initializes the soundtoy core library
      *
      * This should be called to initialize or reinitialize the library.
      *
-     * @param evaluator_type  The evaluator backend that created samplers will use.
-     * @return true on success, false if initialization failed.
+     * @return true on success, false on failure.
      */
-    bool st_initialize(Evaluator_Type evaluator_type);
+    bool st_initialize();
 
     /**
      * @brief Returns a human-readable error message describing the last failure.
@@ -51,15 +47,9 @@ extern "C" {
     /**
      * @brief Creates a new sampler instance.
      *
-     * The sampler starts with:
-     *   - no assigned expression
-     *   - sample time = 0
-     *   - a default sample rate (implementation-defined)
-     *   - an empty variable table
-     *
      * @return Pointer to a new sampler, or NULL on failure.
      */
-    St_Sampler* st_sampler_create();
+    St_Sampler* st_sampler_create(Evaluator_Type evaluator_type, int sample_rate);
 
     /**
      * @brief Destroys a sampler and frees all associated resources.
@@ -71,13 +61,13 @@ extern "C" {
     /**
      * @brief Validates an expression string.
      *
-     * If sampler_or_null is null, only validates the syntax of the given expression.
+     * If sampler_or_null is NULL, only validates the syntax of the given expression.
      * Doesn't check or report errors on variable names.
-     * If sampler_or_null is not null, additionally checks correct usage of registered variables.
+     * If sampler_or_null is not NULL, additionally checks correct usage of registered variables.
      *
      * On failure, returns false and sets an error message.
      *
-     * @param sampler_or_null  sampler; if null performs syntax-only validation.
+     * @param sampler_or_null  sampler; if NULL performs syntax-only validation.
      * @param expression_string  expression text.
      * @param length  Number of bytes in the expression string.
      * @return true if valid, false if invalid.
@@ -133,7 +123,6 @@ extern "C" {
      */
     float st_sampler_get_sample_time(const St_Sampler* sampler);
 
-
     /**
      * @brief Registers a new variable name for this sampler.
      * 
@@ -185,7 +174,7 @@ extern "C" {
      *
      * @param sampler  Target sampler.
      * @param index    Variable index (0 ≤ index < count).
-     * @return variable name, or null if index is invalid.
+     * @return variable name, or NULL if index is invalid.
      */
     const char* st_sampler_get_variable_name_at_index(const St_Sampler* sampler, int index);
 

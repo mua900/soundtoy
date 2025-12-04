@@ -184,7 +184,7 @@ public:
     Ui_State m_ui = {};
     Color m_background_color = DEFAULT_BACKGROUND_COLOR;
 
-    Evaluator m_evaluator = {};
+    Tree_Evaluator m_evaluator = {};
 
     s64 m_time = 0;
     double m_time_seconds = 0;
