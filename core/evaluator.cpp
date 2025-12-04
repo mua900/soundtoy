@@ -652,7 +652,7 @@ void print_expr(const Expr* expr, int indent)
             switch (literal->value.type)
             {
                 case Value_Type::INTEGER:
-                    printf("Literal: %lli\n", literal->value.integer); break;
+                    printf("Literal: %li\n", literal->value.integer); break;
                 case Value_Type::REAL:
                     printf("Literal: %f\n", literal->value.real); break;
                 case Value_Type::BOOL:

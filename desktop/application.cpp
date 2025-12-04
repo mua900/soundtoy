@@ -646,7 +646,7 @@ bool Application::mouse_input_ui()
 
     if (m_ui.input_text_field.m_area.contains(m_mouse.pos))
     {
-        const SDL_Rect area = {m_ui.input_text_field.m_area.x, m_ui.input_text_field.m_area.y, m_ui.input_text_field.m_area.w, m_ui.input_text_field.m_area.h};
+      const SDL_Rect area = {(int)m_ui.input_text_field.m_area.x, (int)m_ui.input_text_field.m_area.y, (int)m_ui.input_text_field.m_area.w, (int)m_ui.input_text_field.m_area.h};
         SDL_SetTextInputArea(m_window.window, &area, m_ui.input_text_field.m_cursor_pixel);
 
         toggle_text_input();
@@ -658,7 +658,7 @@ bool Application::mouse_input_ui()
 
     if (m_ui.sample_rate_box.m_area.contains(m_mouse.pos))
     {
-        const SDL_Rect area = {m_ui.sample_rate_box.m_area.x, m_ui.sample_rate_box.m_area.y, m_ui.sample_rate_box.m_area.w, m_ui.sample_rate_box.m_area.h};
+        const SDL_Rect area = {(int)m_ui.sample_rate_box.m_area.x, (int)m_ui.sample_rate_box.m_area.y, (int)m_ui.sample_rate_box.m_area.w, (int)m_ui.sample_rate_box.m_area.h};
         SDL_SetTextInputArea(m_window.window, &area, m_ui.sample_rate_box.m_cursor_pixel);
 
         toggle_text_input();
