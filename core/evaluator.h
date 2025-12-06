@@ -25,7 +25,6 @@ struct Parser {
 
     void set_symbols(Array<String> p_symbols) { symbols = p_symbols; }
 
-    // @todo
     bool syntax_check(String expression);
     bool check_expression_string(String expression);
 

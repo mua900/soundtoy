@@ -39,7 +39,7 @@ extern "C" {
      * Some API functions return only true/false and errors may occur without an explicit failure status.
      * Error logs are stored internally and retrieved here.
      *
-     * @return Pointer to an internal null-terminated error string.  
+     * @return Pointer to an internal null-terminated error string.
      *         The caller must NOT free this memory.
      */
     const char* get_last_error();
