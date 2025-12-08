@@ -184,8 +184,6 @@ void Application::set_volume(float volume)
 
 bool Application::load_assets()
 {
-    // @todo cleanup
-
     String_Builder sb(256);
     sb.append(make_string(SDL_GetBasePath()));
 #ifdef _WIN32
@@ -196,6 +194,7 @@ bool Application::load_assets()
     sb.append(make_string("asset"));
     sb.append(path_seperator);
 
+    // textures
     {
         String pause_texture = make_string("pause.png");
         sb.append(pause_texture);
@@ -246,7 +245,6 @@ bool Application::load_assets()
 
     return true;
 }
-
 
 void Application::handle_events()
 {

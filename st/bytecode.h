@@ -6,14 +6,22 @@
 #include "builtin.h"
 
 /*
+Instruction layout:
 	opcode(32 bit) operand1(16 bit), operand2(16 bit)
-
 	64 bit fixed length instructions.
+
 	Composed of a 32 bit opcode and a pair of 16 bit arguments.
-	Some instructions may only use the first argument and discard the second slot.
-	Some other ones might not need any arguments at all.
-	Instructions can take arguments as registers or identifiers for known constants or functions.
-	There are unlimited registers (as long as it can be addressed by the representable range of the id) and a constant block containing all the constants used in the expression for bytecode program to use.
+	All instructions take 2 arguments but they aren't required to use either of them.
+	The arguments can be registers or identifiers for known constants or functions.
+
+Registers:
+	The registers are seperated into independent integer and floating point files.
+	There are no hard limits on register file size (it is limited by the addressable range of the 16-bit id).
+
+Constant Block:
+	The constant values used in the expression doesn't fit into the instruction.
+	There is a seperate constant block created when compiling the expression that contains all constants used in the expression.
+	They are used via instructions to load values from the constant block into registers.
 */
 
 enum Constant_Type {
@@ -62,12 +70,12 @@ enum Bytecode_Opcode : u32
 	INSTR_CMPF,			// cmpf freg0, freg1
 
 	// commit the result of the previous generic compare operation for a specific case to the condition bit
-	INSTR_TEST_RESULT,	// test immediate16
+	INSTR_TEST_RESULT,	// test immediate8
 
 	// jump
-	INSTR_JMP,			// jmp  address
+	INSTR_JMP,			// jmp  address16 (little endian)
 	// jump if the condition bit is true (1)
-	INSTR_JMP_COND,		// cjmp address
+	INSTR_JMP_COND,		// cjmp address16 (little endian)
 
 	// calls the builtin function identified by func_id and place the result in freg
 	// all builtin functions take a single floating point number as argument and return a single floating point number
@@ -122,6 +130,7 @@ struct Bytecode_Instr {
 struct Constant_Block {
 	DArray<float> real = {};
 	DArray<s32> integer = {};
+	// @todo builtin constants pi, e etc.
 	float builtin_variable[BUILTIN_VARIABLE_COUNT] = {};
 	Builtin_Function_List builtin_function = {};
 	
@@ -151,8 +160,8 @@ struct Bytecode_Processor {
 };
 
 struct Bytecode_Program {
-	Bytecode_Processor processor = {};  // execution context
-	Bytecode_Code code = {};			// code
+	Bytecode_Processor processor = {};
+	Bytecode_Code code = {};
 	Constant_Block constant_block = {};
 
 	DArray<String> symbols;
@@ -194,5 +203,4 @@ bool bytecode_compile_expression(Bytecode_Program& program, Expr* expr);
 float bytecode_run(Bytecode_Program& program);
 
 // - register usage
-// - common subexpression elimination
 void bytecode_optimize(Bytecode_Program& program);

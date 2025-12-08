@@ -14,7 +14,7 @@
 
 struct Window {
     SDL_Window* window;
-    SDL_Renderer* renderer; // @todo custom renderer maybe?
+    SDL_Renderer* renderer;
 };
 
 struct Font {

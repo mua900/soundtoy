@@ -359,31 +359,165 @@ void Bytecode_Program::set_builtin_function(Builtin_Function implementation, u32
 }
 
 void Bytecode_Program::print_program() {
-    printf("Processor\n");
-    printf("Integers registers:\n");
-    for (int i = 0; i < processor.regs.size(); i++) {
-        printf("%d: %d\n", i, processor.regs.get(i));
-    }
-    printf("Floating point registers:\n");
-    for (int i = 0; i < processor.regs.size(); i++) {
-        printf("%d: %f\n", i, processor.fregs.get(i));
+    String_Builder builder(1024);
+
+    builder.append(make_string("=== Bytecode Program ===\n"));
+
+    {
+        builder.append(make_string("Processor State: \n"));
+
+        if (processor.regs.size() != 0) {
+            builder.append(make_string("    Integer registers:\n"));
+            for (int i = 0; i < processor.regs.size(); i++) {
+                builder.append(make_string("        "));
+                builder.append_integer(processor.regs.get(i));
+                builder.append_char('\n');
+            }
+        }
+
+        if (processor.fregs.size() != 0) {
+            builder.append(make_string("    Floating point registers:\n"));
+            for (int i = 0; i < processor.fregs.size(); i++) {
+                builder.append(make_string("        "));
+                builder.append_integer(processor.fregs.get(i));
+                builder.append_char('\n');
+            }
+        }
+
+        builder.append(make_string("    "));
+        builder.append(make_string("Processor PC: "));
+        builder.append_integer(processor.pc);
+        builder.append_char('\n');
+
+        char flags_str[64];
+        snprintf(flags_str, sizeof(flags_str), "Flags Register:  0x%08x", processor.result_flags);
+
+        builder.append(make_string("    "));
+        builder.append(make_string("Flags register: "));
+        builder.append(make_string(flags_str));
+        builder.append_char('\n');
+
+        String condition_result = processor.result_flags & CONDITION_RESULT                 ? make_string("COND") : make_string("0");
+        String equals           = processor.result_flags & COMPARISON_RESULT_EQUALS         ? make_string("EQ")   : make_string("0");
+        String not_equals       = processor.result_flags & COMPARISON_RESULT_NOT_EQUALS     ? make_string("NEQ")  : make_string("0");
+        String less_than        = processor.result_flags & COMPARISON_RESULT_LESS_THAN      ? make_string("LT")   : make_string("0");
+        String greater_than     = processor.result_flags & COMPARISON_RESULT_GREATER_THAN   ? make_string("GT")   : make_string("0");
+
+        builder.append(make_string("    "));
+        builder.append(make_string("("));
+        builder.append(condition_result);
+        builder.append(make_string(", "));
+        builder.append(equals);
+        builder.append(make_string(", "));
+        builder.append(not_equals);
+        builder.append(make_string(", "));
+        builder.append(less_than);
+        builder.append(make_string(", "));
+        builder.append(greater_than);
+        builder.append(make_string(")"));
+
+        builder.append_char('\n');
     }
 
-    printf("Constant Block\n");
-    printf("Integer constants:\n");
-    for (int i = 0; i < constant_block.integer.size(); i++) {
-        printf("%d\n", constant_block.integer.get(i));
-    }
-    printf("Float constants:\n");
-    for (int i = 0; i < constant_block.real.size(); i++) {
-        printf("%f\n", constant_block.real.get(i));
+    builder.append_char('\n');
+
+    {
+        builder.append("Instructions: \n");
+        for (int i = 0; i < code.code.size(); i++) {
+            auto instr = code.code.get(i);
+            String opcode = make_string(opcode_string(instr.opcode));
+            builder.append("    ");
+            builder.append(opcode);
+            builder.append_char(' ');
+
+            switch (instr.opcode) {
+                case INSTR_JMP:     // fallthrough
+                case INSTR_JMP_COND: {
+                    u16 address = ((u16)instr.op0 << 8) | ((u16)instr.op1);
+                    char address_string[64];
+                    snprintf(address_string, sizeof(address_string), "0x%08x", address);
+                    builder.append(make_string(address_string));
+                    break;
+                }
+                case INSTR_TEST_RESULT: {
+                    u16 test = instr.op0;
+                    char address_string[64];
+                    snprintf(address_string, sizeof(address_string), "0x%08x", test);
+                    builder.append(make_string(address_string));
+                    break;
+                }
+                case INSTR_LOAD:    // fallthrough
+                case INSTR_LOADF: {
+                    builder.append_integer(instr.op0);
+                    builder.append_char(' ');
+
+                    builder.append(make_string("const ["));
+                    builder.append_integer(instr.op1);
+                    builder.append(make_string(" ]"));
+                    break;
+                }
+                case INSTR_LOAD_BUILTIN: {
+                    builder.append_integer(instr.op0);
+                    builder.append_char(' ');
+
+                    const char* builtin_name = "unknown_builtin";
+                    if (instr.op1 == BUILTIN_VARIABLE_TIME) {
+                        builtin_name = "time";
+                    }
+                    else if (instr.op1 == BUILTIN_VARIABLE_SAMPLE_RATE) {
+                        builtin_name = "sample_rate";
+                    }
+
+                    builder.append(make_string(builtin_name));
+                    break;
+                }
+                default: {
+                    if (opcode_is_binary(instr.opcode)) {
+                        builder.append_integer(instr.op0);
+                        builder.append_char(' ');
+                        builder.append_integer(instr.op1);
+                    }
+                    else if (opcode_is_unary(instr.opcode)) {
+                        builder.append_integer(instr.op0);
+                    }
+                }
+            }
+
+            builder.append_char('\n');
+        }
     }
 
-    printf("\n");
-    printf("Code:\n");
-    for (auto instr : code.code) {
-        printf("%s %x %x\n", opcode_string(instr.opcode), instr.op0, instr.op1);
+    builder.append_char('\n');
+
+    {
+        builder.append("Constant Block: \n");
+        builder.append("    Reals: \n");
+        for (auto real : constant_block.real) {
+            builder.append("    ");
+            char real_string[64];
+            snprintf(real_string, sizeof(real_string), "%.3f", real);
+            builder.append(make_string(real_string));
+            builder.append_char('\n');
+        }
+
+        builder.append("    Integers: \n");
+        for (auto integer : constant_block.integer) {
+            builder.append("    ");
+            builder.append_integer(integer);
+            builder.append_char('\n');
+        }
+
+        builder.append("    Builtin Variables: \n");
+        for (float builtin : builtin_variable) {
+            builder.append("    ");
+            char string[64];
+            snprintf(string, sizeof(string), "%.3f", builtin);
+            builder.append(make_string(string));
+            builder.append_char('\n');
+        }
     }
+
+    builder.free_buffer();
 }
 
 // -- Bytecode runner
@@ -617,14 +751,14 @@ float bytecode_run(Bytecode_Program& program)
             }
 
             case INSTR_JMP: {
-                u16 address = instr.op0;
+                u16 address = ((u16)instr.op0 << 8) | ((u16)instr.op1);
                 processor.pc = address;
 
                 break;
             }
             case INSTR_JMP_COND: {
                 if (processor.result_flags & CONDITION_RESULT) {
-                    u16 address = instr.op0;
+                    u16 address = ((u16)instr.op0 << 8) | ((u16)instr.op1);
                     processor.pc = address;
                 }
 
@@ -658,6 +792,21 @@ void bytecode_optimize(Bytecode_Program& program) {
     // not implemented
 
     // @todo
+}
+
+bool opcode_is_binary(Bytecode_Opcode opcode) {
+    switch (opcode) {
+	    case INSTR_NEGATE: case INSTR_NOT: case INSTR_NEGATE_F:
+        case INSTR_TEST_RESULT:
+        case INSTR_RET:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool opcode_is_unary(Bytecode_Opcode opcode) {
+    return !opcode_is_unary(opcode);  // @fix
 }
 
 

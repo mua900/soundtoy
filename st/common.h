@@ -154,6 +154,7 @@ struct String_Builder {
     void append(String string);
     void append_char(char ch);
     void append_integer(int n);
+    // @todo append_hex();
     const char* c_string();
     void remove(int amount);  // remove the last n characters from the buffer
     void remove_slice(int start, int end);
