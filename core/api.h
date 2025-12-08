@@ -52,7 +52,7 @@ extern "C" {
     St_Sampler* st_sampler_create(Evaluator_Type evaluator_type, int sample_rate);
 
     /**
-     * @brief Destroys a sampler and frees all associated resources.
+     * @brief Destroys a sampler and free it's assosiated memory.
      *
      * @param sampler Pointer previously returned by st_sampler_create().
      */

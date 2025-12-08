@@ -11,6 +11,7 @@ let st_sampler_set_expression;
 let st_sampler_evaluate;
 let st_sampler_step_time;
 let st_sampler_set_sample_rate;
+let st_sampler_set_sample_time;
 
 let soundtoy_ready;  // promise
 let resolve_soundtoy_ready;
@@ -26,6 +27,7 @@ Module.onRuntimeInitialized = function load_soundtoy() {
 	st_sampler_evaluate = Module.cwrap("st_sampler_evaluate", "number", ["number"]);
 	st_sampler_step_time = Module.cwrap("st_sampler_step_time", null, ["number", "number"]);
 	st_sampler_set_sample_rate = Module.cwrap("st_sampler_set_sample_rate", null , ["number", "number"]);
+	st_sampler_set_sample_time = Module.cwrap("st_sampler_set_sample_time", null, ["number", "number"]);
 
 	resolve_soundtoy_ready();
 }
@@ -33,24 +35,55 @@ Module.onRuntimeInitialized = function load_soundtoy() {
 let sampler_left;
 let sampler_right;
 
-async function create_samplers () {
+const sample_rate_default = 48000;
+
+async function setup_samplers () {
 	await soundtoy_ready;
 
 	console.log("Loaded soundtoy library");
 
 	if (!st_initialize()) {
 		console.error("Failed to initialize soundtoy library");
-		return;
+		return false;
 	}
-
-	const sample_rate_default = 48000;
 
 	sampler_left = st_sampler_create(TREE_INTERP, sample_rate_default);
 	if (!sampler_left) {
-		console.error("Failed to create a sampler");
+		console.error("Failed to create sampler");
+		return false;
 	}
 
 	sampler_right = st_sampler_create(TREE_INTERP, sample_rate_default);
+	if (!sampler_right) {
+		console.error("Failed to create sampler");
+		st_sampler_destroy(sampler_left);
+		return false;
+	}
+
+	st_sampler_set_sample_rate(sampler_left, sample_rate_default);
+	st_sampler_set_sample_rate(sampler_right, sample_rate_default);
+
+	// build the string
+	const expression_default = "sin(2*PI*t)";
+	const ptr = Module._malloc(expression_default.length + 1);
+	Module.stringToUTF8(expression_default, ptr, expression_default.length + 1);
+
+	let valid = st_check_expression_string(null, ptr, expression_default.length);
+	console.log("expression", valid ? "valid" : "invalid");
+
+	let set_success = true;
+
+	set_success &= st_sampler_set_expression(sampler_left, ptr, expression_default.length);
+	set_success &= st_sampler_set_expression(sampler_right, ptr, expression_default.length);
+
+	if (!set_success) {
+		console.error("Could not set sample expression");
+		st_sampler_destroy(sampler_left);
+		st_sampler_destroy(sampler_right);
+		return false;
+	}
+
+	return true;
 }
 
 // ui elements
@@ -64,9 +97,14 @@ function setup_ui() {
 	button.addEventListener("click", () => { console.log("Hello"); });
 }
 
+function setup_audio() {
+	// @todo
+}
+
 function main() {
-	create_samplers();
 	setup_ui();
+	setup_samplers();
+	setup_audio();
 }
 
 main();
