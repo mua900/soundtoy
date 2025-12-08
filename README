@@ -3,4 +3,4 @@ The consept is the that the user supplies an expression that depends on time to 
 
 Desktop version of this demo uses SDL 3 and companion libraries of SDL_ttf and SDL_image. They are included as git submodules in the vendor/ folder.
 Desktop version uses CMake for building.
-There is a new web version developement of which is going on under the web/ folder
+There is a web version under the web/ folder.
