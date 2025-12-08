@@ -12,6 +12,7 @@ foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${CMAKE_BINARY_DIR}/lib)
 endforeach()
 
+# TODO ifdef this to be excluded on builds for other platforms
 add_executable(soundtoy
     desktop/main.cpp
     
@@ -23,26 +24,26 @@ add_executable(soundtoy
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT soundtoy)
 
-add_library(core STATIC
-    core/common.h
-    core/common.cpp
-    core/evaluator.h
-    core/evaluator.cpp
-    core/builtin.h
-    core/builtin.cpp
-    core/token.h
-    core/expr.h
-    core/expr.cpp
-    core/bytecode.h
-    core/bytecode.cpp
-    core/template.h
+add_library(soundtoy_lib STATIC
+    st/common.h
+    st/common.cpp
+    st/evaluator.h
+    st/evaluator.cpp
+    st/builtin.h
+    st/builtin.cpp
+    st/token.h
+    st/expr.h
+    st/expr.cpp
+    st/bytecode.h
+    st/bytecode.cpp
+    st/template.h
 
-    core/api.h
-    core/api.cpp
+    st/api.h
+    st/api.cpp
 )
 
-target_include_directories(soundtoy PRIVATE core)
-target_link_libraries(soundtoy PRIVATE core)
+target_include_directories(soundtoy PRIVATE soundtoy_lib)
+target_link_libraries(soundtoy PRIVATE soundtoy_lib)
 
 
 # SDL
