@@ -7,6 +7,9 @@
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program);
 static Bytecode_Opcode get_arithmetic_binop_opcode_integer(Op_Binary binary);
 static Bytecode_Opcode get_arithmetic_binop_opcode_float(Op_Binary binary);
+static bool opcode_is_binary(Bytecode_Opcode opcode);
+static bool opcode_is_unary(Bytecode_Opcode opcode);
+
 
 bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
 
@@ -22,12 +25,15 @@ bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
     }
     program.emit_bytecode_instruction(INSTR_RET, location.floating_point_register, 0);
 
+    program.print_program();
+
     bytecode_optimize(program);
 
 	return true;
 }
 
 // @todo handle errors
+// @fix this should be traversed bottom to top
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 	switch (expr->type) {
         case Expr_Type::Literal: {
@@ -55,7 +61,15 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
                 return builtin_location_info;
             }
             else {
-                NOT_IMPLEMENTED("User defined variables");
+                auto freg = program.allocate_fp_register();
+
+                Value_Location_Info location;
+                location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+                location.floating_point_register = freg;
+
+                program.emit_bytecode_instruction(INSTR_LOAD_VAR, variable->var_id, freg);
+
+                return location;
             }
         }
         case Expr_Type::Unary: {
@@ -364,6 +378,22 @@ void Bytecode_Program::print_program() {
     builder.append(make_string("=== Bytecode Program ===\n"));
 
     {
+        builder.append(make_string("Program stats: \n"));
+
+        builder.append(make_string("    "));
+        builder.append(make_string("Floating point register count: "));
+        builder.append_integer(processor.fregs.size());
+        builder.append_char('\n');
+
+        builder.append(make_string("    "));
+        builder.append(make_string("Integer register count: "));
+        builder.append_integer(processor.regs.size());
+        builder.append_char('\n');
+    }
+
+    builder.append_char('\n');
+
+    {
         builder.append(make_string("Processor State: \n"));
 
         if (processor.regs.size() != 0) {
@@ -422,11 +452,11 @@ void Bytecode_Program::print_program() {
     builder.append_char('\n');
 
     {
-        builder.append("Instructions: \n");
+        builder.append(make_string("Instructions: \n"));
         for (int i = 0; i < code.code.size(); i++) {
             auto instr = code.code.get(i);
             String opcode = make_string(opcode_string(instr.opcode));
-            builder.append("    ");
+            builder.append(make_string("    "));
             builder.append(opcode);
             builder.append_char(' ');
 
@@ -490,32 +520,34 @@ void Bytecode_Program::print_program() {
     builder.append_char('\n');
 
     {
-        builder.append("Constant Block: \n");
-        builder.append("    Reals: \n");
+        builder.append(make_string("Constant Block: \n"));
+        builder.append(make_string("    Reals: \n"));
         for (auto real : constant_block.real) {
-            builder.append("    ");
+            builder.append(make_string("    "));
             char real_string[64];
             snprintf(real_string, sizeof(real_string), "%.3f", real);
             builder.append(make_string(real_string));
             builder.append_char('\n');
         }
 
-        builder.append("    Integers: \n");
+        builder.append(make_string("    Integers: \n"));
         for (auto integer : constant_block.integer) {
-            builder.append("    ");
+            builder.append(make_string("    "));
             builder.append_integer(integer);
             builder.append_char('\n');
         }
 
-        builder.append("    Builtin Variables: \n");
-        for (float builtin : builtin_variable) {
-            builder.append("    ");
+        builder.append(make_string("    Builtin Variables: \n"));
+        for (float builtin : constant_block.builtin_variable) {
+            builder.append(make_string("    "));
             char string[64];
             snprintf(string, sizeof(string), "%.3f", builtin);
             builder.append(make_string(string));
             builder.append_char('\n');
         }
     }
+
+    printf("%s\n", builder.c_string());
 
     builder.free_buffer();
 }
@@ -794,7 +826,7 @@ void bytecode_optimize(Bytecode_Program& program) {
     // @todo
 }
 
-bool opcode_is_binary(Bytecode_Opcode opcode) {
+bool opcode_is_unary(Bytecode_Opcode opcode) {
     switch (opcode) {
 	    case INSTR_NEGATE: case INSTR_NOT: case INSTR_NEGATE_F:
         case INSTR_TEST_RESULT:
@@ -805,7 +837,7 @@ bool opcode_is_binary(Bytecode_Opcode opcode) {
     }
 }
 
-bool opcode_is_unary(Bytecode_Opcode opcode) {
+bool opcode_is_binary(Bytecode_Opcode opcode) {
     return !opcode_is_unary(opcode);  // @fix
 }
 

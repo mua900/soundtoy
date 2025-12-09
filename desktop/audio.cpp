@@ -141,8 +141,8 @@ bool Audio::initialize(int freq, int channels)
     m_sample_rate = freq;
     m_channel_count = channels;
 
-    sampler = st_sampler_create(Evaluator_Type::TREE_INTERP, freq);
-    sampler2 = st_sampler_create(Evaluator_Type::TREE_INTERP, freq);
+    sampler = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, freq);
+    sampler2 = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, freq);
 
     String default_expression = make_string("sin(2*PI*t*440)");
     if (!set_sample_expression(default_expression)) {

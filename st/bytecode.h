@@ -43,6 +43,9 @@ enum Bytecode_Opcode : u32
 	INSTR_LOAD,			// load reg, const_int
 	INSTR_LOADF,		// load freg, const_float
 	INSTR_LOAD_BUILTIN,	// load_builtin freg builtin_id
+
+	INSTR_LOAD_VAR,		// load_var var_id freg
+
 	INSTR_MOV,			// mov  reg, reg
 	INSTR_MOVF,			// mov  freg, freg
 	INSTR_MOV_I_TO_F,	// mov  freg, reg		   -- bitwise copy of the value

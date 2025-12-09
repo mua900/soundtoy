@@ -42,7 +42,7 @@ add_library(soundtoy_lib STATIC
     st/api.cpp
 )
 
-target_include_directories(soundtoy PRIVATE soundtoy_lib)
+target_include_directories(soundtoy PRIVATE st)
 target_link_libraries(soundtoy PRIVATE soundtoy_lib)
 
 

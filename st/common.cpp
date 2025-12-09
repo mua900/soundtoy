@@ -198,32 +198,15 @@ void String_Builder::append_char(char ch) {
 
 void String_Builder::append_integer(int n)
 {
-    if (n < 0)
-    {
-        append_char('-');
-        n = -n;
-    }
+    char buffer[128];
+    snprintf(buffer, sizeof(buffer), "%d", n);
+    append(make_string(buffer));
+}
 
-    int count = 0;
-    int pow = 1;
-    while (n >= pow)
-    {
-        pow *= 10;
-        count += 1;
-    }
-
-    grow_to_size(cursor + count);
-
-    int increment = count;
-    while (count)
-    {
-        char c = (n % 10) + '0';
-        buffer[cursor + count - 1] = c;
-        n /= 10;
-        count -= 1;
-    }
-
-    cursor += increment;
+void String_Builder::append_hex(int n) {
+    char buffer[128];
+    snprintf(buffer, sizeof(buffer), "%x", n);
+    append(make_string(buffer));
 }
 
 void String_Builder::clear_and_append(String s) {
