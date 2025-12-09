@@ -7,12 +7,14 @@
 
 extern "C" {
 
+    static void bytecode_step_time(void* evaluator, float step);
 	static Array<String> bytecode_symbol_table_get(void* evaluator);
 	static bool bytecode_set_expression(void* evaluator, String expression_string);
 	static float bytecode_evaluate(void* evaluator);
 	static void bytecode_fill_buffer(void* evaluator, float* buffer, int count);
 	static void bytecode_fill_buffer_interleaved(void* evaluator_0, void* evaluator_1, float* buffer, int count);
 
+    static void tree_interp_step_time(void* evaluator, float step);
 	static Array<String> tree_interp_symbol_table_get(void* evaluator);
 	static bool tree_interp_set_expression(void* evaluator, String expression_string);
 	static float tree_interp_evaluate(void* evaluator);
@@ -23,6 +25,7 @@ extern "C" {
     typedef bool (*evaluator_set_expression_f)(void* evaluator, String expression);
     typedef float (*evaluate_expression_f)(void* evaluator);
     typedef void (*evaluator_fill_buffer_f)(void* evaluator, float* buffer, int count);
+    typedef void (*evaluator_step_time_f)(void* evaluator, float step);
 
     // for this to work both evaluators should be of the same type
     typedef void (*evaluator_fill_buffer_interleaved_f)(void* evaluator_0, void* evaluator_1, float* buffer, int count);
@@ -35,6 +38,7 @@ extern "C" {
         evaluator_set_expression_f evaluator_set_expression = nullptr;
         evaluator_fill_buffer_f evaluator_fill_buffer = nullptr;
         evaluator_fill_buffer_interleaved_f evaluator_fill_buffer_interleaved = nullptr;
+        evaluator_step_time_f evaluator_step_time = nullptr;
     };
 
     // @todo thread safe
@@ -66,6 +70,7 @@ extern "C" {
 			sampler->evaluator_set_expression = bytecode_set_expression;
 			sampler->evaluator_fill_buffer = bytecode_fill_buffer;
 			sampler->evaluator_fill_buffer_interleaved = bytecode_fill_buffer_interleaved;
+            sampler->evaluator_step_time = bytecode_step_time;
         }
         else if (evaluator_type == Evaluator_Type::TREE_INTERP) {
 			sampler->evaluator = new Tree_Evaluator();
@@ -76,6 +81,7 @@ extern "C" {
 			sampler->evaluator_set_expression = tree_interp_set_expression;
 			sampler->evaluator_fill_buffer = tree_interp_fill_buffer;
 			sampler->evaluator_fill_buffer_interleaved = tree_interp_fill_buffer_interleaved;
+            sampler->evaluator_step_time = tree_interp_step_time;
         }
 
 		st_sampler_set_sample_rate(sampler, sample_rate);
@@ -110,10 +116,9 @@ extern "C" {
         return sampler->evaluate_expression(sampler->evaluator);
     }
 
-  void st_sampler_step_time(St_Sampler* sampler, float step_size) {
-    float current_time = st_sampler_get_sample_time(sampler);
-    st_sampler_set_sample_time(sampler, current_time + step_size);
-  }
+    void st_sampler_step_time(St_Sampler* sampler, float step_size) {
+        sampler->evaluator_step_time(sampler->evaluator, step_size);
+    }
 
     void st_sampler_set_sample_rate(St_Sampler* sampler, float sample_rate) {
         if (sampler->evaluator_type == Evaluator_Type::BYTECODE_INTERP) {
@@ -155,11 +160,11 @@ extern "C" {
     float st_sampler_get_sample_rate(const St_Sampler* sampler) {
         if (sampler->evaluator_type == Evaluator_Type::BYTECODE_INTERP) {
             auto program = (Bytecode_Program*) sampler->evaluator;
-            return program->get_sample_time();
+            return program->get_sample_rate();
         }
         else if (sampler->evaluator_type == Evaluator_Type::TREE_INTERP) {
             auto tree_interp = (Tree_Evaluator*) sampler->evaluator;
-            return tree_interp->get_time();
+            return tree_interp->get_sample_rate();
         }
         else {
             st_last_error = "Invalid evaluator type";
@@ -278,7 +283,10 @@ extern "C" {
     }
 
 
-
+    static void bytecode_step_time(void* evaluator, float step) {
+        Bytecode_Program* program = (Bytecode_Program*)evaluator;
+        program->step_time(step);
+    }
     static Array<String> bytecode_symbol_table_get(void* evaluator) {
         Bytecode_Program* program = (Bytecode_Program*) evaluator;
         return program->symbols;
@@ -307,19 +315,19 @@ extern "C" {
     static void bytecode_fill_buffer(void* evaluator, float* buffer, int count) {
         Bytecode_Program* program = (Bytecode_Program*) evaluator;
 
-	double inv_sample_rate = 1.0 / program->get_sample_rate();
+        double inv_sample_rate = 1.0 / program->get_sample_rate();
 
         for (int i = 0; i < count; i++) {
             buffer[i] = bytecode_run(*program);
-	    program->step_time(inv_sample_rate);
+	        program->step_time(inv_sample_rate);
         }
     }
     static void bytecode_fill_buffer_interleaved(void* evaluator_0, void* evaluator_1, float* buffer, int count) {
         Bytecode_Program* program_left = (Bytecode_Program*) evaluator_0;
         Bytecode_Program* program_right = (Bytecode_Program*) evaluator_1;
 
-	double left_inv_sr = 1.0 / program_left->get_sample_rate();
-	double right_inv_sr = 1.0 / program_right->get_sample_rate();
+    	double left_inv_sr = 1.0 / program_left->get_sample_rate();
+    	double right_inv_sr = 1.0 / program_right->get_sample_rate();
 
         for (int i = 0; i < count; i++) {
             int left = i * 2 + 0;
@@ -328,11 +336,15 @@ extern "C" {
             buffer[left] = bytecode_run(*program_left);
             buffer[right] = bytecode_run(*program_right);
 
-	    program_left->step_time(left_inv_sr);
-	    program_right->step_time(right_inv_sr);
+	        program_left->step_time(left_inv_sr);
+	        program_right->step_time(right_inv_sr);
         }
     }
 
+    static void tree_interp_step_time(void* evaluator, float step) {
+        Tree_Evaluator* tree_interp = (Tree_Evaluator*)evaluator;
+        tree_interp->step_time(step);
+    }
     static Array<String> tree_interp_symbol_table_get(void* evaluator) {
         Tree_Evaluator* tree_interp = (Tree_Evaluator*) evaluator;
         return tree_interp->symbols;
@@ -363,18 +375,17 @@ extern "C" {
     static void tree_interp_fill_buffer(void* evaluator, float* buffer, int count) {
         Tree_Evaluator* tree_interp = (Tree_Evaluator*) evaluator;
 
-	double inv_sample_rate = 1.0 / tree_interp->get_sample_rate();
+	    double inv_sample_rate = 1.0 / tree_interp->get_sample_rate();
 
         for (int i = 0; i < count; i++) {
-	  /*
-	    we assume the evaluator is able to evaluate the expression here since
-	    we are in the callback and we shouldn't be here if we have an invalid expression.
-	    And we don't want to check in the callback.
-	  */
+	        /*
+	        we assume the evaluator is able to evaluate the expression here since
+	        we are in the callback and we shouldn't be here if we have an invalid expression.
+	        And we don't want to check in the callback.
+	        */
 
-	  buffer[i] = tree_interp->evaluate().value;
-
-	  tree_interp->step_time(inv_sample_rate);
+            buffer[i] = tree_interp->evaluate().value;
+	        tree_interp->step_time(inv_sample_rate);
         }
     }
     static void tree_interp_fill_buffer_interleaved(void* evaluator_0, void* evaluator_1, float* buffer, int count) {

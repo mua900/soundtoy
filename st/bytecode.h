@@ -40,6 +40,7 @@ using Func_Id = u16;
 enum Bytecode_Opcode : u32
 {
 	// destination source syntax
+	// arithmetic operations are destructive and overwrite the first argument register
 	INSTR_LOAD,			// load reg, const_int
 	INSTR_LOADF,		// load freg, const_float
 	INSTR_LOAD_BUILTIN,	// load_builtin freg builtin_id

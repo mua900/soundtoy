@@ -14,7 +14,8 @@ static bool opcode_is_unary(Bytecode_Opcode opcode);
 bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
 
 	program.reset();
-	Value_Location_Info location = compile_expr(root, program);
+
+    Value_Location_Info location = compile_expr(root, program);
     if (location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
         u16 freg = program.allocate_fp_register();
         program.emit_bytecode_instruction(INSTR_LOADF, freg, location.const_id.constant_index);
@@ -33,7 +34,6 @@ bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
 }
 
 // @todo handle errors
-// @fix this should be traversed bottom to top
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 	switch (expr->type) {
         case Expr_Type::Literal: {
@@ -43,9 +43,7 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
             location.location_type = Value_Location_Type::CONSTANT_BLOCK;
             location.const_id = program.constant_block.add_constant(literal->value);
 
-            program.emit_load_constant(location.const_id);
-
-            return location;
+            return program.emit_load_constant(location.const_id);
         }
         case Expr_Type::Variable: {
             auto variable = static_cast<Expr_Variable*>(expr);
@@ -77,12 +75,6 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 
             Value_Location_Info operand_location = compile_expr(unary->operand, program);
 
-            // if the operand is inside the constant block.
-            // load it and put it to a register first
-            if (operand_location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-                operand_location = program.emit_load_constant(operand_location.const_id);
-            }
-
             if (unary->op == Unop_Negate) {
                 if (operand_location.location_type == Value_Location_Type::INTEGER_REGISTER) {
                     program.emit_bytecode_instruction(INSTR_NEGATE, operand_location.integer_register, 0);
@@ -103,13 +95,6 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
             Value_Location_Info left_location = compile_expr(binary->left, program);
             Value_Location_Info right_location = compile_expr(binary->right, program);
 
-            if (left_location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-                left_location = program.emit_load_constant(left_location.const_id);
-            }
-            else if (right_location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-                right_location = program.emit_load_constant(right_location.const_id);
-            }
-
             // if the results of the left and right branches are in different register files
             // then we need to decide on one of them to do the operations on and move the value
             // in the other file to that one.
@@ -119,12 +104,18 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 
             if (right_location.location_type != left_location.location_type) {
                 if (left_location.location_type == Value_Location_Type::INTEGER_REGISTER) {
+                    auto freg = program.allocate_fp_register();
+                    program.emit_bytecode_instruction(INSTR_MOV_I_TO_F, freg, left_location.integer_register);
+
                     left_location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
                     left_location.floating_point_register = program.allocate_fp_register();
                 }
                 if (right_location.location_type == Value_Location_Type::INTEGER_REGISTER) {
+                    auto freg = program.allocate_fp_register();
+                    program.emit_bytecode_instruction(INSTR_MOV_I_TO_F, freg, right_location.integer_register);
+
                     right_location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
-                    right_location.floating_point_register = program.allocate_fp_register();
+                    right_location.floating_point_register = freg;
                 }
             }
 
@@ -339,7 +330,8 @@ void Bytecode_Program::set_sample_rate(float sample_rate) {
 }
 
 float Bytecode_Program::get_sample_rate() {
-    return constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE];
+    float sample_rate = constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE];
+    return sample_rate;
 }
 
 void Bytecode_Program::set_sample_time(float sample_time) {
@@ -358,9 +350,6 @@ void Bytecode_Program::reset() {
     code.code.reset();
     constant_block.real.reset();
     constant_block.integer.reset();
-    for (float& var : constant_block.builtin_variable) {
-        var = 0;
-    }
     get_default_builtin_functions(constant_block.builtin_function);
 }
 
@@ -483,7 +472,7 @@ void Bytecode_Program::print_program() {
 
                     builder.append(make_string("const ["));
                     builder.append_integer(instr.op1);
-                    builder.append(make_string(" ]"));
+                    builder.append(make_string("]"));
                     break;
                 }
                 case INSTR_LOAD_BUILTIN: {
@@ -563,6 +552,7 @@ float bytecode_run(Bytecode_Program& program)
 
 #define BYTECODE_PROGRAM_MAXIMUM_ITERATION_COUNT 2000
     int iteration_count = 0;
+    processor.pc = 0;
 
     while (processor.pc < code.code.size()) {
         if (iteration_count >= BYTECODE_PROGRAM_MAXIMUM_ITERATION_COUNT) {
@@ -586,7 +576,7 @@ float bytecode_run(Bytecode_Program& program)
                 u16 freg = instr.op0;
                 u16 const_index = instr.op1;
 
-                processor.regs.get_ref(freg) = constant_block.real.get(const_index);
+                processor.fregs.get_ref(freg) = constant_block.real.get(const_index);
                 break;
             }
             case INSTR_LOAD_BUILTIN: {

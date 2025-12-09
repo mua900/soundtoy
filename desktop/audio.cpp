@@ -141,8 +141,8 @@ bool Audio::initialize(int freq, int channels)
     m_sample_rate = freq;
     m_channel_count = channels;
 
-    sampler = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, freq);
-    sampler2 = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, freq);
+    sampler = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, (float)freq);
+    sampler2 = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, (float)freq);
 
     String default_expression = make_string("sin(2*PI*t*440)");
     if (!set_sample_expression(default_expression)) {
@@ -156,10 +156,10 @@ bool Audio::reinitialize(int freq, int channels)
 {
     SDL_DestroyAudioStream(m_audio_stream);
 
-    st_sampler_set_sample_rate(sampler, freq);
+    st_sampler_set_sample_rate(sampler, (float)freq);
     st_sampler_set_sample_time(sampler, 0.0);
     
-    st_sampler_set_sample_rate(sampler2, freq);
+    st_sampler_set_sample_rate(sampler2, (float)freq);
     st_sampler_set_sample_time(sampler2, 0.0);
 
     return create_audio_stream(freq, channels);
