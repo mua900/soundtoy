@@ -2,8 +2,6 @@
 
 #include <math.h>
 
-// @todo get rid of panics
-
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program);
 static Bytecode_Opcode get_arithmetic_binop_opcode_integer(Op_Binary binary);
 static Bytecode_Opcode get_arithmetic_binop_opcode_float(Op_Binary binary);
@@ -28,12 +26,9 @@ bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
 
     program.print_program();
 
-    bytecode_optimize(program);
-
 	return true;
 }
 
-// @todo handle errors
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 	switch (expr->type) {
         case Expr_Type::Literal: {
@@ -226,38 +221,6 @@ Constant_Id Constant_Block::add_constant(Value value)
 
 	return const_id;
 }
-
-Bytecode_Opcode bytecode_get_floating_point_version(Bytecode_Opcode opcode)
-{
-	switch (opcode)
-	{
-		case INSTR_LOAD:
-			return INSTR_LOADF;
-		case INSTR_MOV:
-			return INSTR_MOVF;
-
-		case INSTR_ADD:
-			return INSTR_ADDF;
-		case INSTR_SUB:
-			return INSTR_SUBF;
-		case INSTR_MUL:
-			return INSTR_MULF;
-		case INSTR_DIV:
-			return INSTR_DIVF;
-		case INSTR_MOD:
-			return INSTR_MODF;
-
-		case INSTR_NEGATE:
-			return INSTR_NEGATE_F;
-
-        default:
-            return INSTR_SENTINEL;
-	}
-
-	panic("Unhandled instruction for bytecode_get_floating_point_version");
-}
-
-// @todo proper register allocation
 
 u16 Bytecode_Program::allocate_gp_register() {
 	return processor.regs.add(0);
@@ -545,7 +508,6 @@ void Bytecode_Program::print_program() {
 
 float bytecode_run(Bytecode_Program& program)
 {
-	// @todo
     Bytecode_Processor& processor = program.processor;
     Constant_Block& constant_block = program.constant_block;
     Bytecode_Code& code = program.code;
@@ -808,12 +770,6 @@ float bytecode_run(Bytecode_Program& program)
 
     fprintf(stderr, "Bytecode Runner: No return instruction at the end of the bytecode program!");
     return 0.0;
-}
-
-void bytecode_optimize(Bytecode_Program& program) {
-    // not implemented
-
-    // @todo
 }
 
 bool opcode_is_unary(Bytecode_Opcode opcode) {

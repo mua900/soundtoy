@@ -110,8 +110,6 @@ struct Value_Location_Info {
 	Value_Location_Type location_type = {};
 };
 
-Bytecode_Opcode bytecode_get_floating_point_version(Bytecode_Opcode opcode);
-
 struct Bytecode_Instr {
 	Bytecode_Opcode opcode = {};
 	u16 op0 = 0;
@@ -134,7 +132,6 @@ struct Bytecode_Instr {
 struct Constant_Block {
 	DArray<float> real = {};
 	DArray<s32> integer = {};
-	// @todo builtin constants pi, e etc.
 	float builtin_variable[BUILTIN_VARIABLE_COUNT] = {};
 	Builtin_Function_List builtin_function = {};
 	
@@ -205,6 +202,3 @@ struct Bytecode_Program {
 
 bool bytecode_compile_expression(Bytecode_Program& program, Expr* expr);
 float bytecode_run(Bytecode_Program& program);
-
-// - register usage
-void bytecode_optimize(Bytecode_Program& program);
