@@ -809,6 +809,27 @@ Function_ID get_function_id(String name)
     return FUNC_ID_INVALID; // @todo user defined functions
 }
 
+void free_tree(Expr* node) {
+	if (node->type == Expr_Type::Binary) {
+		free_tree(static_cast<Expr_Binary*>(node)->left);
+		free_tree(static_cast<Expr_Binary*>(node)->right);
+	}
+	else if (node->type == Expr_Type::Grouping) {
+		free_tree(static_cast<Expr_Grouping*>(node)->expr);
+	}
+	else if (node->type == Expr_Type::Unary) {
+		free_tree(static_cast<Expr_Unary*>(node)->operand);
+	}
+	else if (node->type == Expr_Type::Call) {
+		auto call = static_cast<Expr_Call*>(node);
+		for (auto arg : call->arguments) {
+			free_tree(arg);
+		}
+	}
+	
+	delete node;
+}
+
 Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String* error_string);
 Expr* collapse_expr(Expr* root, String* error_string)
 {
@@ -887,8 +908,6 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
     {
         auto call = static_cast<Expr_Call*>(expr);
 
-        // @todo typechecking for arguments
-
         bool all_literals = true;
         bool all_reals = true;
         for (int i = 0; i < call->arguments.size; i++)
@@ -918,6 +937,7 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
             Expr_Literal* lit = static_cast<Expr_Literal*>(call->arguments.data[0]);
             double arg = lit->value.real;
             double bake_value = builtin_functions[call->fn_id](arg);
+            free_tree(call);
             return new Expr_Literal(bake_value);
         }
 

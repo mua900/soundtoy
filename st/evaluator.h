@@ -103,6 +103,8 @@ struct Tree_Evaluator
     void step_time(double step) { builtins[BUILTIN_VARIABLE_TIME] += step; }
 };
 
+void free_tree(Expr* node);
+
 // collapse the expression (constant fold) and return the new root node of the collapsed expression
 // does typechecking in the process
 // sets the error and returns null on failure

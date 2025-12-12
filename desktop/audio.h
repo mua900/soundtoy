@@ -11,13 +11,6 @@ struct Audio {
     St_Sampler* sampler = nullptr;
     St_Sampler* sampler2 = nullptr;
 
-    // time variable used for sampling.
-    // Incremented 1 / sample_rate after each sample.
-    // This isn't real time, this is the the point we are about the sample.
-    double get_sample_time_left();
-    double get_sample_time_right();
-    double get_sample_time_mono();
-
     int m_sample_rate = 0;
     int m_channel_count = 0;
 
@@ -26,6 +19,13 @@ struct Audio {
     bool initialize(int freq, int channels);
     bool reinitialize(int freq, int channels);
     void cleanup();
+
+    // time variable used for sampling.
+    // Incremented 1 / sample_rate after each sample.
+    // This isn't real world time, this is the the point we are about the sample from the function.
+    double get_sample_time_left();
+    double get_sample_time_right();
+    double get_sample_time_mono();
 
     bool set_channel_count(int channel_count);
 
