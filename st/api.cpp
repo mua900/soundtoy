@@ -48,7 +48,7 @@ extern "C" {
         return true;
     }
 
-    const char* get_last_error() {
+    const char* st_get_last_error() {
         return st_last_error;
     }
 
@@ -56,35 +56,36 @@ extern "C" {
         St_Sampler* sampler = (St_Sampler*) malloc(sizeof(St_Sampler));
 
         if (!sampler) {
-            return NULL;
+            st_last_error = "Invalid parameter. sampler in st_sampler_create is null";
+            return nullptr;
         }
 
         sampler->evaluator_type = evaluator_type;
 
         if (evaluator_type == Evaluator_Type::BYTECODE_INTERP) {
-			sampler->evaluator = new Bytecode_Program();
+            sampler->evaluator = new Bytecode_Program();
 
-			// @update
-			sampler->evaluate_expression = bytecode_evaluate;
-			sampler->evaluator_symbol_table_get = bytecode_symbol_table_get;
-			sampler->evaluator_set_expression = bytecode_set_expression;
-			sampler->evaluator_fill_buffer = bytecode_fill_buffer;
-			sampler->evaluator_fill_buffer_interleaved = bytecode_fill_buffer_interleaved;
+            // @update
+            sampler->evaluate_expression = bytecode_evaluate;
+            sampler->evaluator_symbol_table_get = bytecode_symbol_table_get;
+            sampler->evaluator_set_expression = bytecode_set_expression;
+            sampler->evaluator_fill_buffer = bytecode_fill_buffer;
+            sampler->evaluator_fill_buffer_interleaved = bytecode_fill_buffer_interleaved;
             sampler->evaluator_step_time = bytecode_step_time;
         }
         else if (evaluator_type == Evaluator_Type::TREE_INTERP) {
-			sampler->evaluator = new Tree_Evaluator();
+            sampler->evaluator = new Tree_Evaluator();
 
 			// @update
-			sampler->evaluate_expression = tree_interp_evaluate;
-			sampler->evaluator_symbol_table_get = tree_interp_symbol_table_get;
-			sampler->evaluator_set_expression = tree_interp_set_expression;
-			sampler->evaluator_fill_buffer = tree_interp_fill_buffer;
-			sampler->evaluator_fill_buffer_interleaved = tree_interp_fill_buffer_interleaved;
+            sampler->evaluate_expression = tree_interp_evaluate;
+            sampler->evaluator_symbol_table_get = tree_interp_symbol_table_get;
+            sampler->evaluator_set_expression = tree_interp_set_expression;
+            sampler->evaluator_fill_buffer = tree_interp_fill_buffer;
+            sampler->evaluator_fill_buffer_interleaved = tree_interp_fill_buffer_interleaved;
             sampler->evaluator_step_time = tree_interp_step_time;
         }
 
-		st_sampler_set_sample_rate(sampler, sample_rate);
+        st_sampler_set_sample_rate(sampler, sample_rate);
 
         return sampler;
     }
