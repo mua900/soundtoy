@@ -182,6 +182,9 @@ public:
     Assets m_assets = {};
     Audio m_audio = {};
 
+    St_Sampler* left_sampler = nullptr;
+    St_Sampler* right_sampler = nullptr;
+
     Ui_State m_ui = {};
     Color m_background_color = DEFAULT_BACKGROUND_COLOR;
 
@@ -232,6 +235,8 @@ private:
     Text create_text(String text, Color color);
 
     bool set_eval_string(String s);
+
+    void render_waveform(vec2 topleft, vec2 bottomright, int num_samples);
 };
 
 void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale = vec2(0, 0));

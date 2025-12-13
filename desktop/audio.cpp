@@ -5,8 +5,8 @@
 
 extern const double PI;
 
-void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
-void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
+static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
+static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
 
 void Audio::pause()
 {
@@ -42,27 +42,20 @@ void Audio::set_volume(float volume)
 
 bool Audio::set_channel_count(int channel_count) {
     if (channel_count == 1) {
-        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_mono, this);
+        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_mono, m_sampler_left);
     }
     else if (channel_count == 2) {
-        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_stereo, this);
+        St_Sampler* sampler_pair[2] = {m_sampler_left, m_sampler_right};
+        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_stereo, sampler_pair);
     }
     else {
+        fprintf(stderr, "Invalid argument for channel count %d\n", channel_count);
         return false;
     }
 
     m_channel_count = channel_count;
     return true;
 }
-
-bool Audio::set_sample_expression(String expr)
-{
-    bool left = st_sampler_set_expression(sampler, expr.data, expr.size);
-    bool right = st_sampler_set_expression(sampler2, expr.data, expr.size);
-
-    return left && right;
-}
-
 
 bool Audio::create_audio_stream(int freq, int channels)
 {
@@ -104,13 +97,13 @@ void Audio::cleanup()
     SDL_CloseAudioDevice(m_playback);
     SDL_DestroyAudioStream(m_audio_stream);
 
-    st_sampler_destroy(sampler);
-    st_sampler_destroy(sampler2);
+    m_sampler_left = nullptr;
+    m_sampler_right = nullptr;
 
     m_audio_stream = NULL;
 }
 
-bool Audio::initialize(int freq, int channels)
+bool Audio::initialize(int freq, int channels, St_Sampler* left, St_Sampler* right)
 {
     SDL_AudioSpec spec = {};
     spec.freq = freq;
@@ -125,6 +118,8 @@ bool Audio::initialize(int freq, int channels)
         return false;
     }
 
+    m_sampler_left = left;
+    m_sampler_right = right;
     create_audio_stream(freq, channels);
 
     SDL_PauseAudioDevice(m_playback);
@@ -141,14 +136,6 @@ bool Audio::initialize(int freq, int channels)
     m_sample_rate = freq;
     m_channel_count = channels;
 
-    sampler = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, (float)freq);
-    sampler2 = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, (float)freq);
-
-    String default_expression = make_string("sin(2*PI*t*440)");
-    if (!set_sample_expression(default_expression)) {
-        return false;
-    }
-
     return true;
 }
 
@@ -156,38 +143,18 @@ bool Audio::reinitialize(int freq, int channels)
 {
     SDL_DestroyAudioStream(m_audio_stream);
 
-    st_sampler_set_sample_rate(sampler, (float)freq);
-    st_sampler_set_sample_time(sampler, 0.0);
-    
-    st_sampler_set_sample_rate(sampler2, (float)freq);
-    st_sampler_set_sample_time(sampler2, 0.0);
-
     return create_audio_stream(freq, channels);
-}
-
-
-double Audio::get_sample_time_left() {
-    return st_sampler_get_sample_time(sampler);
-}
-
-double Audio::get_sample_time_right() {
-    return st_sampler_get_sample_time(sampler2);
-}
-
-double Audio::get_sample_time_mono() {
-    return get_sample_time_left();
 }
 
 
 #define SAMPLE_BUFFER_SIZE 512
 float g_sample_buffer[SAMPLE_BUFFER_SIZE];
 
-void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
 {
     total_amount /= sizeof(float);
 
-    Audio* audio = (Audio*)userdata;
-    St_Sampler* sampler = audio->sampler;
+    St_Sampler* sampler = (St_Sampler*) userdata;
 
     for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
     {
@@ -197,17 +164,17 @@ void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream, int ad
     }
 }
 
-void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
 {
     total_amount /= sizeof(float);
-    Audio* audio = (Audio*)userdata;
 
-    St_Sampler* sampler = audio->sampler;
-    St_Sampler* sampler2 = audio->sampler2;
+    St_Sampler** sampler_pair = (St_Sampler**) userdata;
+    St_Sampler* sampler1 = sampler_pair[0];
+    St_Sampler* sampler2 = sampler_pair[1];
 
     for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
     {
-        st_fill_interleaved(sampler, sampler2, g_sample_buffer, SAMPLE_BUFFER_SIZE);
+        st_fill_interleaved(sampler1, sampler2, g_sample_buffer, SAMPLE_BUFFER_SIZE / 2);
 
         SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
     }

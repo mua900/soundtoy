@@ -7,6 +7,8 @@
 
 bool Application::initialize()
 {
+    // NOTE: The ordering of initialization matters!
+
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         std::cerr << "Failed to init SDL\n";
@@ -38,25 +40,37 @@ bool Application::initialize()
 
     const int initial_sample_rate = 48000;
 
-    {
-        if (!m_audio.initialize(initial_sample_rate, 1))
-        {
-            std::cerr << "Failed to initialize audio\n";
-            return false;
-        }
-    }
-
-    if (!load_assets())
-    {
+    if (!load_assets()) {
         std::cerr << "Could not load assets\n";
         return false;
     }
 
     {
-      if (!st_initialize()) {
-	std::cerr << "Could not initialize soundtoy library\n";
-	return false;
-      }
+        if (!st_initialize()) {
+            std::cerr << "Could not initialize soundtoy library\n";
+            return false;
+        }
+
+        St_Sampler* left = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, initial_sample_rate);
+        St_Sampler* right = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, initial_sample_rate);
+
+        if (!(left && right)) {
+            fprintf(stderr, "Could not create samplers\n");
+            return false;
+        }
+
+        String expression_default = make_string("sin(2*PI*t*440)");
+        ASSERT(st_sampler_set_expression(left, expression_default.data, expression_default.size));
+        ASSERT(st_sampler_set_expression(right, expression_default.data, expression_default.size));
+
+        left_sampler = left;
+        right_sampler = right;
+    }
+
+    if (!m_audio.initialize(initial_sample_rate, 1, left_sampler, right_sampler))
+    {
+        std::cerr << "Failed to initialize audio\n";
+        return false;
     }
 
     // info string
@@ -159,6 +173,12 @@ void Application::update_audio_spec()
     auto sample_rate = string_to_integer(m_ui.sample_rate_box.get_string(), &conversion_success);
     if (conversion_success)
     {
+        st_sampler_set_sample_rate(left_sampler, (float)sample_rate);
+        st_sampler_set_sample_time(left_sampler, 0.0);
+
+        st_sampler_set_sample_rate(right_sampler, (float)sample_rate);
+        st_sampler_set_sample_time(right_sampler, 0.0);
+
         m_audio.reinitialize(sample_rate, m_audio.m_channel_count);
     }
     else
@@ -396,6 +416,8 @@ void Application::set_event_deactive(int event_index)
 
 void Application::cleanup()
 {
+    st_sampler_destroy(left_sampler);
+    st_sampler_destroy(right_sampler);
     m_audio.cleanup();
     SDL_Quit();
 }
@@ -781,13 +803,22 @@ bool Application::update_input_string()
 
 bool Application::set_eval_string(String eval_string)
 {
-    if (!m_audio.set_sample_expression(eval_string))
-    {
+    bool left =  st_sampler_set_expression(left_sampler,  eval_string.data, eval_string.size);
+    bool right = st_sampler_set_expression(right_sampler, eval_string.data, eval_string.size);
+
+    bool success = left && right;
+    if (!success) {
         fprintf(stderr, "Failed to set sample expression\n");
-        return false;
     }
 
-    return true;
+    return success;
+}
+
+void Application::render_waveform(vec2 topleft, vec2 bottomright, int num_samples) {
+    SDL_FRect area = {topleft.x, topleft.y, bottomright.x - topleft.x, bottomright.y - topleft.y};
+    SDL_RenderFillRect(m_window.renderer, &area);
+
+    // @todo waveform
 }
 
 void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale)
