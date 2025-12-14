@@ -844,7 +844,7 @@ void Application::render_waveform(vec2 topleft, vec2 bottomright, int num_sample
 		buffer[i].x = area.x + i * step_size;
 		buffer[i].y = CLAMP(buffer[i].y, -1.0, 1.0);  // clamp the values the same way they will be in audio samples
 		buffer[i].y *= area.h;                        // the samples are in the range -1..1 so scale them up
-		buffer[i].y += area.y;
+		buffer[i].y += area.y + area.h / 2;
 	}
 	
 	SDL_RenderLines(m_window.renderer, (SDL_FPoint*) buffer, WAVEFORM_SAMPLE_COUNT);
