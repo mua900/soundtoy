@@ -103,7 +103,7 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
                     program.emit_bytecode_instruction(INSTR_MOV_I_TO_F, freg, left_location.integer_register);
 
                     left_location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
-                    left_location.floating_point_register = program.allocate_fp_register();
+                    left_location.floating_point_register = freg;
                 }
                 if (right_location.location_type == Value_Location_Type::INTEGER_REGISTER) {
                     auto freg = program.allocate_fp_register();

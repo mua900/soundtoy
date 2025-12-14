@@ -164,7 +164,6 @@ struct Bytecode_Program {
 	Constant_Block constant_block = {};
 
 	DArray<String> symbols;
-	// @todo instructions for these
 	DArray<float> variables = {};
 
 	Bytecode_Program() : processor(), code(), constant_block() {

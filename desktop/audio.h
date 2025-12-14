@@ -4,15 +4,18 @@
 #include "common.h"
 #include "api.h"
 
+struct Sampler_List {
+	// non-owning pointers
+	St_Sampler* sampler_left = nullptr;
+	St_Sampler* sampler_right = nullptr;
+};
+
 struct Audio {
     SDL_AudioDeviceID m_playback = 0;
     SDL_AudioStream* m_audio_stream = nullptr;
 
-    // @todo rename
-    // this doesn't own these pointers
-    St_Sampler* m_sampler_left = nullptr;
-    St_Sampler* m_sampler_right = nullptr;
-
+	Sampler_List m_samplers = {};
+	
     int m_sample_rate = 0;
     int m_channel_count = 0;
 
@@ -24,8 +27,8 @@ struct Audio {
 
     bool set_channel_count(int channel_count);
     void set_samplers(St_Sampler* left, St_Sampler* right) {
-        m_sampler_left = left;
-        m_sampler_right = right;
+        m_samplers.sampler_left = left;
+        m_samplers.sampler_right = right;
     }
 
     int get_channel_count() const { return m_channel_count; }

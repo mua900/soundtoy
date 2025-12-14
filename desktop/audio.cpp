@@ -42,12 +42,10 @@ void Audio::set_volume(float volume)
 
 bool Audio::set_channel_count(int channel_count) {
     if (channel_count == 1) {
-        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_mono, m_sampler_left);
+        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_mono, m_samplers.sampler_left);
     }
     else if (channel_count == 2) {
-		// @todo fix
-        St_Sampler* sampler_pair[2] = {m_sampler_left, m_sampler_right};
-        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_stereo, sampler_pair);
+        SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_stereo, &m_samplers);
     }
     else {
         fprintf(stderr, "Invalid argument for channel count %d\n", channel_count);
@@ -98,9 +96,8 @@ void Audio::cleanup()
     SDL_CloseAudioDevice(m_playback);
     SDL_DestroyAudioStream(m_audio_stream);
 
-    m_sampler_left = nullptr;
-    m_sampler_right = nullptr;
-
+	m_samplers = Sampler_List{};
+	
     m_audio_stream = NULL;
 }
 
@@ -119,8 +116,8 @@ bool Audio::initialize(int freq, int channels, St_Sampler* left, St_Sampler* rig
         return false;
     }
 
-    m_sampler_left = left;
-    m_sampler_right = right;
+    m_samplers.sampler_left = left;
+    m_samplers.sampler_right = right;
     create_audio_stream(freq, channels);
 
     SDL_PauseAudioDevice(m_playback);
@@ -169,13 +166,11 @@ static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* strea
 {
     total_amount /= sizeof(float);
 
-    St_Sampler** sampler_pair = (St_Sampler**) userdata;
-    St_Sampler* sampler1 = sampler_pair[0];
-    St_Sampler* sampler2 = sampler_pair[1];
+	Sampler_List* samplers = (Sampler_List*) userdata;
 
     for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
     {
-        st_fill_interleaved_double(sampler1, sampler2, g_sample_buffer, SAMPLE_BUFFER_SIZE / 2);
+        st_fill_interleaved_double(samplers->sampler_left, samplers->sampler_right, g_sample_buffer, SAMPLE_BUFFER_SIZE / 2);
 
         SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
     }
