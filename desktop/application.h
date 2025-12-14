@@ -236,7 +236,7 @@ private:
 
     bool set_eval_string(String s);
 
-    void render_waveform(vec2 topleft, vec2 bottomright, int num_samples);
+    void render_waveform(vec2 topleft, vec2 bottomright, int num_samples, Color waveform_color);
 };
 
 void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale = vec2(0, 0));

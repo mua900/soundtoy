@@ -439,6 +439,8 @@ void Application::draw_ui()
     int window_x, window_y;
     SDL_GetWindowSize(m_window.window, &window_x, &window_y);
 
+	vec2 window_size = vec2((float) window_x, (float) window_y);
+
     // volume slider
     {
         Rectangle volume_slider = m_ui.volume_slider;
@@ -586,6 +588,14 @@ void Application::draw_ui()
             }
         }
     }
+
+	// waveform visualization
+	{
+		render_waveform(vec2(window_size.x * (1.0 / 5.0), window_size.y * (6.0 / 10.0)),
+						vec2(window_size.x * (4.0 / 5.0), window_size.y * (8.0 / 10.0)),
+						window_x,
+						Color(0x33, 0x55, 0x66, 0xff));
+	}
 
     // event text
     {
@@ -814,11 +824,30 @@ bool Application::set_eval_string(String eval_string)
     return success;
 }
 
-void Application::render_waveform(vec2 topleft, vec2 bottomright, int num_samples) {
-    SDL_FRect area = {topleft.x, topleft.y, bottomright.x - topleft.x, bottomright.y - topleft.y};
-    SDL_RenderFillRect(m_window.renderer, &area);
+void Application::render_waveform(vec2 topleft, vec2 bottomright, int num_samples, Color waveform_color) {
+	SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(waveform_color));
 
-    // @todo waveform
+	const SDL_FRect area = SDL_FRect{ topleft.x, topleft.y, bottomright.x - topleft.x, bottomright.y - topleft.y};
+	
+#define WAVEFORM_SAMPLE_COUNT 256
+    static SDL_FPoint buffer[WAVEFORM_SAMPLE_COUNT * 2];
+
+	float sample_time_save = st_sampler_get_sample_time(left_sampler);
+
+	// should fill the y component of the elements in the array
+    st_fill_interleaved(left_sampler, (float*)(&buffer[0].y), WAVEFORM_SAMPLE_COUNT);
+
+	st_sampler_set_sample_time(left_sampler, sample_time_save);
+
+	float step_size = (area.w / (float)WAVEFORM_SAMPLE_COUNT);
+	for (int i = 0; i < WAVEFORM_SAMPLE_COUNT; i++) {
+		buffer[i].x = area.x + i * step_size;
+		buffer[i].y = CLAMP(buffer[i].y, -1.0, 1.0);  // clamp the values the same way they will be in audio samples
+		buffer[i].y *= area.h;                        // the samples are in the range -1..1 so scale them up
+		buffer[i].y += area.y;
+	}
+	
+	SDL_RenderLines(m_window.renderer, (SDL_FPoint*) buffer, WAVEFORM_SAMPLE_COUNT);
 }
 
 void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale)

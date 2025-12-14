@@ -45,6 +45,7 @@ bool Audio::set_channel_count(int channel_count) {
         SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_mono, m_sampler_left);
     }
     else if (channel_count == 2) {
+		// @todo fix
         St_Sampler* sampler_pair[2] = {m_sampler_left, m_sampler_right};
         SDL_SetAudioStreamGetCallback(m_audio_stream, audio_callback_stereo, sampler_pair);
     }
@@ -174,7 +175,7 @@ static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* strea
 
     for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
     {
-        st_fill_interleaved(sampler1, sampler2, g_sample_buffer, SAMPLE_BUFFER_SIZE / 2);
+        st_fill_interleaved_double(sampler1, sampler2, g_sample_buffer, SAMPLE_BUFFER_SIZE / 2);
 
         SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
     }
