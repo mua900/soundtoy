@@ -60,7 +60,7 @@ extern "C" {
         St_Sampler* sampler = (St_Sampler*) malloc(sizeof(St_Sampler));
 
         if (!sampler) {
-            st_last_error = "Invalid parameter. sampler in st_sampler_create is null";
+            st_last_error = "Could not allocate sampler";
             return nullptr;
         }
 
@@ -326,7 +326,7 @@ extern "C" {
 	static void bytecode_fill_buffer_interleaved(void* evaluator, float* buffer, int sample_count) {
 		Bytecode_Program* program = (Bytecode_Program*) evaluator;
 
-		double inv_sample_rate = program->get_sample_rate();
+		double inv_sample_rate = 1.0 / program->get_sample_rate();
 		for (int i = 0; i < sample_count; i++) {
 			int index = i * 2;
 			buffer[index] = CLAMP(bytecode_run(*program), -1.0, 1.0);
