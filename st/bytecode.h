@@ -151,7 +151,6 @@ struct Bytecode_Code {
 struct Bytecode_Processor {
 	DArray<s32> regs;
 	DArray<float> fregs;
-	u32 pc = 0;
 	u32 result_flags = 0;
 
 	Bytecode_Processor()

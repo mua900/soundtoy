@@ -308,7 +308,6 @@ float Bytecode_Program::get_sample_time() {
 void Bytecode_Program::reset() {
     processor.regs.reset();
     processor.fregs.reset();
-    processor.pc = 0;
     processor.result_flags = 0;
     code.code.reset();
     constant_block.real.reset();
@@ -365,11 +364,6 @@ void Bytecode_Program::print_program() {
                 builder.append_char('\n');
             }
         }
-
-        builder.append(make_string("    "));
-        builder.append(make_string("Processor PC: "));
-        builder.append_integer(processor.pc);
-        builder.append_char('\n');
 
         char flags_str[64];
         snprintf(flags_str, sizeof(flags_str), "Flags Register:  0x%08x", processor.result_flags);
@@ -514,16 +508,16 @@ float bytecode_run(Bytecode_Program& program)
 
 #define BYTECODE_PROGRAM_MAXIMUM_ITERATION_COUNT 2000
     int iteration_count = 0;
-    processor.pc = 0;
+    int instruction_pointer = 0;
 
-    while (processor.pc < code.code.size()) {
+    while (instruction_pointer < code.code.size()) {
         if (iteration_count >= BYTECODE_PROGRAM_MAXIMUM_ITERATION_COUNT) {
             panic("Too many iterations in bytecode program");
         }
 
-        Bytecode_Instr instr = code.code.get(processor.pc);
+        Bytecode_Instr instr = code.code.get(instruction_pointer);
 
-        processor.pc += 1;
+        instruction_pointer += 1;
         iteration_count += 1;
 
         switch (instr.opcode) {
@@ -736,14 +730,14 @@ float bytecode_run(Bytecode_Program& program)
 
             case INSTR_JMP: {
                 u16 address = ((u16)instr.op0 << 8) | ((u16)instr.op1);
-                processor.pc = address;
+                instruction_pointer = address;
 
                 break;
             }
             case INSTR_JMP_COND: {
                 if (processor.result_flags & CONDITION_RESULT) {
                     u16 address = ((u16)instr.op0 << 8) | ((u16)instr.op1);
-                    processor.pc = address;
+                    instruction_pointer = address;
                 }
 
                 break;

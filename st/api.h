@@ -9,6 +9,7 @@ extern "C" {
 
     struct St_Sampler;
 
+  
     bool st_initialize();
     const char* st_get_last_error();
     St_Sampler* st_sampler_create(Evaluator_Type evaluator_type, int sample_rate);
@@ -27,5 +28,6 @@ extern "C" {
     const char* st_sampler_get_variable_name_at_index(const St_Sampler* sampler, int index);
     int st_sampler_get_variable_count(const St_Sampler* sampler);
     void st_fill(St_Sampler* sampler, float* buffer, int length);
-    void st_fill_interleaved(St_Sampler* sampler0, St_Sampler* sampler1, float* buffer, int length);
+	void st_fill_interleaved(St_Sampler* sampler, float* buffer, int sample_count);
+    void st_fill_interleaved_double(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count);
 }

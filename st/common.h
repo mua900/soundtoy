@@ -123,6 +123,7 @@ struct Rectangle {
 
 struct Color {
     unsigned char r, b, g, a;
+    Color(unsigned char r, unsigned char b, unsigned char g, unsigned char a) : r(r), g(g), b(b), a(a) {}
 };
 
 #define COLOR_WHITE ((Color){0xff,0xff,0xff,0xff})
