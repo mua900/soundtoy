@@ -41,12 +41,12 @@ public:
 		return index < m_size && index >= 0;
 	}
 
-	T get(int index) {
+	T get(int index) const {
 		if (index >= m_size) panic("Out of bounds array access");
 		return m_data[index];
 	}
 
-	T get_or_default(int index) {
+	T get_or_default(int index) const {
 		if (index >= m_size) return T();
 		return m_data[index];
 	}
@@ -78,7 +78,7 @@ public:
 		return add(elem);
 	}
 
-	Find_Result find(T& elem) {
+	Find_Result find(T& elem) const {
 		for (int i = 0; i < m_size; i++)
 		{
 			if (m_data[i] == elem)
@@ -102,7 +102,7 @@ public:
 		m_cap = ncap;
 	}
 
-	bool is_empty()	{
+	bool is_empty()	const {
 		return m_size == 0;
 	}
 

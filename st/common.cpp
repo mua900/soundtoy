@@ -209,6 +209,12 @@ void String_Builder::append_hex(int n) {
     append(make_string(buffer));
 }
 
+void String_Builder::append_float(float n) {
+	char buffer[128];
+	snprintf(buffer, sizeof(buffer), "%1.3f", n);
+	append(make_string(buffer));
+}
+
 void String_Builder::clear_and_append(String s) {
     cursor = 0;
     append(s);

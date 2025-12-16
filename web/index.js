@@ -13,7 +13,7 @@ let st_sampler_step_time;
 let st_sampler_set_sample_rate;
 let st_sampler_set_sample_time;
 
-let soundtoy_ready;  // promise
+let soundtoy_ready;                 // promise
 let resolve_soundtoy_ready;
 
 soundtoy_ready = new Promise((resolve) => {resolve_soundtoy_ready = resolve;})

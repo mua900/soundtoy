@@ -189,20 +189,19 @@ bool Parser::consume(Token_Type type)
     return match;
 }
 
-// @fixme this is not an optimal way to this probably
 bool Parser::syntax_check(String expression_string) {
-  auto save_symbols = symbols;
-  symbols = Array<String>();
-  Expr* expression = parse(expression_string);
-  symbols = save_symbols;
+	auto save_symbols = symbols;
+	symbols = Array<String>();
+	Expr* expression = parse(expression_string);
+	symbols = save_symbols;
 
-  if (expression) {
-    delete expression;
-    return true;
-  }
-  else {
-    return false;
-  }
+	if (expression) {
+		delete expression;
+		return true;
+	}
+	else {
+		return false;
+	}
 }
 
 bool Parser::check_expression_string(String expression_string) {
@@ -241,7 +240,6 @@ Expr* Parser::parse(String expression_string)
     return expression;
 }
 
-// @fix memory leaks
 Expr* Parser::parse_expression()
 {
     Expr* expr = parse_equality_expr();
@@ -414,7 +412,7 @@ Expr* Parser::parse_call_expr()
         {
             if (!(tokens.get(paren_close).type != TOKEN_TYPE_END && cursor < tokens.size))
             {
-                parser_error.message = make_string("Reached end of input before being able to parse all the arguments to function call"); // @todo bad error message
+                parser_error.message = make_string("Reached end of input before being able to parse all the arguments to function call");
                 parser_error.offset = paren_close;
                 return NULL;
             }
@@ -540,7 +538,6 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
             auto literal = static_cast<Expr_Literal*>(expr);
             if (literal->value.type == Value_Type::INTEGER)
             {
-                // @todo integer math
                 return { (double)literal->value.integer, true };
             }
             else if (literal->value.type == Value_Type::REAL)
@@ -565,8 +562,7 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
                 return { builtins[var->var_id], true };
             }
 
-            // eval_error.message = make_string("Variable not defined"); // @todo error message
-            return fail;
+			return { variables.get(var->var_id), true };  // panic on out of bounds
         }
         case Expr_Type::Unary:
         {
@@ -614,7 +610,7 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
                 case Binop_Sub: return Eval{ left.value - right.value, true };
                 case Binop_Mul: return Eval{ left.value * right.value, true };
                 case Binop_Div: return Eval{ left.value / right.value, true };
-                case Binop_Mod: return Eval{ fmod(left.value, right.value), true };  // @todo integer arithmetic
+			    case Binop_Mod: return Eval{ fmod(left.value, right.value), true };
 
                 // comparison
                 case Binop_Eq: return Eval{ double(left.value == right.value), true };
@@ -660,7 +656,11 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
     }
 }
 
-// @todo string builder here
+void print_expr(const Expr* expr, int indent);
+void print_expression(const Expr* expr){ 
+  print_expr(expr, 0);
+}
+
 void print_expr(const Expr* expr, int indent)
 {
     for (int i = 0; i < indent; i++)
@@ -850,161 +850,163 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
     switch (expr->type)
     {
     case Expr_Type::Grouping:
-    {
-        auto group = static_cast<Expr_Grouping*>(expr);
-        return collapse_expr_real(group, builtin_functions, error_string);
-    }
+		{
+			auto group = static_cast<Expr_Grouping*>(expr);
+			return collapse_expr_real(group, builtin_functions, error_string);
+		}
     case Expr_Type::Binary:
-    {
-        auto binary = static_cast<Expr_Binary*>(expr);
+		{
+			auto binary = static_cast<Expr_Binary*>(expr);
 
-        if (!binary->left)
-        {
-            return collapse_expr_real(binary->right, builtin_functions, error_string);
-        }
-        if (!binary->right)
-        {
-            return collapse_expr_real(binary->left, builtin_functions, error_string);
-        }
+			if (!binary->left)
+			{
+				return collapse_expr_real(binary->right, builtin_functions, error_string);
+			}
+			if (!binary->right)
+			{
+				return collapse_expr_real(binary->left, builtin_functions, error_string);
+			}
 
-        auto left = collapse_expr_real(binary->left, builtin_functions, error_string);
-        auto right = collapse_expr_real(binary->right, builtin_functions, error_string);
+			auto left = collapse_expr_real(binary->left, builtin_functions, error_string);
+			auto right = collapse_expr_real(binary->right, builtin_functions, error_string);
 
-        binary->left = left;
-        binary->right = right;
+			binary->left = left;
+			binary->right = right;
 
-        if (left->type == Expr_Type::Literal && right->type == Expr_Type::Literal)
-        {
-            Value left_value = static_cast<Expr_Literal*>(left)->value;
-            Value right_value = static_cast<Expr_Literal*>(right)->value;
+			if (left->type == Expr_Type::Literal && right->type == Expr_Type::Literal)
+			{
+				Value left_value = static_cast<Expr_Literal*>(left)->value;
+				Value right_value = static_cast<Expr_Literal*>(right)->value;
 
-            double left_numeric = (left_value.type == Value_Type::INTEGER) ? left_value.integer : left_value.real;
-            double right_numeric = (right_value.type == Value_Type::INTEGER) ? right_value.integer : right_value.real;
+				double left_numeric = (left_value.type == Value_Type::INTEGER) ? left_value.integer : left_value.real;
+				double right_numeric = (right_value.type == Value_Type::INTEGER) ? right_value.integer : right_value.real;
 
-            switch (binary->op)
-            {
-            case Binop_Unknown:
-                *error_string = make_string("Unknown binary operator");
-                break;
-            case Binop_Add:     return new Expr_Literal(left_numeric + right_numeric);
-            case Binop_Sub:     return new Expr_Literal(left_numeric - right_numeric);
-            case Binop_Mul:     return new Expr_Literal(left_numeric * right_numeric);
-            case Binop_Div:     return new Expr_Literal(left_numeric / right_numeric);
-            case Binop_Mod:     return new Expr_Literal(fmod(left_numeric, right_numeric));
-            case Binop_Eq:      return new Expr_Literal(left_numeric == right_numeric);
-            case Binop_Neq:     return new Expr_Literal(left_numeric != right_numeric);
-            case Binop_Gt:      return new Expr_Literal(left_numeric > right_numeric);
-            case Binop_Ge:      return new Expr_Literal(left_numeric >= right_numeric);
-            case Binop_Lt:      return new Expr_Literal(left_numeric < right_numeric);
-            case Binop_Le:      return new Expr_Literal(left_numeric <= right_numeric);
-	    default:
-	      panic("Unknown binary operator");
-            }
-        }
+				switch (binary->op)
+				{
+				case Binop_Unknown:
+					*error_string = make_string("Unknown binary operator");
+					break;
+				case Binop_Add:     return new Expr_Literal(left_numeric + right_numeric);
+				case Binop_Sub:     return new Expr_Literal(left_numeric - right_numeric);
+				case Binop_Mul:     return new Expr_Literal(left_numeric * right_numeric);
+				case Binop_Div:     return new Expr_Literal(left_numeric / right_numeric);
+				case Binop_Mod:     return new Expr_Literal(fmod(left_numeric, right_numeric));
+				case Binop_Eq:      return new Expr_Literal(left_numeric == right_numeric);
+				case Binop_Neq:     return new Expr_Literal(left_numeric != right_numeric);
+				case Binop_Gt:      return new Expr_Literal(left_numeric > right_numeric);
+				case Binop_Ge:      return new Expr_Literal(left_numeric >= right_numeric);
+				case Binop_Lt:      return new Expr_Literal(left_numeric < right_numeric);
+				case Binop_Le:      return new Expr_Literal(left_numeric <= right_numeric);
+				default:
+					panic("Unknown binary operator");
+				}
+			}
 
-        break;
-    }
+			break;
+		}
     case Expr_Type::Call:
-    {
-        auto call = static_cast<Expr_Call*>(expr);
+		{
+			auto call = static_cast<Expr_Call*>(expr);
 
-        bool all_literals = true;
-        bool all_reals = true;
-        for (int i = 0; i < call->arguments.size; i++)
-        {
-            call->arguments.data[i] = collapse_expr_real(call->arguments.data[i], builtin_functions, error_string);
-            if (call->arguments.data[i]->type == Expr_Type::Literal)
-            {
-                if (static_cast<Expr_Literal*>(call->arguments.data[i])->value.type != Value_Type::REAL)
-                {
-                    all_reals = false;
-                }
-            }
-            else
-            {
-                all_literals = false;
-            }
-        }
+			bool all_literals = true;
+			bool all_reals = true;
+			for (int i = 0; i < call->arguments.size; i++)
+			{
+				call->arguments.data[i] = collapse_expr_real(call->arguments.data[i], builtin_functions, error_string);
+				if (call->arguments.data[i]->type == Expr_Type::Literal)
+				{
+					if (static_cast<Expr_Literal*>(call->arguments.data[i])->value.type != Value_Type::REAL)
+					{
+						all_reals = false;
+					}
+				}
+				else
+				{
+					all_literals = false;
+				}
+			}
 
-        if (is_builtin_function(call) && all_literals && all_reals)
-        {
-            if (call->arguments.size != 1)
-            {
-                *error_string = make_string("Builtin functions take 1 parameter");
-                return NULL;
-            }
+			if (is_builtin_function(call) && all_literals && all_reals)
+			{
+				if (call->arguments.size != 1)
+				{
+					*error_string = make_string("Builtin functions take 1 parameter");
+					return NULL;
+				}
 
-            Expr_Literal* lit = static_cast<Expr_Literal*>(call->arguments.data[0]);
-            double arg = lit->value.real;
-            double bake_value = builtin_functions[call->fn_id](arg);
-            free_tree(call);
-            return new Expr_Literal(bake_value);
-        }
+				Expr_Literal* lit = static_cast<Expr_Literal*>(call->arguments.data[0]);
+				double arg = lit->value.real;
+				double bake_value = builtin_functions[call->fn_id](arg);
+				free_tree(call);
+				return new Expr_Literal(bake_value);
+			}
 
-        break;
-    }
+			break;
+		}
     case Expr_Type::Literal:
-    {
-        return expr;
-    }
+		{
+			return expr;
+		}
     case Expr_Type::Unary:
-    {
-        Expr_Unary* unary = static_cast<Expr_Unary*>(expr);
-        {
-            auto operand = collapse_expr_real(unary->operand, builtin_functions, error_string);
-            if (!operand)
-                return NULL;
-            unary->operand = operand;
-        }
+		{
+			Expr_Unary* unary = static_cast<Expr_Unary*>(expr);
+			{
+				auto operand = collapse_expr_real(unary->operand, builtin_functions, error_string);
+				if (!operand)
+					return NULL;
+				unary->operand = operand;
+			}
 
-        if (unary->operand->type == Expr_Type::Literal)
-        {
-            auto operand = static_cast<Expr_Literal*>(unary->operand);
-            switch (unary->op)
-            {
+			if (unary->operand->type == Expr_Type::Literal)
+			{
+				auto operand = static_cast<Expr_Literal*>(unary->operand);
+				switch (unary->op)
+				{
                 case Unop_Negate:
-                {
-                    if (!operand->value.is_numeric())
-                    {
-                        *error_string = make_string("Can not negate non numeric value");
-                        return NULL;
-                    }
+					{
+						if (!operand->value.is_numeric())
+						{
+							*error_string = make_string("Can not negate non numeric value");
+							return NULL;
+						}
 
-                    if (operand->value.type == Value_Type::INTEGER)
-                    {
-                        operand->value.integer = -operand->value.integer;
-                    }
-                    else if (operand->value.type == Value_Type::REAL)
-                    {
-                        operand->value.real = -operand->value.real;
-                    }
+						if (operand->value.type == Value_Type::INTEGER)
+						{
+							operand->value.integer = -operand->value.integer;
+						}
+						else if (operand->value.type == Value_Type::REAL)
+						{
+							operand->value.real = -operand->value.real;
+						}
 
-                    return operand;
-                }
+						return operand;
+					}
                 case Unop_Not:
-                {
-                    if (operand->value.type != Value_Type::BOOL)
-                    {
-                        *error_string = make_string("Can not apply the operator Not to non boolean value");
-                        return NULL;
-                    }
+					{
+						if (operand->value.type != Value_Type::BOOL)
+						{
+							*error_string = make_string("Can not apply the operator Not to non boolean value");
+							return NULL;
+						}
 
-                    operand->value.boolean = !operand->value.boolean;
-                    return operand;
-                }
-            }
-        }
+						operand->value.boolean = !operand->value.boolean;
+						return operand;
+					}
+				}
+			}
 
-        break;
-    }
+			break;
+		}
     case Expr_Type::Variable:
-        auto var = static_cast<Expr_Variable*>(expr);
-        if (var->var_id == BUILTIN_VAR_ID_INVALID)
-        {
-            *error_string = make_string("Undefined variable");
-            return NULL;
-        }
-        return expr;
+		{
+			auto var = static_cast<Expr_Variable*>(expr);
+			if (var->var_id == BUILTIN_VAR_ID_INVALID)
+			{
+				*error_string = make_string("Undefined variable");
+				return NULL;
+			}
+			return expr;
+		}
     }
 
     return expr;

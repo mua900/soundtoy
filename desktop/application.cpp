@@ -7,8 +7,6 @@
 
 bool Application::initialize()
 {
-    // NOTE: The ordering of initialization matters!
-
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         std::cerr << "Failed to init SDL\n";
@@ -152,17 +150,26 @@ bool Application::gen_static_text(Color color)
 
 bool Application::gen_text(Color color)
 {
+	float volume = m_audio.get_volume();
     char buffer[50];
-    int writen = snprintf(buffer, sizeof(buffer), "%.4f", m_audio.get_volume());
+	if (volume == 1.0) {
+		snprintf(buffer, sizeof(buffer), "1.0");
+	}
+	else if (volume == 0.0) {
+		snprintf(buffer, sizeof(buffer), "0.0");
+	}
+	else {
+		snprintf(buffer, sizeof(buffer), "%.4f", volume);		
+	}
 
-    Text volume = create_text(make_string(buffer), color);
+    Text volume_text = create_text(make_string(buffer), color);
 
-    if (!volume.texture)
+    if (!volume_text.texture)
     {
         return false;
     }
 
-    m_rendered_text_cache.data[TEXT_VOLUME_VALUE] = volume;
+    m_rendered_text_cache.data[TEXT_VOLUME_VALUE] = volume_text;
 
     return true;
 }

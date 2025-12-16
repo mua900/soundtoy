@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <cstdbool>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -156,6 +155,7 @@ struct String_Builder {
     void append_char(char ch);
     void append_integer(int n);
     void append_hex(int n);
+	void append_float(float n);
     const char* c_string();
     void remove(int amount);  // remove the last n characters from the buffer
     void remove_slice(int start, int end);

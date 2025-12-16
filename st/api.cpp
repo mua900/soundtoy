@@ -106,7 +106,7 @@ extern "C" {
         String expression = String(expression_string, length);
 
         if (sampler_or_null) {
-	    parser.set_symbols(sampler_or_null->evaluator_symbol_table_get(sampler_or_null->evaluator));
+			parser.set_symbols(sampler_or_null->evaluator_symbol_table_get(sampler_or_null->evaluator));
             return parser.check_expression_string(expression);
         }
         else {
@@ -254,7 +254,6 @@ extern "C" {
 
     const char* st_sampler_get_variable_name_at_index(const St_Sampler* sampler, int index) {
         // @fix returning raw pointer from string
-        // although it is coming from a user supplied C string and it probably is null terminated.
         return sampler->evaluator_symbol_table_get(sampler->evaluator).get(index).data;
     }
 
@@ -296,11 +295,14 @@ extern "C" {
 
         Parser parser = {};
 
+		parser.set_symbols(bytecode_symbol_table_get(evaluator));
         Expr* expression = parser.parse(expression_string);
         if (!expression) {
             return false;
         }
 
+		print_expression(expression);
+		
         bool compilation_success = bytecode_compile_expression(*program, expression);
         if (!compilation_success) {
             return false;
@@ -367,11 +369,14 @@ extern "C" {
 
         Parser parser = {};
 
+		parser.set_symbols(tree_interp_symbol_table_get(evaluator));
         Expr* expression = parser.parse(expression_string);
         if (!expression) {
             return false;
         }
 
+		print_expression(expression);
+		
         auto eval = tree_interp->evaluate_expression(expression);
         if (!eval.success) {
             return false;

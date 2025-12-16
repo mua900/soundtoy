@@ -53,13 +53,14 @@ private:
     void report_error();  // @todo
 };
 
+void print_expression(const Expr* expr);
+
 using BuiltinVar_ID = unsigned int;
 using Function_ID = unsigned int;
 
 #define BUILTIN_VAR_ID_INVALID (BuiltinVar_ID)(-1)
 #define FUNC_ID_INVALID (Function_ID)(-1)
 
-// @todo user defined variables and functions
 BuiltinVar_ID get_builtin_var_id(String name);
 Function_ID get_function_id(String name);
 double get_builtin_constant(String name);  // returns 0.0 if no constant name matches
@@ -105,7 +106,4 @@ struct Tree_Evaluator
 
 void free_tree(Expr* node);
 
-// collapse the expression (constant fold) and return the new root node of the collapsed expression
-// does typechecking in the process
-// sets the error and returns null on failure
 Expr* collapse_expr(Expr* root, String* error_string);

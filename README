@@ -1,6 +1,0 @@
-This is a demo application about mathematical audio synthesis.
-The consept is the that the user supplies an expression that depends on time to sample from to generate audio.
-
-Desktop version of this demo uses SDL 3 and companion libraries of SDL_ttf and SDL_image. They are included as git submodules in the vendor/ folder.
-Desktop version uses CMake for building.
-There is a web version under the web/ folder.

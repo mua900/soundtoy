@@ -345,60 +345,7 @@ void Bytecode_Program::print_program() {
     builder.append_char('\n');
 
     {
-        builder.append(make_string("Processor State: \n"));
-
-        if (processor.regs.size() != 0) {
-            builder.append(make_string("    Integer registers:\n"));
-            for (int i = 0; i < processor.regs.size(); i++) {
-                builder.append(make_string("        "));
-                builder.append_integer(processor.regs.get(i));
-                builder.append_char('\n');
-            }
-        }
-
-        if (processor.fregs.size() != 0) {
-            builder.append(make_string("    Floating point registers:\n"));
-            for (int i = 0; i < processor.fregs.size(); i++) {
-                builder.append(make_string("        "));
-                builder.append_integer(processor.fregs.get(i));
-                builder.append_char('\n');
-            }
-        }
-
-        char flags_str[64];
-        snprintf(flags_str, sizeof(flags_str), "Flags Register:  0x%08x", processor.result_flags);
-
-        builder.append(make_string("    "));
-        builder.append(make_string("Flags register: "));
-        builder.append(make_string(flags_str));
-        builder.append_char('\n');
-
-        String condition_result = processor.result_flags & CONDITION_RESULT                 ? make_string("COND") : make_string("0");
-        String equals           = processor.result_flags & COMPARISON_RESULT_EQUALS         ? make_string("EQ")   : make_string("0");
-        String not_equals       = processor.result_flags & COMPARISON_RESULT_NOT_EQUALS     ? make_string("NEQ")  : make_string("0");
-        String less_than        = processor.result_flags & COMPARISON_RESULT_LESS_THAN      ? make_string("LT")   : make_string("0");
-        String greater_than     = processor.result_flags & COMPARISON_RESULT_GREATER_THAN   ? make_string("GT")   : make_string("0");
-
-        builder.append(make_string("    "));
-        builder.append(make_string("("));
-        builder.append(condition_result);
-        builder.append(make_string(", "));
-        builder.append(equals);
-        builder.append(make_string(", "));
-        builder.append(not_equals);
-        builder.append(make_string(", "));
-        builder.append(less_than);
-        builder.append(make_string(", "));
-        builder.append(greater_than);
-        builder.append(make_string(")"));
-
-        builder.append_char('\n');
-    }
-
-    builder.append_char('\n');
-
-    {
-        builder.append(make_string("Instructions: \n"));
+        builder.append(make_string("Code: \n"));
         for (int i = 0; i < code.code.size(); i++) {
             auto instr = code.code.get(i);
             String opcode = make_string(opcode_string(instr.opcode));
@@ -424,12 +371,22 @@ void Bytecode_Program::print_program() {
                 }
                 case INSTR_LOAD:    // fallthrough
                 case INSTR_LOADF: {
-                    builder.append_integer(instr.op0);
+					auto register_index = instr.op0;
+					auto const_index = instr.op1;
+                    builder.append_integer(register_index);
                     builder.append_char(' ');
 
                     builder.append(make_string("const ["));
-                    builder.append_integer(instr.op1);
-                    builder.append(make_string("]"));
+                    builder.append_integer(const_index);
+                    builder.append(make_string("]   ("));
+					if (instr.opcode == INSTR_LOAD) {
+						builder.append_integer(constant_block.integer.get(const_index));
+					}
+					else if (instr.opcode == INSTR_LOADF) {
+						builder.append_float(constant_block.real.get(const_index));
+					}
+
+					builder.append_char(')');
                     break;
                 }
                 case INSTR_LOAD_BUILTIN: {
@@ -448,7 +405,7 @@ void Bytecode_Program::print_program() {
                     break;
                 }
                 default: {
-                    if (opcode_is_binary(instr.opcode)) {
+                    if (opcode_is_binary(instr.opcode)) {  // @todo knowning register types would be useful
                         builder.append_integer(instr.op0);
                         builder.append_char(' ');
                         builder.append_integer(instr.op1);
