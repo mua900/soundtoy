@@ -7,8 +7,7 @@
 
 bool Application::initialize()
 {
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
-    {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         std::cerr << "Failed to init SDL\n";
         return false;
     }
@@ -18,8 +17,7 @@ bool Application::initialize()
         SDL_Window* window;
         SDL_Renderer* renderer;
         SDL_WindowFlags flags = SDL_WINDOW_RESIZABLE;
-        if (!SDL_CreateWindowAndRenderer("soundtoy", 1440, 810, flags, &window, &renderer))
-        {
+        if (!SDL_CreateWindowAndRenderer("soundtoy", 1440, 810, flags, &window, &renderer)) {
             std::cerr << "Failed to create window and renderer\n";
             return false;
         }
@@ -63,10 +61,11 @@ bool Application::initialize()
 
         left_sampler = left;
         right_sampler = right;
+
+		set_waveform_sample_count(512);
     }
 
-    if (!m_audio.initialize(initial_sample_rate, 1, left_sampler, right_sampler))
-    {
+    if (!m_audio.initialize(initial_sample_rate, 1, left_sampler, right_sampler)) {
         std::cerr << "Failed to initialize audio\n";
         return false;
     }
@@ -598,9 +597,9 @@ void Application::draw_ui()
 
 	// waveform visualization
 	{
-		render_waveform(vec2(window_size.x * (1.0 / 5.0), window_size.y * (6.0 / 10.0)),
-						vec2(window_size.x * (4.0 / 5.0), window_size.y * (8.0 / 10.0)),
-						window_x,
+		render_waveform(left_sampler,
+						vec2(window_size.x * (1.0 / 2.0), window_size.y * (3.0 / 5.0)), // pos
+						vec2(window_size.x * (3.0 / 5.0), window_size.y * (1.0 / 5.0)), // scale
 						Color(0x33, 0x55, 0x66, 0xff));
 	}
 
@@ -831,30 +830,35 @@ bool Application::set_eval_string(String eval_string)
     return success;
 }
 
-void Application::render_waveform(vec2 topleft, vec2 bottomright, int num_samples, Color waveform_color) {
+void Application::set_waveform_sample_count(int sample_count) {
+	m_waveform_sample_buffer.resize(sample_count);
+}
+
+void Application::render_waveform(St_Sampler* sampler, vec2 area_center, vec2 area_scale, Color waveform_color) {
 	SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(waveform_color));
 
-	const SDL_FRect area = SDL_FRect{ topleft.x, topleft.y, bottomright.x - topleft.x, bottomright.y - topleft.y};
-	
-#define WAVEFORM_SAMPLE_COUNT 256
-    static SDL_FPoint buffer[WAVEFORM_SAMPLE_COUNT * 2];
+	const SDL_FRect area = SDL_FRect{ area_center.x - area_scale.x / 2, area_center.y - area_scale.y / 2, area_scale.x, area_scale.y };
 
-	float sample_time_save = st_sampler_get_sample_time(left_sampler);
+	int sample_count = m_waveform_sample_buffer.size;
+	vec2* buffer_data = m_waveform_sample_buffer.data;
+	float* first_y = &buffer_data[0].y;
 
-	// should fill the y component of the elements in the array
-    st_fill_interleaved(left_sampler, (float*)(&buffer[0].y), WAVEFORM_SAMPLE_COUNT);
+	float sample_time_save = st_sampler_get_sample_time(sampler);
 
-	st_sampler_set_sample_time(left_sampler, sample_time_save);
+	// fill the y component of the elements in the array
+    st_fill_interleaved(sampler, first_y, sample_count);
+	st_sampler_set_sample_time(sampler, sample_time_save);
 
-	float step_size = (area.w / (float)WAVEFORM_SAMPLE_COUNT);
-	for (int i = 0; i < WAVEFORM_SAMPLE_COUNT; i++) {
-		buffer[i].x = area.x + i * step_size;
-		buffer[i].y = CLAMP(buffer[i].y, -1.0, 1.0);  // clamp the values the same way they will be in audio samples
-		buffer[i].y *= area.h;                        // the samples are in the range -1..1 so scale them up
-		buffer[i].y += area.y + area.h / 2;
+	float step_size = (area.w / (float)sample_count);
+	for (int i = 0; i < sample_count; i++) {
+		buffer_data[i].x = area.x + i * step_size;
+		buffer_data[i].y = CLAMP(buffer_data[i].y, -1.0, 1.0);  // clamp the values the same way they will be in audio samples
+		buffer_data[i].y *= area.h;                             // the samples are in the range -1..1 so scale them up
+		buffer_data[i].y += area.y + area.h / 2;
 	}
-	
-	SDL_RenderLines(m_window.renderer, (SDL_FPoint*) buffer, WAVEFORM_SAMPLE_COUNT);
+
+	// SDL_FPoint and vec2 are defined literally the same so it should be fine
+	SDL_RenderLines(m_window.renderer, (SDL_FPoint*) buffer_data, sample_count);
 }
 
 void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale)

@@ -46,7 +46,7 @@ extern "C" {
     };
 
     // @todo thread safe
-    static const char* st_last_error = NULL;
+    static const char* st_last_error = nullptr;
 
     bool st_initialize() {
         return true;
@@ -253,7 +253,8 @@ extern "C" {
     }
 
     const char* st_sampler_get_variable_name_at_index(const St_Sampler* sampler, int index) {
-        // @fix returning raw pointer from string
+        // @fix returning raw pointer from string that is not guaranteed to be null terminated
+		// if we make a copy then the caller needs to free which isn't nice
         return sampler->evaluator_symbol_table_get(sampler->evaluator).get(index).data;
     }
 

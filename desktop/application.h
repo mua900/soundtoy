@@ -194,7 +194,8 @@ public:
     Event_Timeout m_events[EVENT_COUNT] = {};
 
     Array<Text> m_rendered_text_cache = {};
-
+    Array<vec2> m_waveform_sample_buffer = {};
+	
     bool quit = false;
     bool doing_text_input = false;
     bool input_valid = false;
@@ -226,6 +227,7 @@ private:
     bool update_channel_count(int count);
 
     void set_volume(float volume);
+	void set_waveform_sample_count(int sample_count);  // sample count used for waveform visualization
 
     void text_input_start();
     void text_input_stop();
@@ -236,7 +238,7 @@ private:
 
     bool set_eval_string(String s);
 
-    void render_waveform(vec2 topleft, vec2 bottomright, int num_samples, Color waveform_color);
+    void render_waveform(St_Sampler* sampler, vec2 area_center, vec2 area_scale, Color waveform_color);
 };
 
 void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale = vec2(0, 0));

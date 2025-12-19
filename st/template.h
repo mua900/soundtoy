@@ -8,8 +8,7 @@ struct Find_Result {
 };
 
 template <typename T>
-struct DArray
-{
+struct DArray {
 private:
 	T* m_data = NULL;
 	int m_size = 0;
@@ -25,6 +24,10 @@ public:
 		m_cap = cap;
 	}
 
+	void discard_data() {
+		m_size = 0;
+	}
+
 	void reset() {
 		if (m_data)
 		{
@@ -35,7 +38,6 @@ public:
 			m_cap = 0;
 		}
 	}
-
 
 	bool in_bounds(int index) {
 		return index < m_size && index >= 0;
@@ -60,7 +62,7 @@ public:
 		int ret_index = m_size;
 		if (m_size + 1 >= m_cap)
 		{
-			resize();
+			grow();
 		}
 
 		m_data[m_size] = elem;
@@ -90,18 +92,6 @@ public:
 		return Find_Result {0, false};
 	}
 
-	void resize() {
-		int ncap = m_cap ? (m_cap * 2) : 8;
-		T* ndata = new T[ncap];
-		for (int i = 0; i < m_size; i++)
-		{
-			ndata[i] = m_data[i];
-		}
-		delete[](m_data);
-		m_data = ndata;
-		m_cap = ncap;
-	}
-
 	bool is_empty()	const {
 		return m_size == 0;
 	}
@@ -120,6 +110,24 @@ public:
 		reset();
 	}
 
+	void resize(int size) {
+		T* new_buffer = new T[size];
+
+		int new_size = (size < m_size) ? size : m_size;
+
+		for (int i = 0; i < new_size; i++) {
+			new_buffer[i] = m_data[i];
+		}
+
+		if (m_data) {
+			delete[] m_data;
+		}
+
+		m_data = new_buffer;
+		m_cap = size;
+		m_size = new_size;
+	}
+
 	T* begin() {
 		return m_data;
 	}
@@ -127,11 +135,31 @@ public:
 	T* end() {
 		return m_data + m_size;
 	}
+
+	const T* begin() const {
+		return m_data;
+	}
+
+	const T* end() const {
+		return m_data + m_size;
+	}
+
+private:
+	void grow() {
+		int ncap = m_cap ? (m_cap * 2) : 8;
+		T* ndata = new T[ncap];
+		for (int i = 0; i < m_size; i++)
+		{
+			ndata[i] = m_data[i];
+		}
+		delete[](m_data);
+		m_data = ndata;
+		m_cap = ncap;
+	}
 };
 
 template <typename T>
-struct Array
-{
+struct Array {
 	T* data = NULL;
 	int size = 0;
 
@@ -139,18 +167,17 @@ struct Array
 	Array(T* data, int size) : data(data), size(size) {}
 	Array(DArray<T> darray) : data(darray.data()), size(darray.size()) {}
 
-	T get(int index) const
-	{
+	T get(int index) const {
 		if (index >= size) panic("Out of bounds array access");
 		return data[index];
 	}
 
-	T get_or_default(int index) {
+	T get_or_default(int index) const {
 		if (index >= size) return T();
 		return data[index];
 	}
 
-	Find_Result find(T& elem) {
+	Find_Result find(T& elem) const {
 		for (int i = 0; i < size; i++)
 		{
 			if (data[i] == elem)
@@ -162,11 +189,76 @@ struct Array
 		return Find_Result {0, false};
 	}
 
+	void resize(int new_size) {
+		T* new_buffer = new T[new_size];
+
+		if (size > new_size)
+			size = new_size;
+		
+		for (int i = 0; i < size; i++) {
+			new_buffer[i] = data[i];
+		}
+
+		if (data) {
+			delete[] data;
+		}
+
+		data = new_buffer;
+		size = new_size;
+	}
+
 	T* begin() {
 		return data;
 	}
 
 	T* end() {
+		return data + size;
+	}
+
+	const T* begin() const {
+		return data;
+	}
+
+	const T* end() const {
+		return data + size;
+	}
+};
+
+template <typename T>
+struct Span {
+	T const * const data = nullptr;
+	int size = 0;
+
+	Span() {}
+	Span(T const * const data, int size) : data(data), size(size) {}
+
+	T get(int index) const {
+		if (index >= size)
+			panic("Out of bounds array access");
+		return data[index];
+	}
+
+	T get_or_default(int index) const {
+		if (index >= size)
+			return T();
+		return data[index];
+	}
+
+	Find_Result find(T& elem) const {
+		for (int i = 0; i < size; i++) {
+			if (data[i] == elem) {
+				return Find_Result {i, true};
+			}
+		}
+
+		return Find_Result {0, false};
+	}
+
+	const T* begin() const {
+		return data;
+	}
+
+	const T* end() const {
 		return data + size;
 	}
 };
