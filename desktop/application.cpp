@@ -5,6 +5,10 @@
 #include <SDL3_ttf/SDL_ttf.h>
 
 
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_sdlrenderer3.h>
+
 bool Application::initialize()
 {
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
@@ -14,6 +18,8 @@ bool Application::initialize()
 
     // window
     {
+        float scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+
         SDL_Window* window;
         SDL_Renderer* renderer;
         SDL_WindowFlags flags = SDL_WINDOW_RESIZABLE;
@@ -23,6 +29,26 @@ bool Application::initialize()
         }
 
         m_window = { window, renderer };
+
+        // setup imgui
+        {
+            IMGUI_CHECKVERSION();
+            ImGui::CreateContext();
+
+            ImGuiIO& imgui_io = ImGui::GetIO();
+            imgui_io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+            ImGui::StyleColorsDark();
+            //ImGui::StyleColorsLight();
+
+            ImGuiStyle& style = ImGui::GetStyle();
+            style.ScaleAllSizes(scale);
+            style.FontScaleDpi = scale;
+
+            ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
+            ImGui_ImplSDLRenderer3_Init(renderer);
+        }
+
     }
 
     // ttf
@@ -277,6 +303,8 @@ void Application::handle_events()
     SDL_Event e = {};
     while (SDL_PollEvent(&e))
     {
+        ImGui_ImplSDL3_ProcessEvent(&e);
+
         switch (e.type)
         {
             case SDL_EVENT_QUIT:
@@ -425,6 +453,11 @@ void Application::cleanup()
     st_sampler_destroy(left_sampler);
     st_sampler_destroy(right_sampler);
     m_audio.cleanup();
+
+    ImGui_ImplSDLRenderer3_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+
     SDL_Quit();
 }
 
@@ -432,10 +465,25 @@ void Application::draw()
 {
     SDL_Renderer* renderer = m_window.renderer;
 
+    if (SDL_GetWindowFlags(m_window.window) & SDL_WINDOW_MINIMIZED) {
+        // don't draw anything if the window is minimized
+        return;
+    }
+
+    ImGui_ImplSDLRenderer3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::ShowDemoWindow();
+
     SDL_SetRenderDrawColor(renderer, COLOR_ARG(m_background_color));
     SDL_RenderClear(renderer);
 
     draw_ui();
+
+    ImGui::Render();
+
+    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 
     SDL_RenderPresent(renderer);
 }

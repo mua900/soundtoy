@@ -35,6 +35,23 @@ float snap_value(float val, float bound1, float bound2, float threshold)
   return val;
 }
 
+Color::Color(const ColorF& color) {
+    float coef = 255.0;
+    r = int(color.r * coef);
+    g = int(color.g * coef);
+    b = int(color.b * coef);
+    a = int(color.a * coef);
+}
+
+ColorF::ColorF(const Color& color) {
+    float coef = 1.0 / 255.0;
+    r = (float)color.r * coef;
+    g = (float)color.g * coef;
+    b = (float)color.b * coef;
+    a = (float)color.a * coef;
+}
+
+
 int pop_lsb(u64* x) {
     int index = TRAILING_ZEROS(*x);
     *x &= *x - 1;

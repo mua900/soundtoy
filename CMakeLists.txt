@@ -27,9 +27,16 @@ add_executable(soundtoy
     vendor/imgui/imgui_tables.cpp
     vendor/imgui/imgui_widgets.cpp
     vendor/imgui/imgui_demo.cpp
+
+    # the backends we use
+    vendor/imgui/backends/imgui_impl_sdl3.cpp
+    vendor/imgui/backends/imgui_impl_sdlrenderer3.cpp
+    vendor/imgui/backends/imgui_impl_sdl3.h
+    vendor/imgui/backends/imgui_impl_sdlrenderer3.h
 )
 
 target_include_directories(soundtoy PRIVATE vendor/imgui)
+target_include_directories(soundtoy PRIVATE vendor/imgui/backends)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT soundtoy)
 
