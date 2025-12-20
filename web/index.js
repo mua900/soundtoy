@@ -36,6 +36,7 @@ let sampler_left;
 let sampler_right;
 
 const sample_rate_default = 48000;
+const expression_default = "sin(2*PI*t)";
 
 async function setup_samplers () {
 	await soundtoy_ready;
@@ -64,7 +65,6 @@ async function setup_samplers () {
 	st_sampler_set_sample_rate(sampler_right, sample_rate_default);
 
 	// build the string
-	const expression_default = "sin(2*PI*t)";
 	const ptr = Module._malloc(expression_default.length + 1);
 	Module.stringToUTF8(expression_default, ptr, expression_default.length + 1);
 
@@ -89,22 +89,29 @@ async function setup_samplers () {
 // ui elements
 let button;
 let expression_input;
+let sample_rate_box;
 
 function setup_ui() {
-	button = document.getElementById("HelloButton");
-	expression_input = document.getElementById("ExpressionInput");
+    button = document.getElementById("HelloButton");
+    expression_input = document.getElementById("ExpressionInput");
+    sample_rate_box = document.getElementById("SampleRateBox");
 
-	button.addEventListener("click", () => { console.log("Hello"); });
+    button.addEventListener("click", () => { console.log("Hello"); });
+
+    expression_input.setAttribute("placeholder", expression_default);
+    sample_rate_box.setAttribute("placeholder", String(sample_rate_default));
+
+    expression_input.addEventListener("change", event => {console.log(this.value)});
 }
 
 function setup_audio() {
-	// @todo
+
 }
 
 function main() {
-	setup_ui();
-	setup_samplers();
-	setup_audio();
+    setup_ui();
+    setup_samplers();
+    setup_audio();
 }
 
 main();
