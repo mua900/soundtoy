@@ -20,7 +20,16 @@ add_executable(soundtoy
     desktop/application.cpp
     desktop/audio.h
     desktop/audio.cpp
+
+    vendor/imgui/imgui.cpp
+    vendor/imgui/imgui.h
+    vendor/imgui/imgui_draw.cpp
+    vendor/imgui/imgui_tables.cpp
+    vendor/imgui/imgui_widgets.cpp
+    vendor/imgui/imgui_demo.cpp
 )
+
+target_include_directories(soundtoy PRIVATE vendor/imgui)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT soundtoy)
 
