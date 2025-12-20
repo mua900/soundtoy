@@ -1,7 +1,6 @@
-class Audio {
+export class StAudio {
     constructor(sample_rate, channel_count, sampler_left, sampler_right) {
         this.audio_context = null;
-        this.audio_context.sampleRate = sample_rate;
         this.sample_rate = sample_rate;
         this.channel_count = channel_count;
         this.sampler_left = sampler_left;
@@ -17,14 +16,14 @@ class Audio {
         this.gainNode.gain.value = 0.0;
 
         this.audio_context.audioWorklet.addModule("audio_processor.js");
-        this.workletNode = new AudioWorkletNode(this.audio_context, "audio_worklet_node");
+        this.workletNode = new AudioWorkletNode(this.audio_context, "audio_processor");
 
         this.workletNode.connect(this.gainNode).connect(this.audio_context.destination);
         await this.audio_context.suspend();
     }
 
     async reinitialize(sample_rate, channel_count) {
-        this.audio_context.sampleRate = sample_rate;
+        // @todo
     }
 
     getVolume() {

@@ -1,3 +1,5 @@
+import { StAudio } from "./audio.js";
+
 // evaluator type
 const BYTECODE_INTERP = 0;
 const TREE_INTERP = 1;
@@ -12,6 +14,9 @@ let st_sampler_evaluate;
 let st_sampler_step_time;
 let st_sampler_set_sample_rate;
 let st_sampler_set_sample_time;
+let st_sampler_fill;
+let st_sampler_fill_interleaved;
+let st_sampler_fill_interleaved_double;
 
 let soundtoy_ready;                 // promise
 let resolve_soundtoy_ready;
@@ -28,6 +33,9 @@ Module.onRuntimeInitialized = function load_soundtoy() {
 	st_sampler_step_time = Module.cwrap("st_sampler_step_time", null, ["number", "number"]);
 	st_sampler_set_sample_rate = Module.cwrap("st_sampler_set_sample_rate", null , ["number", "number"]);
 	st_sampler_set_sample_time = Module.cwrap("st_sampler_set_sample_time", null, ["number", "number"]);
+	st_sampler_fill = Module.cwrap("st_sampler_fill", null, ["number", "number", "number"]);
+	st_sampler_fill_interleaved = Module.cwrap("st_sampler_fill_interleaved", null, ["number", "number", "number"]);
+	st_sampler_fill_interleaved_double = Module.cwrap("st_sampler_fill_interleaved_double", null, ["number", "number", "number", "number"]);
 
 	resolve_soundtoy_ready();
 }
@@ -36,6 +44,7 @@ let sampler_left;
 let sampler_right;
 
 const sample_rate_default = 48000;
+const channel_count_default = 1;  // mono
 const expression_default = "sin(2*PI*t)";
 
 async function setup_samplers () {
@@ -104,8 +113,12 @@ function setup_ui() {
     expression_input.addEventListener("change", event => {console.log(this.value)});
 }
 
-function setup_audio() {
+let audio;
 
+function setup_audio() {
+	audio = new StAudio(sample_rate_default, channel_count_default, sampler_left, sampler_right);
+
+	audio.initialize();
 }
 
 function main() {

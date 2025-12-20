@@ -3,8 +3,6 @@
 
 #include <math.h>
 
-extern const double PI;
-
 static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
 static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
 
