@@ -14,6 +14,7 @@ extern "C" {
 	static void bytecode_fill_buffer(void* program, float* buffer, int sample_count);
 	static void bytecode_fill_buffer_interleaved(void* program, float* buffer, int sample_count);
 	static void bytecode_fill_buffer_interleaved_double(void* program_left, void* program_right, float* buffer, int sample_count);
+	static void bytecode_fill_planar(void* program_left, void* program_right, float* buffer, int sample_count);
 
     static void tree_interp_step_time(void* evaluator, float step);
 	static Array<String> tree_interp_symbol_table_get(void* evaluator);
@@ -22,6 +23,7 @@ extern "C" {
 	static void tree_interp_fill_buffer(void* evaluator, float* buffer, int sample_count);
 	static void tree_interp_fill_buffer_interleaved(void* evaluator_0, float* buffer, int sample_count);
 	static void tree_interp_fill_buffer_interleaved_double(void* evaluator_left, void* evaluator_right, float* buffer, int sample_count);
+	static void tree_interp_fill_planar(void* evaluator_left, void* evaluator_right, float* buffer, int sample_count);
 
 
     typedef Array<String> (*evaluator_symbol_table_get_f)(void* evaluator);
@@ -31,7 +33,8 @@ extern "C" {
 	typedef void (*evaluator_fill_buffer_interleaved_f)(void* evaluator, float* buffer, int sample_count);
     typedef void (*evaluator_step_time_f)(void* evaluator, float step);	
     // both evaluators should be of the same type
-    typedef void (*evaluator_fill_buffer_interleaved_double_f)(void* evaluator_left, void* evaluator_right, float* buffer, int count);
+    typedef void (*evaluator_fill_buffer_interleaved_double_f)(void* evaluator_left, void* evaluator_right, float* buffer, int sample_count);
+    typedef void (*evaluator_fill_planar)(void* evaluator_left, void* evaluator_right, float* buffer, int sample_count);
 
     struct St_Sampler {
         Evaluator_Type evaluator_type = Evaluator_Type::TREE_INTERP;
@@ -356,6 +359,28 @@ extern "C" {
         }
     }
 
+    static void bytecode_fill_planar(void* evaluator_left, void* evaluator_right, float* buffer, int sample_count) {
+    	Bytecode_Program* program_left = (Bytecode_Program*) evaluator_left;
+    	Bytecode_Program* program_right = (Bytecode_Program*) evaluator_right;
+
+        double left_inv_sr = 1.0 / program_left->get_sample_rate();
+        double right_inv_sr = 1.0 / program_right->get_sample_rate();
+
+        if (sample_count % 2 == 1) {
+        	st_last_error = "Sample count for planar stereo buffer not a multiple of 2.";
+        }
+
+    	for (int i = 0; i < sample_count / 2; i++) {
+    		buffer[i] = CLAMP(bytecode_run(*program_left), -1.0, 1.0);
+    		program_left->step_time(left_inv_sr);
+    	}
+    	for (int i = sample_count / 2; i < sample_count; i++) {
+    		buffer[i] = CLAMP(bytecode_run(*program_right), -1.0, 1.0);
+    		program_right->step_time(right_inv_sr);
+    	}
+    }
+
+
     static void tree_interp_step_time(void* evaluator, float step) {
 		Tree_Evaluator* tree_interp = (Tree_Evaluator*) evaluator;
         tree_interp->step_time(step);
@@ -417,14 +442,14 @@ extern "C" {
 			tree_interp->step_time(inv_sample_rate);
 		}
 	}
-    static void tree_interp_fill_buffer_interleaved_double(void* evaluator_left, void* evaluator_right, float* buffer, int count) {
+    static void tree_interp_fill_buffer_interleaved_double(void* evaluator_left, void* evaluator_right, float* buffer, int sample_count) {
 		Tree_Evaluator* tree_left = (Tree_Evaluator*) evaluator_left;
 		Tree_Evaluator* tree_right = (Tree_Evaluator*) evaluator_right;
 		
         double left_inv_sr = 1.0 / tree_left->get_sample_rate();
         double right_inv_sr = 1.0 / tree_right->get_sample_rate();
 
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < sample_count; i++) {
             int left = i * 2 + 0;
             int right = i * 2 + 1;
 
@@ -436,4 +461,24 @@ extern "C" {
         }
     }
 
+	static void tree_interp_fill_planar(void* evaluator_left, void* evaluator_right, float* buffer, int sample_count) {
+		Tree_Evaluator* tree_left = (Tree_Evaluator*) evaluator_left;
+		Tree_Evaluator* tree_right = (Tree_Evaluator*) evaluator_right;
+
+        double left_inv_sr = 1.0 / tree_left->get_sample_rate();
+        double right_inv_sr = 1.0 / tree_right->get_sample_rate();
+
+        if (sample_count % 2 == 1) {
+        	st_last_error = "Sample count for planar stereo buffer not a multiple of 2.";
+        }
+
+		for (int i = 0; i < sample_count / 2; i++) {
+			buffer[i] = CLAMP(tree_left->evaluate().value, -1.0, 1.0);
+			tree_left->step_time(left_inv_sr);
+		}
+		for (int i = sample_count / 2; i < sample_count; i++) {
+			buffer[i] = CLAMP(tree_right->evaluate().value, -1.0, 1.0);
+			tree_right->step_time(right_inv_sr);
+		}
+	}
 }

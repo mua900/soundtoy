@@ -30,4 +30,5 @@ extern "C" {
     void st_fill(St_Sampler* sampler, float* buffer, int length);
 	void st_fill_interleaved(St_Sampler* sampler, float* buffer, int sample_count);
     void st_fill_interleaved_double(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count);
+    void st_fill_planar(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count);
 }
