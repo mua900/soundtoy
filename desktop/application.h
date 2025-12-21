@@ -195,7 +195,9 @@ public:
 
     Array<Text> m_rendered_text_cache = {};
     Array<vec2> m_waveform_sample_buffer = {};
-	
+
+    float m_volume = 0.0;
+
     bool quit = false;
     bool doing_text_input = false;
     bool input_valid = false;
@@ -217,16 +219,15 @@ private:
     bool load_assets();
 
     void draw_ui();
+    void draw_imgui();
 
     bool mouse_input_ui();
 
     bool gen_static_text(Color color);
-    bool gen_text(Color color);
 
     void update_audio_spec();
     bool update_channel_count(int count);
 
-    void set_volume(float volume);
 	void set_waveform_sample_count(int sample_count);  // sample count used for waveform visualization
 
     void text_input_start();

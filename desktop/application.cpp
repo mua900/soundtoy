@@ -88,7 +88,7 @@ bool Application::initialize()
         left_sampler = left;
         right_sampler = right;
 
-		set_waveform_sample_count(512);
+        set_waveform_sample_count(512);
     }
 
     if (!m_audio.initialize(initial_sample_rate, 1, left_sampler, right_sampler)) {
@@ -102,6 +102,8 @@ bool Application::initialize()
         m_rendered_text_cache = Array<Text>(texts, TEXT_COUNT);
 
         gen_static_text(Color{0x44, 0x22, 0x33, 0xff});
+        // dynamic text
+        m_rendered_text_cache.data[TEXT_VOLUME_VALUE] = create_text(make_string("0.0"), Color(0x54, 0x22, 0x77, 0xff));
     }
 
     // ui
@@ -173,30 +175,25 @@ bool Application::gen_static_text(Color color)
     return true;
 }
 
-bool Application::gen_text(Color color)
-{
-	float volume = m_audio.get_volume();
-    char buffer[50];
-	if (volume == 1.0) {
-		snprintf(buffer, sizeof(buffer), "1.0");
-	}
-	else if (volume == 0.0) {
-		snprintf(buffer, sizeof(buffer), "0.0");
-	}
-	else {
-		snprintf(buffer, sizeof(buffer), "%.4f", volume);		
-	}
+void Application::draw_imgui() {
+    int window_x, window_y;
+    SDL_GetWindowSize(m_window.window, &window_x, &window_y);
+    vec2 window_size = vec2(window_x, window_y);
 
-    Text volume_text = create_text(make_string(buffer), color);
-
-    if (!volume_text.texture)
+    // volume slider
     {
-        return false;
+        ImGui::SliderFloat("Volume", &m_volume, 0.0, 1.0);
+
+        m_audio.set_volume(m_volume);
     }
 
-    m_rendered_text_cache.data[TEXT_VOLUME_VALUE] = volume_text;
-
-    return true;
+    // pause/resume button
+    {
+        bool toggle = ImGui::Button(m_audio.paused ? "Resume" : "Pause", ImVec2(window_size.x * (1.0 / 10.0), window_size.y * (1.0 / 10.0)));
+        if (toggle) {
+            m_audio.toggle_pause();
+        }
+    }
 }
 
 void Application::update_audio_spec()
@@ -223,13 +220,6 @@ bool Application::update_channel_count(int channels)
 {
     bool success = m_audio.reinitialize(m_audio.get_sample_rate(), channels);
     return success;
-}
-
-void Application::set_volume(float volume)
-{
-    m_audio.set_volume(volume);
-
-    gen_text(Color{0x22, 0x55, 0x65, 0xff});
 }
 
 #define FONT_SIZE 100.0
@@ -474,15 +464,12 @@ void Application::draw()
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::ShowDemoWindow();
-
     SDL_SetRenderDrawColor(renderer, COLOR_ARG(m_background_color));
     SDL_RenderClear(renderer);
 
     draw_ui();
 
     ImGui::Render();
-
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 
     SDL_RenderPresent(renderer);
@@ -499,34 +486,29 @@ void Application::draw_ui()
     {
         Rectangle volume_slider = m_ui.volume_slider;
         vec2 knob_scale = m_ui.volume_slider_knob_scale;
-
         const float slider_knob_width = volume_slider.w * knob_scale.x;
         const float slider_knob_height = volume_slider.h * knob_scale.y;
-
         SDL_SetRenderDrawColor(m_window.renderer, 0x55, 0x44, 0x22, 0xff);
         SDL_FRect slider = { volume_slider.x, volume_slider.y, volume_slider.w, volume_slider.h };
         SDL_RenderFillRect(m_window.renderer, &slider);
-
         float percentage = m_audio.get_volume();
         SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x55, 0x22, 0xff);
-        SDL_FRect slider_knob = { volume_slider.x - (slider_knob_width / 2) + (volume_slider.w * percentage), volume_slider.y - volume_slider.h / 2,
-                                    slider_knob_width, slider_knob_height };
+        SDL_FRect slider_knob = {
+            volume_slider.x - (slider_knob_width / 2) + (volume_slider.w * percentage), volume_slider.y - volume_slider.h / 2,
+            slider_knob_width, slider_knob_height
+        };
         SDL_RenderFillRect(m_window.renderer, &slider_knob);
 
         // volume text
         {
             Text text = m_rendered_text_cache.data[TEXT_VOLUME_VALUE];
-
             int measured_width = 0;
             TTF_MeasureString(m_assets.font.font, text.string.data, text.string.size, 0, &measured_width, NULL);
-
             float tex_w, tex_h;
             SDL_GetTextureSize(text.texture, &tex_w, &tex_h);
-
             SDL_FRect src = { 0, 0, tex_w, tex_h };
             int margin = 10;
-            SDL_FRect dst = { volume_slider.x - tex_w / 2, volume_slider.y + volume_slider.h + margin, tex_w, tex_h};
-
+            SDL_FRect dst = { volume_slider.x - tex_w / 5, volume_slider.y + volume_slider.h + margin, tex_w, tex_h};
             SDL_RenderTexture(m_window.renderer, text.texture, &src, &dst);
         }
     }
@@ -645,7 +627,7 @@ void Application::draw_ui()
 
 	// waveform visualization
 	{
-		render_waveform(left_sampler,
+        render_waveform(left_sampler,
 						vec2(window_size.x * (1.0 / 2.0), window_size.y * (3.0 / 5.0)), // pos
 						vec2(window_size.x * (3.0 / 5.0), window_size.y * (1.0 / 5.0)), // scale
 						Color(0x33, 0x55, 0x66, 0xff));
@@ -676,7 +658,11 @@ bool Application::mouse_input_ui()
 
         volume = snap_value(volume, 0.0, 1.0, 0.09);
 
-        set_volume(volume);
+        m_audio.set_volume(volume);
+
+        char buffer[64];
+        snprintf(buffer, sizeof(buffer), "%.3f", volume);
+        m_rendered_text_cache.data[TEXT_VOLUME_VALUE] = create_text(make_string(buffer), Color(0x54, 0x22, 0x77, 0xff));
 
         printf("%f\n", m_audio.get_volume());
         return true;
@@ -891,18 +877,14 @@ void Application::render_waveform(St_Sampler* sampler, vec2 area_center, vec2 ar
 	vec2* buffer_data = m_waveform_sample_buffer.data;
 	float* first_y = &buffer_data[0].y;
 
-	float sample_time_save = st_sampler_get_sample_time(sampler);
-
-	// fill the y component of the elements in the array
-    st_fill_interleaved(sampler, first_y, sample_count);
-	st_sampler_set_sample_time(sampler, sample_time_save);
-
 	float step_size = (area.w / (float)sample_count);
+	float half_h = area.h / 2;
+	float middle_y = area.y + half_h;
 	for (int i = 0; i < sample_count; i++) {
 		buffer_data[i].x = area.x + i * step_size;
-		buffer_data[i].y = CLAMP(buffer_data[i].y, -1.0, 1.0);  // clamp the values the same way they will be in audio samples
-		buffer_data[i].y *= area.h;                             // the samples are in the range -1..1 so scale them up
-		buffer_data[i].y += area.y + area.h / 2;
+		float sample = CLAMP(buffer_data[i].y, -1.0, 1.0);    // clamp the values the same way they will be in audio samples
+		// Up should correspond to positive samples while down should correspond to negative ones. It is the opposite in the coordinate system hence negate the addition.
+		buffer_data[i].y = middle_y - (sample * half_h);      // scale the sample up and subtract it from the middle_y position.
 	}
 
 	// SDL_FPoint and vec2 are defined literally the same so it should be fine
@@ -916,7 +898,6 @@ void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 
 
     float tex_w, tex_h;
     SDL_GetTextureSize(text.texture, &tex_w, &tex_h);
-
 
     if (!scale.x)
     {

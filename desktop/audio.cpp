@@ -30,12 +30,13 @@ void Audio::toggle_pause()
 
 float Audio::get_volume()
 {
-    return SDL_GetAudioDeviceGain(m_playback);
+    return m_volume;
 }
 
 void Audio::set_volume(float volume)
 {
-    SDL_SetAudioDeviceGain(m_playback, volume);
+    m_volume = volume;
+    SDL_SetAudioDeviceGain(m_playback, volume);  // @fix
 }
 
 bool Audio::set_channel_count(int channel_count) {

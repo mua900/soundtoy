@@ -16,6 +16,8 @@ struct Audio {
 
 	Sampler_List m_samplers = {};
 	
+    float m_volume = 0.0;
+
     int m_sample_rate = 0;
     int m_channel_count = 0;
 
