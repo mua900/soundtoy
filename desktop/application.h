@@ -52,6 +52,7 @@ enum Text_Id : int {
     TEXT_SAMPLE_RATE,
     TEXT_INVALID_EXPRESSION,
     TEXT_VALID_EXPRESSION,
+	TEXT_INVALID_SAMPLE_RATE,
     TEXT_MONO,
     TEXT_STEREO,
 
@@ -171,6 +172,7 @@ struct Event_Timeout {
 
 enum Events {
     EVENT_INVALID_EXPRESSION,
+	EVENT_INVALID_SAMPLE_RATE,
     EVENT_COUNT,
 };
 
@@ -182,6 +184,9 @@ public:
     Assets m_assets = {};
     Audio m_audio = {};
 
+	Array<float> sample_buffer = {};  // audio sample buffer
+	Array<SDL_FPoint> waveform_sample_buffer = {};  // waveform rendering sample buffer
+	
     St_Sampler* left_sampler = nullptr;
     St_Sampler* right_sampler = nullptr;
 
@@ -194,15 +199,12 @@ public:
     Event_Timeout m_events[EVENT_COUNT] = {};
 
     Array<Text> m_rendered_text_cache = {};
-    Array<vec2> m_waveform_sample_buffer = {};
 
     float m_volume = 0.0;
 
     bool quit = false;
     bool doing_text_input = false;
     bool input_valid = false;
-
-    DArray<String> m_error_log = {};  // @todo render this onto the screen
 
     bool initialize();
 
@@ -227,8 +229,6 @@ private:
 
     void update_audio_spec();
     bool update_channel_count(int count);
-
-	void set_waveform_sample_count(int sample_count);  // sample count used for waveform visualization
 
     void text_input_start();
     void text_input_stop();

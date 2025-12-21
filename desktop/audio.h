@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL.h>
 #include "common.h"
+#include "template.h"
 #include "api.h"
 
 struct Sampler_List {
@@ -15,6 +16,7 @@ struct Audio {
     SDL_AudioStream* m_audio_stream = nullptr;
 
 	Sampler_List m_samplers = {};
+	Array<float> sample_buffer;
 	
     float m_volume = 0.0;
 
@@ -23,7 +25,7 @@ struct Audio {
 
     bool paused = true;
 
-    bool initialize(int freq, int channels, St_Sampler* left, St_Sampler* right);
+    bool initialize(Array<float> p_sample_buffer, int freq, int channels, St_Sampler* left, St_Sampler* right);
     bool reinitialize(int freq, int channels);
     void cleanup();
 

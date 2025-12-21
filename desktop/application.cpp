@@ -60,12 +60,12 @@ bool Application::initialize()
         }
     }
 
-    const int initial_sample_rate = 48000;
-
     if (!load_assets()) {
         std::cerr << "Could not load assets\n";
         return false;
     }
+
+    const int initial_sample_rate = 48000;
 
     {
         if (!st_initialize()) {
@@ -88,10 +88,13 @@ bool Application::initialize()
         left_sampler = left;
         right_sampler = right;
 
-        set_waveform_sample_count(512);
+		const int sample_buffer_size = 512;
+
+		waveform_sample_buffer.resize(sample_buffer_size);
+		sample_buffer.resize(sample_buffer_size);
     }
 
-    if (!m_audio.initialize(initial_sample_rate, 1, left_sampler, right_sampler)) {
+    if (!m_audio.initialize(sample_buffer, initial_sample_rate, 1, left_sampler, right_sampler)) {
         std::cerr << "Failed to initialize audio\n";
         return false;
     }
@@ -147,18 +150,21 @@ bool Application::gen_static_text(Color color)
     Text paused = create_text(make_string("Paused"), color);
     Text playing = create_text(make_string("Playing"), color);
     Text invalid_expression = create_text(make_string("Invalid Expression"), color);
+	Text invalid_sample_rate = create_text(make_string("Invalid Sample Rate"), color);
     Text valid_expression = create_text(make_string("Valid Expression"), color);
     Text sample_rate = create_text(make_string("sample rate"), color);
     Text mono = create_text(make_string("mono"), color);
     Text stereo = create_text(make_string("stereo"), color);
 
-    if (!paused.texture ||
-        !playing.texture ||
-        !invalid_expression.texture ||
-        !valid_expression.texture ||
-        !sample_rate.texture ||
-        !mono.texture ||
-        !stereo.texture
+    if (!
+		(paused.texture &&
+		 playing.texture &&
+		 invalid_expression.texture &&
+		 invalid_expression.texture &&
+		 valid_expression.texture &&
+		 sample_rate.texture &&
+		 mono.texture &&
+		 stereo.texture)
         )
     {
         return false;
@@ -168,6 +174,7 @@ bool Application::gen_static_text(Color color)
     m_rendered_text_cache.data[TEXT_PLAYING] = playing;
     m_rendered_text_cache.data[TEXT_SAMPLE_RATE] = sample_rate;
     m_rendered_text_cache.data[TEXT_INVALID_EXPRESSION] = invalid_expression;
+	m_rendered_text_cache.data[TEXT_INVALID_SAMPLE_RATE] = invalid_sample_rate;
     m_rendered_text_cache.data[TEXT_VALID_EXPRESSION] = valid_expression;
     m_rendered_text_cache.data[TEXT_MONO] = mono;
     m_rendered_text_cache.data[TEXT_STEREO] = stereo;
@@ -212,7 +219,7 @@ void Application::update_audio_spec()
     }
     else
     {
-        m_error_log.add(make_string("Unable to parse sample rate"));
+		set_event_active(EVENT_INVALID_SAMPLE_RATE, 1.0);
     }
 }
 
@@ -635,17 +642,19 @@ void Application::draw_ui()
 
     // event text
     {
+        const vec2 text_scale = vec2(300, 100);
+
         if (m_events[EVENT_INVALID_EXPRESSION].active)
         {
             auto tf_area = m_ui.input_text_field.m_area;
-
-            const vec2 text_scale = vec2(300, 100);
-
-            render_text(m_window.renderer, m_assets.font,
-                m_rendered_text_cache.get(TEXT_INVALID_EXPRESSION),
-                vec2(tf_area.x + tf_area.w/2, tf_area.y + tf_area.h),
-                text_scale);
+            render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(TEXT_INVALID_EXPRESSION), vec2(tf_area.x + tf_area.w/2, tf_area.y + tf_area.h), text_scale);
         }
+
+		if (m_events[EVENT_INVALID_SAMPLE_RATE].active) {
+			auto tf_area = m_ui.sample_rate_box.m_area;
+            const vec2 text_scale = vec2(300, 100);
+			render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(TEXT_INVALID_SAMPLE_RATE), vec2(tf_area.x + tf_area.w / 2, tf_area.y + tf_area.h / 2), text_scale);
+		}
     }
 }
 
@@ -864,31 +873,23 @@ bool Application::set_eval_string(String eval_string)
     return success;
 }
 
-void Application::set_waveform_sample_count(int sample_count) {
-	m_waveform_sample_buffer.resize(sample_count);
-}
-
 void Application::render_waveform(St_Sampler* sampler, vec2 area_center, vec2 area_scale, Color waveform_color) {
 	SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(waveform_color));
 
 	const SDL_FRect area = SDL_FRect{ area_center.x - area_scale.x / 2, area_center.y - area_scale.y / 2, area_scale.x, area_scale.y };
 
-	int sample_count = m_waveform_sample_buffer.size;
-	vec2* buffer_data = m_waveform_sample_buffer.data;
-	float* first_y = &buffer_data[0].y;
-
-	float step_size = (area.w / (float)sample_count);
+	int sample_count = sample_buffer.size;
 	float half_h = area.h / 2;
 	float middle_y = area.y + half_h;
+
+    float step_size = (area.w / (float)sample_count);
 	for (int i = 0; i < sample_count; i++) {
-		buffer_data[i].x = area.x + i * step_size;
-		float sample = CLAMP(buffer_data[i].y, -1.0, 1.0);    // clamp the values the same way they will be in audio samples
-		// Up should correspond to positive samples while down should correspond to negative ones. It is the opposite in the coordinate system hence negate the addition.
-		buffer_data[i].y = middle_y - (sample * half_h);      // scale the sample up and subtract it from the middle_y position.
+		waveform_sample_buffer[i].x = area.x * i * step_size;
+		float sample = sample_buffer[i];
+		waveform_sample_buffer[i].y = middle_y - (sample * half_h);
 	}
 
-	// SDL_FPoint and vec2 are defined literally the same so it should be fine
-	SDL_RenderLines(m_window.renderer, (SDL_FPoint*) buffer_data, sample_count);
+	SDL_RenderLines(m_window.renderer, waveform_sample_buffer.data, sample_count);
 }
 
 void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale)

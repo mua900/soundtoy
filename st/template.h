@@ -167,6 +167,10 @@ struct Array {
 	Array(T* data, int size) : data(data), size(size) {}
 	Array(DArray<T> darray) : data(darray.data()), size(darray.size()) {}
 
+	T& operator[](int index) {
+		return data[index];
+	}
+	
 	T get(int index) const {
 		if (index >= size) panic("Out of bounds array access");
 		return data[index];
@@ -213,45 +217,6 @@ struct Array {
 
 	T* end() {
 		return data + size;
-	}
-
-	const T* begin() const {
-		return data;
-	}
-
-	const T* end() const {
-		return data + size;
-	}
-};
-
-template <typename T>
-struct Span {
-	T const * const data = nullptr;
-	int size = 0;
-
-	Span() {}
-	Span(T const * const data, int size) : data(data), size(size) {}
-
-	T get(int index) const {
-		if (index >= size)
-			panic("Out of bounds array access");
-		return data[index];
-	}
-
-	T get_or_default(int index) const {
-		if (index >= size)
-			return T();
-		return data[index];
-	}
-
-	Find_Result find(T& elem) const {
-		for (int i = 0; i < size; i++) {
-			if (data[i] == elem) {
-				return Find_Result {i, true};
-			}
-		}
-
-		return Find_Result {0, false};
 	}
 
 	const T* begin() const {
