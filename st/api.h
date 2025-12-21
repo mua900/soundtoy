@@ -28,7 +28,7 @@ extern "C" {
     const char* st_sampler_get_variable_name_at_index(const St_Sampler* sampler, int index);
     int st_sampler_get_variable_count(const St_Sampler* sampler);
     void st_fill(St_Sampler* sampler, float* buffer, int length);
-	void st_fill_interleaved(St_Sampler* sampler, float* buffer, int sample_count);
-    void st_fill_interleaved_double(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count);
+	void st_fill_strided(St_Sampler* sampler, float* buffer, int sample_count);
+    void st_fill_interleaved(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count);
     void st_fill_planar(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count);
 }

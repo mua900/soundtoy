@@ -169,7 +169,7 @@ static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* strea
 
     for (int turn = 0; turn < total_amount / SAMPLE_BUFFER_SIZE + 1; turn++)
     {
-        st_fill_interleaved_double(samplers->sampler_left, samplers->sampler_right, g_sample_buffer, SAMPLE_BUFFER_SIZE / 2);
+        st_fill_interleaved(samplers->sampler_left, samplers->sampler_right, g_sample_buffer, SAMPLE_BUFFER_SIZE / 2);
 
         SDL_PutAudioStreamData(stream, g_sample_buffer, SAMPLE_BUFFER_SIZE);
     }
