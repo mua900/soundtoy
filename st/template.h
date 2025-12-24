@@ -16,7 +16,7 @@ private:
 
 public:
 	T* data() { return m_data; }
-	int size() { return m_size; }
+	int size() const { return m_size; }
 
 	DArray() {}
 	DArray(int cap) {
@@ -68,6 +68,31 @@ public:
 		m_data[m_size] = elem;
 		m_size += 1;
 		return ret_index;
+	}
+
+	bool remove_shift(int index) {
+		if (!in_bounds(index)) {
+			return false;
+		}
+
+		for (int i = index; i < m_size; i++) {
+			m_data[i] = m_data[i+1];
+		}
+
+		m_size -= 1;
+
+		return true;
+	}
+
+	bool remove(int index) {
+		if (!in_bounds(index)) {
+			return false;
+		}
+
+		m_size -= 1;
+
+		m_data[index] = m_data[m_size-1];
+		return true;
 	}
 
 	int add_unique(T elem) {

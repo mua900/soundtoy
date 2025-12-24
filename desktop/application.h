@@ -53,8 +53,6 @@ enum Text_Id : int {
     TEXT_INVALID_EXPRESSION,
     TEXT_VALID_EXPRESSION,
 	TEXT_INVALID_SAMPLE_RATE,
-    TEXT_MONO,
-    TEXT_STEREO,
 
     // dynamic text
     TEXT_VOLUME_VALUE,
@@ -111,8 +109,8 @@ struct Drop_Down_List {
     vec2 pos = {};
     vec2 scale = {};
     int selected = DROP_DOWN_LIST_SELECTED_SENTINEL;
-    Text_Id title = {};
-    DArray<Text_Id> options = {};
+    Text title = {};
+    DArray<Text> options = {};
     bool open = false;
 
     void toggle() {
@@ -124,12 +122,16 @@ struct Drop_Down_List {
         pos = p_pos; scale = p_scale;
     }
 
-    void set_title(Text_Id text_id) {
-        title = text_id;
+    void set_title(Text text) {
+        title = text;
     }
 
-    void add_option(Text_Id text_id) {
-        options.add(text_id);
+    void add_option(Text text) {
+        options.add(text);
+    }
+
+    void remove_option(int index) {
+        options.remove_shift(index);
     }
 
     Drop_Down_List() {}
@@ -153,6 +155,7 @@ struct Ui_State {
     Text_Field sample_rate_box = { { INIT_WINDOW_WIDTH * (3.0 / 5.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0), INIT_WINDOW_WIDTH / 5.0, INIT_WINDOW_HEIGHT / 5.0 } };
 
     Drop_Down_List channel_count = {};
+    Drop_Down_List playback_device = {};
 
     Text_Input_Target text_input_target = TEXT_INPUT_TEXT_FIELD;
 
@@ -164,7 +167,6 @@ struct Ui_State {
 
 #define NS_PER_SECONDS 1'000'000'000
 
-// remaining ticks (nanoseconds) for events that will have to stay alive for a certain time
 struct Event_Timeout {
     s64 event = 0;
     bool active = false;
@@ -185,7 +187,7 @@ public:
     Audio m_audio = {};
 
 	Array<float> sample_buffer = {};  // audio sample buffer
-	Array<SDL_FPoint> waveform_sample_buffer = {};  // waveform rendering sample buffer
+	Array<SDL_FPoint> waveform_sample_buffer = {};
 	
     St_Sampler* left_sampler = nullptr;
     St_Sampler* right_sampler = nullptr;
@@ -204,7 +206,6 @@ public:
 
     bool quit = false;
     bool doing_text_input = false;
-    bool input_valid = false;
 
     bool initialize();
 
@@ -238,8 +239,10 @@ private:
     Text create_text(String text, Color color);
 
     bool set_eval_string(String s);
+    bool select_playback_device(SDL_AudioDeviceID device);
 
     void render_waveform(St_Sampler* sampler, vec2 area_center, vec2 area_scale, Color waveform_color);
+    void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
 };
 
 void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale = vec2(0, 0));

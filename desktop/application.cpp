@@ -48,7 +48,6 @@ bool Application::initialize()
             ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
             ImGui_ImplSDLRenderer3_Init(renderer);
         }
-
     }
 
     // ttf
@@ -116,9 +115,24 @@ bool Application::initialize()
 
         m_ui.update(m_window);
 
-        m_ui.channel_count.set_title(TEXT_MONO);
-        m_ui.channel_count.add_option(TEXT_MONO);
-        m_ui.channel_count.add_option(TEXT_STEREO);
+        Text mono = create_text(make_string("mono"), Color(0x44, 0x22, 0x55, 0xff));
+        Text stereo = create_text(make_string("stereo"), Color(0x44, 0x22, 0x55, 0xff));
+        m_ui.channel_count.set_title(create_text(make_string("Channel Count"), Color(0x44, 0x22, 0x55, 0xff)));
+        m_ui.channel_count.add_option(mono);
+        m_ui.channel_count.add_option(stereo);
+
+        m_ui.playback_device.set_title(create_text(make_string("Audio Device"), Color(0x44, 0x22, 0x55, 0xff)));
+
+        int count = 0;
+        SDL_AudioDeviceID* devices = SDL_GetAudioPlaybackDevices(&count);
+
+        printf("Playback devices: \n");
+        for (int i = 0; i < count; i++) {
+            const char* device_name = SDL_GetAudioDeviceName(devices[i]);
+            // m_ui.playback_device.add_option(create_text(make_string(device_name), Color(0x88, 0x33, 0x11, 0xff)));
+
+            printf("%s\n", device_name);
+        }
     }
 
     quit = false;
@@ -153,8 +167,6 @@ bool Application::gen_static_text(Color color)
 	Text invalid_sample_rate = create_text(make_string("Invalid Sample Rate"), color);
     Text valid_expression = create_text(make_string("Valid Expression"), color);
     Text sample_rate = create_text(make_string("sample rate"), color);
-    Text mono = create_text(make_string("mono"), color);
-    Text stereo = create_text(make_string("stereo"), color);
 
     if (!
 		(paused.texture &&
@@ -162,9 +174,8 @@ bool Application::gen_static_text(Color color)
 		 invalid_expression.texture &&
 		 invalid_expression.texture &&
 		 valid_expression.texture &&
-		 sample_rate.texture &&
-		 mono.texture &&
-		 stereo.texture)
+		 sample_rate.texture
+         )
         )
     {
         return false;
@@ -174,10 +185,8 @@ bool Application::gen_static_text(Color color)
     m_rendered_text_cache.data[TEXT_PLAYING] = playing;
     m_rendered_text_cache.data[TEXT_SAMPLE_RATE] = sample_rate;
     m_rendered_text_cache.data[TEXT_INVALID_EXPRESSION] = invalid_expression;
-	m_rendered_text_cache.data[TEXT_INVALID_SAMPLE_RATE] = invalid_sample_rate;
+    m_rendered_text_cache.data[TEXT_INVALID_SAMPLE_RATE] = invalid_sample_rate;
     m_rendered_text_cache.data[TEXT_VALID_EXPRESSION] = valid_expression;
-    m_rendered_text_cache.data[TEXT_MONO] = mono;
-    m_rendered_text_cache.data[TEXT_STEREO] = stereo;
 
     return true;
 }
@@ -399,6 +408,38 @@ void Application::handle_events()
                 }
                 break;
             }
+            case SDL_EVENT_AUDIO_DEVICE_ADDED: {
+                // get added playback devices
+                SDL_AudioDeviceEvent device_event = e.adevice;
+                if (device_event.recording) {
+                    break;
+                }
+
+                SDL_AudioDeviceID device = device_event.which;
+                m_ui.playback_device.add_option(create_text(make_string(SDL_GetAudioDeviceName(device)), Color(0x88, 0x33, 0x11, 0xff)));
+                break;
+            }
+            case SDL_EVENT_AUDIO_DEVICE_REMOVED: {
+                // get removed playback devices
+                SDL_AudioDeviceEvent device_event = e.adevice;
+                if (device_event.recording) {
+                    break;
+                }
+
+                SDL_AudioDeviceID device = device_event.which;
+                String device_name = make_string(SDL_GetAudioDeviceName(device));
+
+                for (int i = 0; i < m_ui.playback_device.options.size(); i++) {
+                    Text device_text = m_ui.playback_device.options.get(i);
+                    if (string_compare(device_text.string, device_name)) {
+                        m_ui.playback_device.remove_option(i);
+                        break;
+                    }
+                }
+                break;
+            }
+            case SDL_EVENT_AUDIO_DEVICE_FORMAT_CHANGED: { break; }
+
             default:
             {
                 break;
@@ -593,43 +634,9 @@ void Application::draw_ui()
         }
     }
 
-    // channel count -- dropdown
     {
-        Drop_Down_List& channel_count = m_ui.channel_count;
-
-        if (channel_count.open) {
-            SDL_SetRenderDrawColor(m_window.renderer, 0x55, 0x33, 0x88, 0xff);
-        }
-        else {
-            SDL_SetRenderDrawColor(m_window.renderer, 0x33, 0x55, 0x88, 0xff);
-        }
-
-        SDL_FRect header_area = {
-            channel_count.pos.x - channel_count.scale.x/2, channel_count.pos.y - channel_count.scale.y / 2,
-            channel_count.scale.x, channel_count.scale.y
-        };
-        SDL_RenderFillRect(m_window.renderer, &header_area);
-
-        Text_Id option_names[] = {
-            TEXT_MONO, TEXT_STEREO
-        };
-
-        auto option_index = m_audio.get_channel_count() - 1;
-
-        render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(option_names[option_index]),
-            vec2(header_area.x + header_area.w / 2, header_area.y + header_area.h / 2), vec2(header_area.w, header_area.h));
-
-        if (channel_count.open) {
-            SDL_SetRenderDrawColor(m_window.renderer, 0x33, 0x55, 0x88, 0xff);
-
-            for (int i = 0; i < channel_count.options.size(); i++) {
-                SDL_FRect area = header_area;
-                area.y += area.h * (i + 1);
-                SDL_RenderFillRect(m_window.renderer, &area);
-                render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(option_names[i]),
-                    vec2(area.x + area.w/2, area.y + area.h/2), vec2(area.w, area.h));
-            }
-        }
+        render_dropdown(m_ui.channel_count, Color(0x55, 0x33, 0x88, 0xff), Color(0x33, 0x55, 0x88, 0xff));
+        render_dropdown(m_ui.playback_device, Color(0x55, 0x33, 0x88, 0xff), Color(0x33, 0x55, 0x88, 0xff));
     }
 
 	// waveform visualization
@@ -655,6 +662,29 @@ void Application::draw_ui()
             const vec2 text_scale = vec2(300, 100);
 			render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(TEXT_INVALID_SAMPLE_RATE), vec2(tf_area.x + tf_area.w / 2, tf_area.y + tf_area.h / 2), text_scale);
 		}
+    }
+}
+
+void Application::render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color) {
+    SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(title_color));
+
+    SDL_FRect header_area = {
+        list.pos.x - list.scale.x/2, list.pos.y - list.scale.y / 2,
+        list.scale.x, list.scale.y
+    };
+    SDL_RenderFillRect(m_window.renderer, &header_area);
+    render_text(m_window.renderer, m_assets.font, list.title, vec2(header_area.x + header_area.w / 2, header_area.y + header_area.h / 2), vec2(header_area.w, header_area.h));
+
+    if (list.open) {
+        SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(option_color));
+
+        for (int i = 0; i < list.options.size(); i++) {
+            SDL_FRect area = header_area;
+            area.y += area.h * (i + 1);
+            SDL_RenderFillRect(m_window.renderer, &area);
+            render_text(m_window.renderer, m_assets.font, list.options.get(i),
+                vec2(area.x + area.w/2, area.y + area.h/2), vec2(area.w, area.h));
+        }
     }
 }
 
@@ -718,6 +748,36 @@ bool Application::mouse_input_ui()
 
             if (got_clikcked) {
                 m_ui.channel_count.open = false;
+                return true;
+            }
+        }
+    }
+
+    {
+        Rectangle playback_device_header = Rectangle(
+            m_ui.playback_device.pos.x - m_ui.playback_device.scale.x / 2, m_ui.playback_device.pos.y - m_ui.playback_device.scale.y / 2,
+            m_ui.playback_device.scale.x, m_ui.playback_device.scale.y
+        );
+
+        if (playback_device_header.contains(m_mouse.pos)) {
+            m_ui.playback_device.toggle();
+            return true;
+        }
+
+        if (m_ui.playback_device.open) {
+            bool got_clikcked = false;
+            for (int i = 0; i < m_ui.playback_device.options.size(); i++) {
+                Rectangle area = playback_device_header;
+                area.y += playback_device_header.h * (i+1);
+
+                if (area.contains(m_mouse.pos)) {
+                    
+                    got_clikcked = true;
+                }
+            }
+
+            if (got_clikcked) {
+                m_ui.playback_device.open = false;
                 return true;
             }
         }
@@ -802,6 +862,13 @@ void Ui_State::update(Window window)
     channel_count.set_area(
         vec2(window_size.x / 2,
              window_size.y * (1.0 / 5.0)),
+        vec2((float)window_size.x * (1.0 / 5.0),
+             (float)window_size.y * (1.0 / 10.0))
+    );
+
+    playback_device.set_area(
+        vec2(window_size.x / 3,
+             window_size.y * (2.0 / 5.0)),
         vec2((float)window_size.x * (1.0 / 5.0),
              (float)window_size.y * (1.0 / 10.0))
     );
