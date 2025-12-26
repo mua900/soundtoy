@@ -14,9 +14,10 @@ let st_sampler_evaluate;
 let st_sampler_step_time;
 let st_sampler_set_sample_rate;
 let st_sampler_set_sample_time;
-let st_sampler_fill;
-let st_sampler_fill_interleaved;
-let st_sampler_fill_interleaved_double;
+let st_fill;
+let st_fill_interleaved;
+let st_fill_strided;
+let st_fill_planar;
 
 let soundtoy_ready;                 // promise
 let resolve_soundtoy_ready;
@@ -24,20 +25,21 @@ let resolve_soundtoy_ready;
 soundtoy_ready = new Promise((resolve) => {resolve_soundtoy_ready = resolve;})
 
 Module.onRuntimeInitialized = function load_soundtoy() {
-	st_initialize = Module.cwrap("st_initialize", "boolean", []);
-	st_sampler_create = Module.cwrap("st_sampler_create", "number", ["number", "number"]);
-	st_sampler_destroy = Module.cwrap("st_sampler_destroy", null, ["number"]);
-	st_check_expression_string = Module.cwrap("st_check_expression_string", "boolean", ["number", "number", "number"]);
-	st_sampler_set_expression = Module.cwrap("st_sampler_set_expression", "boolean", ["number", "number", "number"]);
-	st_sampler_evaluate = Module.cwrap("st_sampler_evaluate", "number", ["number"]);
-	st_sampler_step_time = Module.cwrap("st_sampler_step_time", null, ["number", "number"]);
-	st_sampler_set_sample_rate = Module.cwrap("st_sampler_set_sample_rate", null , ["number", "number"]);
-	st_sampler_set_sample_time = Module.cwrap("st_sampler_set_sample_time", null, ["number", "number"]);
-	st_sampler_fill = Module.cwrap("st_sampler_fill", null, ["number", "number", "number"]);
-	st_sampler_fill_interleaved = Module.cwrap("st_sampler_fill_interleaved", null, ["number", "number", "number"]);
-	st_sampler_fill_interleaved_double = Module.cwrap("st_sampler_fill_interleaved_double", null, ["number", "number", "number", "number"]);
+    st_initialize = Module.cwrap("st_initialize", "boolean", []);
+    st_sampler_create = Module.cwrap("st_sampler_create", "number", ["number", "number"]);
+    st_sampler_destroy = Module.cwrap("st_sampler_destroy", null, ["number"]);
+    st_check_expression_string = Module.cwrap("st_check_expression_string", "boolean", ["number", "number", "number"]);
+    st_sampler_set_expression = Module.cwrap("st_sampler_set_expression", "boolean", ["number", "number", "number"]);
+    st_sampler_evaluate = Module.cwrap("st_sampler_evaluate", "number", ["number"]);
+    st_sampler_step_time = Module.cwrap("st_sampler_step_time", null, ["number", "number"]);
+    st_sampler_set_sample_rate = Module.cwrap("st_sampler_set_sample_rate", null , ["number", "number"]);
+    st_sampler_set_sample_time = Module.cwrap("st_sampler_set_sample_time", null, ["number", "number"]);
+    st_fill = Module.cwrap("st_fill", null, ["number", "number", "number"]);
+    st_fill_interleaved = Module.cwrap("st_fill_interleaved", null, ["number", "number", "number", "number"]);
+    st_fill_strided = Module.cwrap("st_fill_strided", null, ["number", "number", "number"]);
+    st_fill_planar = Module.cwrap("st_fill_planar", null, ["number", "number", "number", "number"]);
 
-	resolve_soundtoy_ready();
+    resolve_soundtoy_ready();
 }
 
 let sampler_left;

@@ -8,7 +8,6 @@ extern "C" {
     };
 
     struct St_Sampler;
-
   
     bool st_initialize();
     const char* st_get_last_error();
