@@ -188,10 +188,12 @@ public:
 
 	Array<float> sample_buffer = {};  // audio sample buffer
 	Array<SDL_FPoint> waveform_sample_buffer = {};
-	
-    St_Sampler* left_sampler = nullptr;
-    St_Sampler* right_sampler = nullptr;
 
+	St_Sampler* sampler_audio_left      = nullptr;
+	St_Sampler* sampler_audio_right     = nullptr;
+	St_Sampler* sampler_waveform_left   = nullptr;
+	St_Sampler* sampler_waveform_right  = nullptr;
+	
     Ui_State m_ui = {};
     Color m_background_color = DEFAULT_BACKGROUND_COLOR;
 

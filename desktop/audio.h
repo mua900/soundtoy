@@ -5,12 +5,6 @@
 #include "template.h"
 #include "api.h"
 
-struct Sampler_List {
-	// non-owning pointers
-	St_Sampler* sampler_left = nullptr;
-	St_Sampler* sampler_right = nullptr;
-};
-
 struct Audio {
     SDL_AudioDeviceID m_playback = 0;
     SDL_AudioStream* m_audio_stream = nullptr;

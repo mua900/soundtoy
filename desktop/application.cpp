@@ -72,28 +72,39 @@ bool Application::initialize()
             return false;
         }
 
-        St_Sampler* left = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, initial_sample_rate);
-        St_Sampler* right = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, initial_sample_rate);
+		const int waveform_sample_rate = 100;
 
-        if (!(left && right)) {
-            fprintf(stderr, "Could not create samplers\n");
+        St_Sampler* audio_left = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, initial_sample_rate);
+        St_Sampler* audio_right = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, initial_sample_rate);
+
+		St_Sampler* waveform_left = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, waveform_sample_rate);
+		St_Sampler* waveform_right = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, waveform_sample_rate);
+
+        if (!(audio_left && audio_right && waveform_left, waveform_right)) {
+            fprintf(stderr, "Could not create a samplers\n");
             return false;
         }
 
         String expression_default = make_string("sin(2*PI*t*440)");
-        ASSERT(st_sampler_set_expression(left, expression_default.data, expression_default.size));
-        ASSERT(st_sampler_set_expression(right, expression_default.data, expression_default.size));
+        ASSERT(st_sampler_set_expression(audio_left, expression_default.data, expression_default.size));
+        ASSERT(st_sampler_set_expression(audio_right, expression_default.data, expression_default.size));
+        ASSERT(st_sampler_set_expression(waveform_left, expression_default.data, expression_default.size));
+        ASSERT(st_sampler_set_expression(waveform_right, expression_default.data, expression_default.size));
 
-        left_sampler = left;
-        right_sampler = right;
+        sampler_audio_left = audio_left;
+        sampler_audio_right = audio_right;
 
-		const int sample_buffer_size = 512;
+		sampler_waveform_left = waveform_left;
+		sampler_waveform_right = waveform_right;
 
-		waveform_sample_buffer.resize(sample_buffer_size);
-		sample_buffer.resize(sample_buffer_size);
+		const int sample_buffer_size_audio = 512;
+		const int sample_buffer_size_waveform = 16;
+
+		sample_buffer.resize(sample_buffer_size_audio);
+		waveform_sample_buffer.resize(sample_buffer_size_waveform);
     }
 
-    if (!m_audio.initialize(sample_buffer, initial_sample_rate, 1, left_sampler, right_sampler)) {
+    if (!m_audio.initialize(sample_buffer, initial_sample_rate, 1, sampler_audio_left, sampler_audio_right)) {
         std::cerr << "Failed to initialize audio\n";
         return false;
     }
@@ -218,11 +229,11 @@ void Application::update_audio_spec()
     auto sample_rate = string_to_integer(m_ui.sample_rate_box.get_string(), &conversion_success);
     if (conversion_success)
     {
-        st_sampler_set_sample_rate(left_sampler, (float)sample_rate);
-        st_sampler_set_sample_time(left_sampler, 0.0);
+        st_sampler_set_sample_rate(sampler_audio_left, (float)sample_rate);
+        st_sampler_set_sample_time(sampler_audio_left, 0.0);
 
-        st_sampler_set_sample_rate(right_sampler, (float)sample_rate);
-        st_sampler_set_sample_time(right_sampler, 0.0);
+        st_sampler_set_sample_rate(sampler_audio_right, (float)sample_rate);
+        st_sampler_set_sample_time(sampler_audio_right, 0.0);
 
         m_audio.reinitialize(sample_rate, m_audio.m_channel_count);
     }
@@ -337,7 +348,6 @@ void Application::handle_events()
                             bool set = set_eval_string(text_field->get_string());
                             if (!set)
                             {
-                                printf("Could not set sample expression\n");
                                 set_event_active(EVENT_INVALID_EXPRESSION, 3.0);
                             }
 
@@ -488,8 +498,10 @@ void Application::set_event_deactive(int event_index)
 
 void Application::cleanup()
 {
-    st_sampler_destroy(left_sampler);
-    st_sampler_destroy(right_sampler);
+    st_sampler_destroy(sampler_audio_left);
+    st_sampler_destroy(sampler_audio_right);
+	st_sampler_destroy(sampler_waveform_left);
+	st_sampler_destroy(sampler_waveform_right);
     m_audio.cleanup();
 
     ImGui_ImplSDLRenderer3_Shutdown();
@@ -641,10 +653,19 @@ void Application::draw_ui()
 
 	// waveform visualization
 	{
-        render_waveform(left_sampler,
-						vec2(window_size.x * (1.0 / 2.0), window_size.y * (3.0 / 5.0)), // pos
-						vec2(window_size.x * (3.0 / 5.0), window_size.y * (1.0 / 5.0)), // scale
-						Color(0x33, 0x55, 0x66, 0xff));
+		SDL_SetRenderDrawColor(m_window.renderer, 0x22, 0xAA, 0x11, 0xff);
+		SDL_FRect area_left = {window_size.x * (float)(1.0 / 20.0), window_size.y * (float)(1.0 / 2.0), window_size.x * (float)(1.0 / 3.0), window_size.y * (float)(1.0 / 5.0)};
+		SDL_FRect area_right = {window_size.x - (area_left.x + area_left.w), area_left.y, area_left.w, area_left.h};
+
+		SDL_RenderFillRect(m_window.renderer, &area_left);
+		SDL_RenderFillRect(m_window.renderer, &area_right);
+
+        render_waveform(sampler_waveform_left,
+					    vec2(area_left.x + area_left.w / 2, area_left.y + area_left.h / 2), vec2(area_left.w, area_left.h),
+						Color(0xBB, 0x44, 0x32, 0xff));
+        render_waveform(sampler_waveform_right,
+					    vec2(area_right.x + area_right.w / 2, area_right.y + area_right.h / 2), vec2(area_right.w, area_right.h),
+						Color(0xBB, 0x44, 0x32, 0xff));
 	}
 
     // event text
@@ -929,8 +950,8 @@ bool Application::update_input_string()
 
 bool Application::set_eval_string(String eval_string)
 {
-    bool left =  st_sampler_set_expression(left_sampler,  eval_string.data, eval_string.size);
-    bool right = st_sampler_set_expression(right_sampler, eval_string.data, eval_string.size);
+    bool left =  st_sampler_set_expression(sampler_audio_left,  eval_string.data, eval_string.size);
+    bool right = st_sampler_set_expression(sampler_audio_right, eval_string.data, eval_string.size);
 
     bool success = left && right;
     if (!success) {
@@ -945,14 +966,17 @@ void Application::render_waveform(St_Sampler* sampler, vec2 area_center, vec2 ar
 
 	const SDL_FRect area = SDL_FRect{ area_center.x - area_scale.x / 2, area_center.y - area_scale.y / 2, area_scale.x, area_scale.y };
 
-	int sample_count = sample_buffer.size;
+	int sample_count = waveform_sample_buffer.size / 2;
 	float half_h = area.h / 2;
 	float middle_y = area.y + half_h;
 
+	st_fill_strided(sampler, &waveform_sample_buffer.data[0].y, sample_count);
+
     float step_size = (area.w / (float)sample_count);
+	float start_x = area.x + step_size / 2;
 	for (int i = 0; i < sample_count; i++) {
-		waveform_sample_buffer[i].x = area.x * i * step_size;
-		float sample = sample_buffer[i];
+		waveform_sample_buffer[i].x = start_x + i * step_size;
+		float sample = waveform_sample_buffer[i].y;  // copy
 		waveform_sample_buffer[i].y = middle_y - (sample * half_h);
 	}
 
