@@ -106,19 +106,30 @@ private:
 #define DROP_DOWN_LIST_SELECTED_SENTINEL -1
 
 struct Drop_Down_List {
+	struct Entry {
+		Text label = {};
+		union {
+			void* data;
+			int index;
+		};
+
+		Entry() : label(), data(nullptr) {}
+		Entry(Text p_label, void* p_data) : label(p_label), data(p_data) {}
+		Entry(Text p_label, int p_data) : label(p_label), index(p_data) {}
+	};
+	
     vec2 pos = {};
     vec2 scale = {};
     int selected = DROP_DOWN_LIST_SELECTED_SENTINEL;
     Text title = {};
-    DArray<Text> options = {};
+    DArray<Entry> options = {};
     bool open = false;
 
     void toggle() {
         open = !open;
     }
 
-    void set_area(vec2 p_pos, vec2 p_scale)
-    {
+    void set_area(vec2 p_pos, vec2 p_scale) {
         pos = p_pos; scale = p_scale;
     }
 
@@ -126,10 +137,30 @@ struct Drop_Down_List {
         title = text;
     }
 
-    void add_option(Text text) {
-        options.add(text);
+    void add_option(Text text, void* data) {
+        options.add(Entry(text, data));
     }
 
+	void add_option(Text text, int index) {
+		options.add(Entry(text, index));
+	}
+
+	Text get_option_label(int index) const {
+		return options.get(index).label;
+	}
+
+	String get_option_name(int index) const {
+		return options.get(index).label.string;
+	}
+
+	void* get_option_data(int index) const {
+		return options.get(index).data;
+	}
+
+	int get_option_data_index(int index) const {
+		return options.get(index).index;
+	}
+	
     void remove_option(int index) {
         options.remove_shift(index);
     }

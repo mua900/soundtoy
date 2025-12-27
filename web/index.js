@@ -1,10 +1,8 @@
 import { StAudio } from "./audio.js";
 
-// evaluator type
 const BYTECODE_INTERP = 0;
 const TREE_INTERP = 1;
 
-// soundtoy functions
 let st_initialize;
 let st_sampler_create;
 let st_sampler_destroy;
@@ -19,10 +17,8 @@ let st_fill_interleaved;
 let st_fill_strided;
 let st_fill_planar;
 
-let soundtoy_ready;                 // promise
+let soundtoy_ready = new Promise((resolve) => {resolve_soundtoy_ready = resolve;});
 let resolve_soundtoy_ready;
-
-soundtoy_ready = new Promise((resolve) => {resolve_soundtoy_ready = resolve;})
 
 Module.onRuntimeInitialized = function load_soundtoy() {
     st_initialize = Module.cwrap("st_initialize", "boolean", []);

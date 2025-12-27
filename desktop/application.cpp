@@ -80,7 +80,7 @@ bool Application::initialize()
 		St_Sampler* waveform_left = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, waveform_sample_rate);
 		St_Sampler* waveform_right = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, waveform_sample_rate);
 
-        if (!(audio_left && audio_right && waveform_left, waveform_right)) {
+        if (!(audio_left && audio_right && waveform_left && waveform_right)) {
             fprintf(stderr, "Could not create a samplers\n");
             return false;
         }
@@ -98,7 +98,7 @@ bool Application::initialize()
 		sampler_waveform_right = waveform_right;
 
 		const int sample_buffer_size_audio = 512;
-		const int sample_buffer_size_waveform = 16;
+		const int sample_buffer_size_waveform = 1024;
 
 		sample_buffer.resize(sample_buffer_size_audio);
 		waveform_sample_buffer.resize(sample_buffer_size_waveform);
@@ -129,8 +129,8 @@ bool Application::initialize()
         Text mono = create_text(make_string("mono"), Color(0x44, 0x22, 0x55, 0xff));
         Text stereo = create_text(make_string("stereo"), Color(0x44, 0x22, 0x55, 0xff));
         m_ui.channel_count.set_title(create_text(make_string("Channel Count"), Color(0x44, 0x22, 0x55, 0xff)));
-        m_ui.channel_count.add_option(mono);
-        m_ui.channel_count.add_option(stereo);
+        m_ui.channel_count.add_option(mono, nullptr);
+        m_ui.channel_count.add_option(stereo, nullptr);
 
         m_ui.playback_device.set_title(create_text(make_string("Audio Device"), Color(0x44, 0x22, 0x55, 0xff)));
 
@@ -140,6 +140,7 @@ bool Application::initialize()
         printf("Playback devices: \n");
         for (int i = 0; i < count; i++) {
             const char* device_name = SDL_GetAudioDeviceName(devices[i]);
+			// this is done in the event handler as existing devices at initialization time are provided as device_added events by SDL
             // m_ui.playback_device.add_option(create_text(make_string(device_name), Color(0x88, 0x33, 0x11, 0xff)));
 
             printf("%s\n", device_name);
@@ -426,7 +427,9 @@ void Application::handle_events()
                 }
 
                 SDL_AudioDeviceID device = device_event.which;
-                m_ui.playback_device.add_option(create_text(make_string(SDL_GetAudioDeviceName(device)), Color(0x88, 0x33, 0x11, 0xff)));
+
+                m_ui.playback_device.add_option(create_text(make_string(SDL_GetAudioDeviceName(device)), Color(0x88, 0x33, 0x11, 0xff)),
+												device);
                 break;
             }
             case SDL_EVENT_AUDIO_DEVICE_REMOVED: {
@@ -440,8 +443,8 @@ void Application::handle_events()
                 String device_name = make_string(SDL_GetAudioDeviceName(device));
 
                 for (int i = 0; i < m_ui.playback_device.options.size(); i++) {
-                    Text device_text = m_ui.playback_device.options.get(i);
-                    if (string_compare(device_text.string, device_name)) {
+                    String device_text = m_ui.playback_device.get_option_name(i);
+                    if (string_compare(device_text, device_name)) {
                         m_ui.playback_device.remove_option(i);
                         break;
                     }
@@ -703,7 +706,7 @@ void Application::render_dropdown(const Drop_Down_List& list, Color title_color,
             SDL_FRect area = header_area;
             area.y += area.h * (i + 1);
             SDL_RenderFillRect(m_window.renderer, &area);
-            render_text(m_window.renderer, m_assets.font, list.options.get(i),
+            render_text(m_window.renderer, m_assets.font, list.get_option_label(i),
                 vec2(area.x + area.w/2, area.y + area.h/2), vec2(area.w, area.h));
         }
     }
@@ -792,7 +795,8 @@ bool Application::mouse_input_ui()
                 area.y += playback_device_header.h * (i+1);
 
                 if (area.contains(m_mouse.pos)) {
-                    
+					m_audio.set_playback_device(m_ui.playback_device.get_option_data_index(i));
+					
                     got_clikcked = true;
                 }
             }

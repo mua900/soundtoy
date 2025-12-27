@@ -95,8 +95,8 @@ void Audio::cleanup()
     SDL_CloseAudioDevice(m_playback);
     SDL_DestroyAudioStream(m_audio_stream);
 
-	m_sampler_left = nullptr;
-	m_sampler_right = nullptr;
+	sampler_left = nullptr;
+	sampler_right = nullptr;
 	
     m_audio_stream = NULL;
 }
@@ -108,20 +108,20 @@ bool Audio::initialize(Array<float> p_sample_buffer, int freq, int channels, St_
     spec.channels = channels;
     spec.format = SDL_AUDIO_F32;
 
-    SDL_AudioDeviceID default_device = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
+	auto device = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec);
 
-    m_playback = SDL_OpenAudioDevice(default_device, &spec);
-    if (!m_playback)
-    {
+    if (!device) {
+		fprintf(stderr, "Could not open audio device %s. %s\n", SDL_GetAudioDeviceName(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK), SDL_GetError());
         return false;
     }
 
-    m_sampler_left = left;
-    m_sampler_right = right;
+	m_playback = device;
+
+    sampler_left = left;
+    sampler_right = right;
     create_audio_stream(freq, channels);
 
     SDL_PauseAudioDevice(m_playback);
-
     SDL_SetAudioDeviceGain(m_playback, 0.0);
 
     printf("Audio Backend: %s\n", SDL_GetCurrentAudioDriver());
@@ -139,11 +139,40 @@ bool Audio::initialize(Array<float> p_sample_buffer, int freq, int channels, St_
     return true;
 }
 
-bool Audio::reinitialize(int freq, int channels)
-{
+bool Audio::reinitialize(int freq, int channels) {
     SDL_DestroyAudioStream(m_audio_stream);
 
     return create_audio_stream(freq, channels);
+}
+
+bool Audio::set_playback_device(SDL_AudioDeviceID p_device) {
+	if (m_playback) {
+		SDL_CloseAudioDevice(m_playback);
+		m_playback = 0;
+	}
+	
+    SDL_AudioSpec spec = {};
+    spec.freq = m_sample_rate;
+    spec.channels = m_channel_count;
+    spec.format = SDL_AUDIO_F32;
+
+	auto device = SDL_OpenAudioDevice(p_device, &spec);
+
+    if (!device) {
+		fprintf(stderr, "Could not open audio device. %s\n", SDL_GetError());
+        return false;
+    }
+	
+    SDL_PauseAudioDevice(m_playback);
+    SDL_SetAudioDeviceGain(m_playback, 0.0);
+
+    m_playback = device;
+
+	if (!reinitialize(m_sample_rate, m_channel_count)) {
+		return false;
+	}
+
+	return true;
 }
 
 
@@ -153,10 +182,10 @@ static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream,
 
 	Audio* audio = (Audio*) userdata;
 	
-    St_Sampler* sampler = audio->m_sampler_left;
+    St_Sampler* sampler = audio->sampler_left;
 	auto sample_buffer = audio->sample_buffer;
 
-    for (int turn = 0; turn < total_amount / sample_buffer.size + 1; turn++)
+    for (int turn = 0; turn < total_amount / sample_buffer.size; turn++)
     {
         st_fill(sampler, sample_buffer.data, sample_buffer.size);
 
@@ -174,7 +203,7 @@ static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* strea
 
     for (int turn = 0; turn < total_amount / sample_buffer.size; turn++)
     {
-        st_fill_interleaved(audio->m_sampler_left, audio->m_sampler_right, sample_buffer.data, sample_buffer.size / 2);
+        st_fill_interleaved(audio->sampler_left, audio->sampler_right, sample_buffer.data, sample_buffer.size / 2);
 
         SDL_PutAudioStreamData(stream, sample_buffer.data, sample_buffer.size);
     }

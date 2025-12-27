@@ -9,8 +9,10 @@ struct Audio {
     SDL_AudioDeviceID m_playback = 0;
     SDL_AudioStream* m_audio_stream = nullptr;
 
-	St_Sampler* m_sampler_left = nullptr;
-	St_Sampler* m_sampler_right = nullptr;
+	// Non owning pointers
+	St_Sampler* sampler_left = nullptr;
+	St_Sampler* sampler_right = nullptr;
+	
 	Array<float> sample_buffer;
 	
     float m_volume = 0.0;
@@ -26,10 +28,11 @@ struct Audio {
 
     bool set_channel_count(int channel_count);
     void set_samplers(St_Sampler* left, St_Sampler* right) {
-        m_sampler_left = left;
-        m_sampler_right = right;
+        sampler_left = left;
+        sampler_right = right;
     }
-
+	bool set_playback_device(SDL_AudioDeviceID device);
+	
     int get_channel_count() const { return m_channel_count; }
     int get_sample_rate() const { return m_sample_rate; }
 
