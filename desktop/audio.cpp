@@ -95,7 +95,8 @@ void Audio::cleanup()
     SDL_CloseAudioDevice(m_playback);
     SDL_DestroyAudioStream(m_audio_stream);
 
-	m_samplers = Sampler_List{};
+	m_sampler_left = nullptr;
+	m_sampler_right = nullptr;
 	
     m_audio_stream = NULL;
 }
@@ -115,8 +116,8 @@ bool Audio::initialize(Array<float> p_sample_buffer, int freq, int channels, St_
         return false;
     }
 
-    m_samplers.sampler_left = left;
-    m_samplers.sampler_right = right;
+    m_sampler_left = left;
+    m_sampler_right = right;
     create_audio_stream(freq, channels);
 
     SDL_PauseAudioDevice(m_playback);
@@ -152,7 +153,7 @@ static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream,
 
 	Audio* audio = (Audio*) userdata;
 	
-    St_Sampler* sampler = audio->m_samplers.sampler_left;
+    St_Sampler* sampler = audio->m_sampler_left;
 	auto sample_buffer = audio->sample_buffer;
 
     for (int turn = 0; turn < total_amount / sample_buffer.size + 1; turn++)
@@ -169,12 +170,11 @@ static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* strea
 
 	Audio* audio = (Audio*)userdata;
 
-	Sampler_List* samplers = &audio->m_samplers;
 	auto sample_buffer = audio->sample_buffer;
 
     for (int turn = 0; turn < total_amount / sample_buffer.size; turn++)
     {
-        st_fill_interleaved(samplers->sampler_left, samplers->sampler_right, sample_buffer.data, sample_buffer.size / 2);
+        st_fill_interleaved(audio->m_sampler_left, audio->m_sampler_right, sample_buffer.data, sample_buffer.size / 2);
 
         SDL_PutAudioStreamData(stream, sample_buffer.data, sample_buffer.size);
     }

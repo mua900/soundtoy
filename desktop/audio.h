@@ -9,7 +9,8 @@ struct Audio {
     SDL_AudioDeviceID m_playback = 0;
     SDL_AudioStream* m_audio_stream = nullptr;
 
-	Sampler_List m_samplers = {};
+	St_Sampler* m_sampler_left = nullptr;
+	St_Sampler* m_sampler_right = nullptr;
 	Array<float> sample_buffer;
 	
     float m_volume = 0.0;
@@ -25,8 +26,8 @@ struct Audio {
 
     bool set_channel_count(int channel_count);
     void set_samplers(St_Sampler* left, St_Sampler* right) {
-        m_samplers.sampler_left = left;
-        m_samplers.sampler_right = right;
+        m_sampler_left = left;
+        m_sampler_right = right;
     }
 
     int get_channel_count() const { return m_channel_count; }
