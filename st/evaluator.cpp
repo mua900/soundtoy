@@ -751,12 +751,10 @@ BuiltinVar_ID get_builtin_var_id(String name)
 
 // returns 0 if no constant matches
 double get_builtin_constant(String name) {
-    if (string_compare(name, make_string("pi")) || string_compare(name, make_string("PI"))
-        ) {
+    if (string_compare(name, make_string("pi")) || string_compare(name, make_string("PI"))) {
         return CONSTANT_PI;
     }
-    else if (string_compare(name, make_string("e")) || string_compare(name, make_string("E"))
-        ) {
+    else if (string_compare(name, make_string("e")) || string_compare(name, make_string("E"))) {
         return CONSTANT_E;
     }
 	else if (string_compare(name, make_string("TAU")) || string_compare(name, make_string("tau"))) {

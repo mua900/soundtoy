@@ -885,18 +885,18 @@ void Ui_State::update(Window window)
     sample_rate_box.m_area.h = window_size.y * (1.0 / 5.0);
 
     channel_count.set_area(
-        vec2(window_size.x / 2,
-             window_size.y * (1.0 / 5.0)),
-        vec2((float)window_size.x * (1.0 / 5.0),
-             (float)window_size.y * (1.0 / 10.0))
-    );
+						   vec2(window_size.x / 2,
+								window_size.y * (1.0 / 5.0)),
+						   vec2((float)window_size.x * (1.0 / 5.0),
+								(float)window_size.y * (1.0 / 10.0))
+						   );
 
     playback_device.set_area(
-        vec2(window_size.x / 3,
-             window_size.y * (2.0 / 5.0)),
-        vec2((float)window_size.x * (1.0 / 5.0),
-             (float)window_size.y * (1.0 / 10.0))
-    );
+							 vec2(window_size.x * (0.8 / 3.0),
+								  window_size.y * (1.5 / 5.0)),
+							 vec2((float)window_size.x * (1.0 / 5.0),
+								  (float)window_size.y * (1.0 / 10.0))
+							 );
 }
 
 Text_Field* Ui_State::get_selected_text_field()
