@@ -40,6 +40,7 @@ const char* get_token_type_string(Token_Type type)
         case TOKEN_TYPE_PAREN_CLOSE:        return "TOKEN_TYPE_PAREN_CLOSE";
         case TOKEN_TYPE_BRACE_OPEN:         return "TOKEN_TYPE_BRACE_OPEN";
         case TOKEN_TYPE_BRACE_CLOSE:        return "TOKEN_TYPE_BRACE_CLOSE";
+     	case TOKEN_TYPE_QUESTION_MARK:      return "TOKEN_TYPE_QUESTION_MARK";
         case TOKEN_TYPE_EXCLAMATION:        return "TOKEN_TYPE_EXCLAMATION";
         case TOKEN_TYPE_EQUALS:             return "TOKEN_TYPE_EQUALS";
         case TOKEN_TYPE_GREATER:            return "TOKEN_TYPE_GREATER";

@@ -40,10 +40,12 @@ private:
     Expr* parse_expression();
 
     // according to precedence in order
+	Expr* parse_ternary_expr();
     Expr* parse_equality_expr();
     Expr* parse_comparison_expr();
     Expr* parse_arithmetic_expr();
     Expr* parse_factor_expr();
+	Expr* parse_mod_expr();
     Expr* parse_unary_expr();
     Expr* parse_call_expr();
     Expr* parse_primary_expr();

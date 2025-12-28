@@ -59,6 +59,9 @@ DArray<Token> tokenize(String expression)
             case '}':
                 ADD_TOKEN(TOKEN_TYPE_BRACE_CLOSE, "}")
                 break;
+            case '?':
+				ADD_TOKEN(TOKEN_TYPE_QUESTION_MARK, "?")
+				break;
             case '!': {
                 if (expression.data[cursor+1] == '=')
                 {
@@ -242,7 +245,7 @@ Expr* Parser::parse(String expression_string)
 
 Expr* Parser::parse_expression()
 {
-    Expr* expr = parse_equality_expr();
+    Expr* expr = parse_ternary_expr();
     if (expr)
     {
         String error_string = {};
@@ -255,6 +258,37 @@ Expr* Parser::parse_expression()
     }
 
     return expr;
+}
+
+Expr* Parser::parse_ternary_expr() {
+	Expr* expr = parse_equality_expr();
+	if (!expr) return nullptr;
+
+	if (tokens.get(cursor).type == TOKEN_TYPE_QUESTION_MARK) {
+		cursor++;  // ?
+
+		Expr* then_branch = parse_expression();
+		if (tokens.get(cursor).type != TOKEN_TYPE_COLON) {
+			free_tree(expr);
+			free_tree(then_branch);
+			return nullptr;
+		}
+
+		cursor++;  // :
+		
+		Expr* else_branch = parse_expression();
+		if (!(then_branch && else_branch)) {
+			free_tree(expr);
+			free_tree(then_branch);
+			free_tree(else_branch);
+			return nullptr;
+		}
+
+		return new Expr_Ternary(expr, then_branch, else_branch);
+	}
+	else {
+		return expr;
+	}
 }
 
 Expr* Parser::parse_equality_expr()
@@ -334,20 +368,20 @@ Expr* Parser::parse_arithmetic_expr()
 
 Expr* Parser::parse_factor_expr()
 {
-    Expr* left = parse_unary_expr();
+    Expr* left = parse_mod_expr();
     Token_Type type = tokens.get(cursor).type;
     while (type == TOKEN_TYPE_STAR || type == TOKEN_TYPE_SLASH)
     {
         cursor++;
 
-        Expr* right = parse_unary_expr();
-        if (!right)
-        {
+        Expr* right = parse_mod_expr();
+        if (!right) {
+			free_tree(left);
             return NULL;
         }
 
         Op_Binary op = get_binop(type);
-        if (op == Binop_Unknown) return NULL;  // this should be a bug if it happens
+		ASSERT(op != Binop_Unknown);
 
         left = new Expr_Binary(left, right, op);
 
@@ -355,6 +389,32 @@ Expr* Parser::parse_factor_expr()
     }
 
     return left;
+}
+
+Expr* Parser::parse_mod_expr() {
+	Expr* left = parse_unary_expr();
+
+	Token_Type type = tokens.get(cursor).type;
+    while (type == TOKEN_TYPE_PERCENT)
+	{
+		cursor++;
+		
+		Expr* right = parse_unary_expr();
+		if (!right) {
+			free_tree(left);
+			return NULL;
+		}
+
+		// Op_Binary op = Binop_Mod;
+		Op_Binary op = get_binop(type);
+		ASSERT(op != Binop_Unknown);
+
+		left = new Expr_Binary(left, right, op);
+
+		type = tokens.get(cursor).type;
+	}
+	
+	return left;
 }
 
 Expr* Parser::parse_unary_expr()
@@ -651,8 +711,22 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
                 NOT_IMPLEMENTED("User defined functions")
             }
         }
-        default:
-            panic("Unknown expression type");
+	case Expr_Type::Ternary: {
+		auto ternary = static_cast<Expr_Ternary*>(expr);
+		Eval result = evaluate_expression(ternary->condition);
+
+		if (!result.success) return fail;
+		
+		if (result.value == 0.0) {
+			return evaluate_expression(ternary->else_);
+		}
+		else {
+			return evaluate_expression(ternary->then_);
+		}
+	}
+	default: {
+		panic("Unknown expression type");
+	}
     }
 }
 
@@ -676,11 +750,11 @@ void print_expr(const Expr* expr, int indent)
             switch (literal->value.type)
             {
                 case Value_Type::INTEGER:
-                    printf("Literal: %li\n", literal->value.integer); break;
+                    printf("Integer Literal: %li\n", literal->value.integer); break;
                 case Value_Type::REAL:
-                    printf("Literal: %f\n", literal->value.real); break;
+                    printf("Float Literal: %f\n", literal->value.real); break;
                 case Value_Type::BOOL:
-                    printf("Bool: %s\n", BOOL_STRING(literal->value.boolean)); break;
+                    printf("Boolean Literal: %s\n", BOOL_STRING(literal->value.boolean)); break;
             }
             break;
         }
@@ -694,14 +768,14 @@ void print_expr(const Expr* expr, int indent)
         {
             const auto unary = static_cast<const Expr_Unary*>(expr);
             const char* operator_string = (unary->op == Unop_Negate) ? "Negate" : "Not";
-            printf("Unary %s\n", operator_string);
+            printf("Unary Expression %s\n", operator_string);
             print_expr(unary->operand, indent + 1);
             break;
         }
         case Expr_Type::Binary:
         {
             const auto binary = static_cast<const Expr_Binary*>(expr);
-            printf("Binary %s\n", get_binop_string(binary->op));
+            printf("Binary Expression %s\n", get_binop_string(binary->op));
             print_expr(binary->left, indent + 1);
             print_expr(binary->right, indent + 1);
             break;
@@ -709,13 +783,14 @@ void print_expr(const Expr* expr, int indent)
         case Expr_Type::Grouping:
         {
             const auto grouping = static_cast<const Expr_Grouping*>(expr);
-            printf("Grouping\n");
+            printf("Grouping Expression\n");
             print_expr(grouping->expr, indent + 1);
             break;
         }
         case Expr_Type::Call:
         {
             const auto call = static_cast<const Expr_Call*>(expr);
+			printf("Call Expression\n");
             call->function_name.print(true);
             for (int i = 0; i < call->arguments.size; i++)
             {
@@ -724,8 +799,18 @@ void print_expr(const Expr* expr, int indent)
 
             break;
         }
-        default:
+	case Expr_Type::Ternary: {
+		const auto ternary = static_cast<const Expr_Ternary*>(expr);
+		printf("Ternary Expression\n");
+		print_expr(ternary->condition, indent + 1);
+		print_expr(ternary->then_, indent + 2);
+		print_expr(ternary->else_, indent + 2);
+
+		break;
+	}
+	default: {
             panic("Unknown expression type");
+	}
     }
 }
 
@@ -809,6 +894,10 @@ Function_ID get_function_id(String name)
 }
 
 void free_tree(Expr* node) {
+	if (!node) {
+		return;
+	}
+	
 	if (node->type == Expr_Type::Binary) {
 		free_tree(static_cast<Expr_Binary*>(node)->left);
 		free_tree(static_cast<Expr_Binary*>(node)->right);
@@ -1006,7 +1095,43 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
 			}
 			return expr;
 		}
-    }
 
+	case Expr_Type::Ternary:
+		{
+			auto ternary = static_cast<Expr_Ternary*>(expr);
+			auto cond = collapse_expr_real(ternary->condition, builtin_functions, error_string);
+			if (!cond) {
+				return NULL;
+			}
+
+			if (cond->type == Expr_Type::Literal) {
+				bool thruth_value = static_cast<Expr_Literal*>(cond)->value.evaluate_truth_value();
+
+				delete ternary;
+				if (thruth_value) {
+					free_tree(ternary->else_);
+					return new Expr_Literal(ternary->then_);
+				}
+				else {
+					free_tree(ternary->then_);
+					return new Expr_Literal(ternary->else_);
+				}
+			}
+
+			ternary->condition = cond;
+		
+			auto then_ = collapse_expr_real(ternary->then_, builtin_functions, error_string);
+			auto else_ = collapse_expr_real(ternary->else_, builtin_functions, error_string);
+
+			if (!(then_ && else_)) {
+				return NULL;
+			}
+
+			ternary->then_ = then_;
+			ternary->else_ = else_;
+
+			break;
+		}
+    }
     return expr;
 }

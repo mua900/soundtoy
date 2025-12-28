@@ -52,6 +52,16 @@ struct Value {
     bool is_numeric() {
         return type == Value_Type::INTEGER || type == Value_Type::REAL;
     }
+
+	bool evaluate_truth_value() {
+		switch (type) {
+		case Value_Type::BOOL: return boolean;
+		case Value_Type::INTEGER: return integer != 0;
+		case Value_Type::REAL: return real != 0.0;
+		}
+
+		panic("Unknown value type");
+	}
 };
 
 enum class Expr_Type {
@@ -61,6 +71,7 @@ enum class Expr_Type {
     Binary,
     Grouping,
     Call,
+	Ternary,
 };
 
 struct Expr {
@@ -72,13 +83,16 @@ void print_expr(const Expr* expr, int indent);
 struct Expr_Literal : Expr {
     Value value;
 
-    Expr_Literal(bool b) : value(b) {
+    Expr_Literal(bool b) : value(b)
+	{
         type = Expr_Type::Literal;
     }
-    Expr_Literal(long long integer) : value(integer) {
+    Expr_Literal(long long integer) : value(integer)
+	{
         type = Expr_Type::Literal;
     }
-    Expr_Literal(double real) : value(real) {
+    Expr_Literal(double real) : value(real)
+	{
         type = Expr_Type::Literal;
     }
 };
@@ -87,7 +101,8 @@ struct Expr_Unary : Expr {
     Op_Unary op;
     Expr* operand = NULL;
 
-    Expr_Unary(Op_Unary p_op, Expr* p_operand) : op(p_op), operand(p_operand) {
+    Expr_Unary(Op_Unary p_op, Expr* p_operand) : op(p_op), operand(p_operand)
+	{
         type = Expr_Type::Unary;
     }
 };
@@ -97,7 +112,8 @@ struct Expr_Binary : Expr {
     Expr* right = NULL;
     Op_Binary op;
 
-    Expr_Binary(Expr* l, Expr* r, Op_Binary p_op) : left(l), right(r), op(p_op) {
+    Expr_Binary(Expr* l, Expr* r, Op_Binary p_op) : left(l), right(r), op(p_op)
+	{
         type = Expr_Type::Binary;
     }
 };
@@ -110,7 +126,8 @@ bool binop_is_comparison(Op_Binary op);
 struct Expr_Grouping : Expr {
     Expr* expr = NULL;
 
-    Expr_Grouping(Expr* p_expr) : expr(p_expr) {
+    Expr_Grouping(Expr* p_expr) : expr(p_expr)
+	{
         type = Expr_Type::Grouping;
     }
 };
@@ -121,7 +138,8 @@ struct Expr_Call : Expr {
     Array<Expr*> arguments;
     int fn_id = 0;  // function id assigned by parser
 
-    Expr_Call(String f_name, Array<Expr*> args, int func_id) : function_name(f_name), arguments(args), fn_id(func_id) {
+    Expr_Call(String f_name, Array<Expr*> args, int func_id) : function_name(f_name), arguments(args), fn_id(func_id)
+	{
         type = Expr_Type::Call;
     }
 };
@@ -131,7 +149,19 @@ struct Expr_Variable : Expr {
     int var_id = 0;
     Value_Type variable_type;  // @todo
 
-    Expr_Variable(String var_name, int id) : name(var_name), var_id(id), variable_type(Value_Type::INTEGER) {
+    Expr_Variable(String var_name, int id) : name(var_name), var_id(id), variable_type(Value_Type::INTEGER)
+	{
         type = Expr_Type::Variable;
     }
+};
+
+struct Expr_Ternary : Expr {
+	Expr* condition = nullptr;
+	Expr* then_ = nullptr;
+	Expr* else_ = nullptr;
+
+	Expr_Ternary(Expr* condition, Expr* then_, Expr* else_) : condition(condition), then_(then_), else_(else_)
+	{
+		type = Expr_Type::Ternary;
+	}
 };

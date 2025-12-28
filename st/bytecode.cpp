@@ -188,6 +188,72 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 
             return location;
         }
+    	case Expr_Type::Ternary: {
+			// This uses weird hacks to go around the fact that we are trying to compile a part of a program with non-linear control flow in a simple way and in a single go.
+			// Ideally we want to restructure the system to detect and compile basic blocks individually and then combine them into a program which can open up additional optimizations but i don't have time for that right now.
+			
+			auto ternary = static_cast<Expr_Ternary*>(expr);
+
+			u32 then_length;
+			u32 else_length;
+
+			Value_Location_Type then_loc_type;
+			Value_Location_Type else_loc_type;
+			
+			{
+				// @hack
+				Bytecode_Program dumy;
+				
+				then_loc_type = compile_expr(ternary->then_, dumy).location_type;
+				then_length = dumy.code.size();
+
+			    dumy.reset();
+				
+				else_loc_type = compile_expr(ternary->else_, dumy).location_type;
+				else_length = dumy.code.size();
+				dumy.reset();
+			}
+			
+			Value_Location_Info cond_result = compile_expr(ternary->condition, program);
+			
+			if (cond_result.location_type == Value_Location_Type::INTEGER_REGISTER) {
+				program.emit_bytecode_instruction(INSTR_TEST, cond_result.integer_register, 0);
+			}
+			else if (cond_result.location_type == Value_Location_Type::FLOATING_POINT_REGISTER) {
+				program.emit_bytecode_instruction(INSTR_TEST_F, cond_result.floating_point_register, 0);
+			}
+			else if (cond_result.location_type == Value_Location_Type::CONSTANT_BLOCK) {
+				u16 reg = program.get_value_to_gp_register(cond_result);
+				program.emit_bytecode_instruction(INSTR_TEST, reg, 0);
+			}
+
+			// both paths will write their results to a common register
+			// emulating returning
+			u32 result_register = program.allocate_fp_register();
+
+			// there is no jump if not instruction so else block goes first and then block goes second
+			// + 1 is for the jump instruction at the beginning
+			// additional + 2 for the necessary jump and copy at the end of the branch that will go on top of the other one
+			u32 then_branch = program.code.index() + 1 + else_length + 2;
+			u32 else_branch = program.code.index() + 1;
+			u32 expr_end = program.code.index() + 1 + else_length + 2 + then_length;
+			
+			program.emit_bytecode_instruction(INSTR_JMP_COND, then_branch, 0);
+
+
+			Value_Location_Info else_loc = compile_expr(ternary->else_, program);
+			program.emit_bytecode_instruction(INSTR_JMP, expr_end, 0);
+			program.copy_value_to_fp_register(else_loc, result_register);  // single instruction
+			
+			Value_Location_Info then_loc = compile_expr(ternary->then_, program);
+			program.copy_value_to_fp_register(then_loc, result_register);
+
+			Value_Location_Info result_loc;
+			result_loc.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+			result_loc.floating_point_register = result_register;
+
+			return result_loc;
+		}
         default: {
             panic("Unknown expression type");
         }
@@ -230,6 +296,29 @@ u16 Bytecode_Program::allocate_fp_register() {
 	return processor.fregs.add(0.0);
 }
 
+// guaranteed to output a single instruction
+void Bytecode_Program::copy_value_to_fp_register(Value_Location_Info val_loc, u16 dest_reg) {
+    if (val_loc.location_type == Value_Location_Type::FLOATING_POINT_REGISTER) {
+		emit_bytecode_instruction(INSTR_MOVF, dest_reg, val_loc.floating_point_register);
+    }
+    else {
+        if (val_loc.location_type == Value_Location_Type::CONSTANT_BLOCK) {
+			if (val_loc.const_id.constant_type == CONSTANT_TYPE_REAL) {
+				emit_bytecode_instruction(INSTR_LOADF, dest_reg, val_loc.const_id.constant_index);
+			}
+			else if (val_loc.const_id.constant_type == CONSTANT_TYPE_BUILTIN) {
+				emit_bytecode_instruction(INSTR_LOAD_BUILTIN, dest_reg, val_loc.const_id.constant_index);
+			}
+			else if (val_loc.const_id.constant_type == CONSTANT_TYPE_INTEGER) {
+				emit_bytecode_instruction(INSTR_LOAD_I_TO_F, dest_reg, val_loc.const_id.constant_index);
+			}
+        }
+        else if (val_loc.location_type == Value_Location_Type::INTEGER_REGISTER) {
+            emit_bytecode_instruction(INSTR_MOV_I_TO_F, dest_reg, val_loc.integer_register);
+        }
+    }
+}
+
 u16 Bytecode_Program::get_value_to_fp_register(Value_Location_Info val_info)
 {
     if (val_info.location_type == Value_Location_Type::FLOATING_POINT_REGISTER) {
@@ -238,13 +327,31 @@ u16 Bytecode_Program::get_value_to_fp_register(Value_Location_Info val_info)
     else {
         u16 freg = allocate_fp_register();
         if (val_info.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-            emit_load_constant(val_info.const_id);
+			emit_bytecode_instruction(INSTR_LOAD_I_TO_F, freg, val_info.const_id.constant_index);
         }
         else if (val_info.location_type == Value_Location_Type::INTEGER_REGISTER) {
             emit_bytecode_instruction(INSTR_MOV_I_TO_F, freg, val_info.integer_register);
         }
 
         return freg;
+    }
+}
+
+u16 Bytecode_Program::get_value_to_gp_register(Value_Location_Info val_info)
+{
+    if (val_info.location_type == Value_Location_Type::INTEGER_REGISTER) {
+        return val_info.integer_register;
+    }
+    else {
+        u16 reg = allocate_gp_register();
+        if (val_info.location_type == Value_Location_Type::CONSTANT_BLOCK) {
+			emit_bytecode_instruction(INSTR_LOAD_F_TO_I, reg, val_info.const_id.constant_index);
+        }
+        else if (val_info.location_type == Value_Location_Type::FLOATING_POINT_REGISTER) {
+            emit_bytecode_instruction(INSTR_MOV_I_TO_F, reg, val_info.floating_point_register);
+        }
+
+        return reg;
     }
 }
 
@@ -272,7 +379,7 @@ Value_Location_Info Bytecode_Program::emit_load_constant(Constant_Id const_id)
                 break;
             }
         case CONSTANT_TYPE_BUILTIN: {
-            u32 freg = allocate_gp_register();
+            u32 freg = allocate_fp_register();
             emit_bytecode_instruction(INSTR_LOAD_BUILTIN, freg, const_id.constant_index);
             location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
             location.floating_point_register = freg;
@@ -462,6 +569,7 @@ float bytecode_run(Bytecode_Program& program)
     Bytecode_Processor& processor = program.processor;
     Constant_Block& constant_block = program.constant_block;
     Bytecode_Code& code = program.code;
+	DArray<float>& variables = program.variables;
 
 #define BYTECODE_PROGRAM_MAXIMUM_ITERATION_COUNT 2000
     int iteration_count = 0;
@@ -500,6 +608,27 @@ float bytecode_run(Bytecode_Program& program)
 
                 break;
             }
+		case INSTR_LOAD_VAR: {
+			u16 freg = instr.op0;
+			u16 var_id = instr.op1;
+
+			processor.fregs.get_ref(freg) = variables.get(var_id);
+			break;
+		}
+		case INSTR_LOAD_I_TO_F: {
+			u16 freg = instr.op0;
+			u16 const_int = instr.op1;
+
+			processor.fregs.get_ref(freg) = constant_block.integer.get(const_int);
+			break;
+		}
+		case INSTR_LOAD_F_TO_I: {
+			u16 reg = instr.op0;
+			u16 const_float = instr.op1;
+
+			processor.regs.get_ref(reg) = constant_block.real.get(const_float);
+			break;
+		}
             case INSTR_MOV: {
                 u16 reg_0 = instr.op0;
                 u16 reg_1 = instr.op1;
@@ -670,6 +799,30 @@ float bytecode_run(Bytecode_Program& program)
 
                 break;
             }
+		case INSTR_TEST: {
+			u16 reg = instr.op0;
+			u16 result = processor.regs.get(reg);
+			if (result) {
+				processor.result_flags |= CONDITION_RESULT;
+			}
+			else {
+				processor.result_flags &= ~CONDITION_RESULT;
+			}
+			
+			break;
+		}
+		case INSTR_TEST_F: {
+			u16 freg = instr.op0;
+			u16 result = processor.fregs.get(freg);
+			if (result != 0.0) {
+				processor.result_flags |= CONDITION_RESULT;
+			}
+			else {
+				processor.result_flags &= ~CONDITION_RESULT;
+			}
+			
+			break;
+		}
 
             case INSTR_TEST_RESULT: {
                 u32 test_value = (u32)instr.op0;
@@ -744,6 +897,8 @@ const char* opcode_string(Bytecode_Opcode opcode) {
         case INSTR_LOAD: return "INSTR_LOAD";
         case INSTR_LOADF: return "INSTR_LOADF";
         case INSTR_LOAD_BUILTIN: return "INSTR_LOAD_BUILTIN";
+	    case INSTR_LOAD_VAR: return "INSTR_LOAD_VAR";
+    	case INSTR_LOAD_I_TO_F: return "INSTR_LOAD_I_TO_F";
         case INSTR_MOV: return "INSTR_MOV";
         case INSTR_MOVF: return "INSTR_MOVF";
         case INSTR_MOV_I_TO_F: return "INSTR_MOV_I_TO_F";

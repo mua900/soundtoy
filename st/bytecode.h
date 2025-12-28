@@ -24,19 +24,6 @@ Constant Block:
 	They are used via instructions to load values from the constant block into registers.
 */
 
-enum Constant_Type {
-	CONSTANT_TYPE_INTEGER,
-	CONSTANT_TYPE_REAL,
-	CONSTANT_TYPE_BUILTIN,
-};
-
-struct Constant_Id {
-	Constant_Type constant_type;
-	u16 constant_index;
-};
-
-using Func_Id = u16;
-
 enum Bytecode_Opcode : u32
 {
 	// destination source syntax
@@ -44,7 +31,9 @@ enum Bytecode_Opcode : u32
 	INSTR_LOAD,			// load reg, const_int
 	INSTR_LOADF,		// load freg, const_float
 	INSTR_LOAD_BUILTIN,	// load_builtin freg builtin_id
-	INSTR_LOAD_VAR,		// load_var var_id freg
+	INSTR_LOAD_VAR,		// load_var freg var_id
+	INSTR_LOAD_I_TO_F,  // load freg, const_int
+	INSTR_LOAD_F_TO_I,  // load reg, const_float
 
 	INSTR_MOV,			// mov  reg, reg
 	INSTR_MOVF,			// mov  freg, freg
@@ -72,6 +61,10 @@ enum Bytecode_Opcode : u32
 	INSTR_CMP,			// cmp reg0, reg1
 	INSTR_CMPF,			// cmpf freg0, freg1
 
+	// test if the value stored in the argument register is 0 and set the condition bit to 0 if it is and 1 if it is not.
+	INSTR_TEST,         // test reg
+	INSTR_TEST_F,       // test freg
+
 	// commit the result of the previous generic compare operation for a specific case to the condition bit
 	INSTR_TEST_RESULT,	// test immediate8
 
@@ -94,6 +87,19 @@ enum Bytecode_Opcode : u32
 };
 
 const char* opcode_string(Bytecode_Opcode opcode);
+
+enum Constant_Type {
+	CONSTANT_TYPE_INTEGER,
+	CONSTANT_TYPE_REAL,
+	CONSTANT_TYPE_BUILTIN,
+};
+
+struct Constant_Id {
+	Constant_Type constant_type;
+	u16 constant_index;
+};
+
+using Func_Id = u16;
 
 enum Value_Location_Type {
 	INTEGER_REGISTER,
@@ -139,6 +145,14 @@ struct Constant_Block {
 
 struct Bytecode_Code {
 	DArray<Bytecode_Instr> code;
+
+	u32 index() const {
+		return code.size() - 1;
+	}
+
+	u32 size() const {
+		return code.size();
+	}
 };
 
 #define CONDITION_RESULT				BIT(0)
@@ -175,7 +189,9 @@ struct Bytecode_Program {
 	u16 allocate_gp_register();
 	u16 allocate_fp_register();
 
+	void copy_value_to_fp_register(Value_Location_Info val_loc, u16 dest_reg);
 	u16 get_value_to_fp_register(Value_Location_Info val_info);
+	u16 get_value_to_gp_register(Value_Location_Info val_info);
 
 	void emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg0, u16 arg1);
 
@@ -193,7 +209,7 @@ struct Bytecode_Program {
 	void set_sample_rate(float sample_rate);
 	float get_sample_rate();
 	float get_sample_time();
-
+	
 	void print_program();
 };
 
