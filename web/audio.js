@@ -15,15 +15,11 @@ export class StAudio {
         this.gainNode = new GainNode(this.audio_context);
         this.gainNode.gain.value = 0.0;
 
-        this.audio_context.audioWorklet.addModule("audio_processor.js");
+        await this.audio_context.audioWorklet.addModule("audio_processor.js");
         this.workletNode = new AudioWorkletNode(this.audio_context, "audio_processor");
 
         this.workletNode.connect(this.gainNode).connect(this.audio_context.destination);
         await this.audio_context.suspend();
-    }
-
-    async reinitialize(sample_rate, channel_count) {
-        // @todo
     }
 
     getVolume() {

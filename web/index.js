@@ -17,8 +17,10 @@ let st_fill_interleaved;
 let st_fill_strided;
 let st_fill_planar;
 
-let soundtoy_ready = new Promise((resolve) => {resolve_soundtoy_ready = resolve;});
+let soundtoy_ready;
 let resolve_soundtoy_ready;
+
+soundtoy_ready = new Promise((resolve) => {resolve_soundtoy_ready = resolve;});
 
 Module.onRuntimeInitialized = function load_soundtoy() {
     st_initialize = Module.cwrap("st_initialize", "boolean", []);

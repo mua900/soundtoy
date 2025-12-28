@@ -16,4 +16,4 @@ class AudioProcessor extends AudioWorkletProcessor {
     }
 }
 
-AudioWorkletGlobalScope.registerProcessor("audio_processor", AudioProcessor);
+registerProcessor("audio_processor", AudioProcessor);
