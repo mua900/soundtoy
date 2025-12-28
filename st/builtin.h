@@ -2,8 +2,9 @@
 
 #include "expr.h"
 
-#define CONSTANT_PI 3.14159265359
-#define CONSTANT_E  2.71828182846
+#define CONSTANT_PI  3.14159265359
+#define CONSTANT_E   2.71828182846
+#define CONSTANT_TAU CONSTANT_PI * 2.0
 
 // @todo higher level builtins for audio
 
@@ -60,6 +61,7 @@ enum Builtin_Variable : unsigned int {
 enum Builtin_Constants {
     // constant
     BUILTIN_CONSTANT_PI,
+	BUILTIN_CONSTANT_TAU,
     BUILTIN_CONSTANT_E,
 
     BUILTIN_CONSTANT_COUNT,
