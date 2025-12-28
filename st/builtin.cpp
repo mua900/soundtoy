@@ -25,7 +25,6 @@ void get_default_builtin_functions(Builtin_Function* list)
 
 bool is_builtin_function(const Expr_Call* call)
 {
-    ASSERT(call->arguments.size == 1);  // builtin functions should have a parameter count of 1
     return call->fn_id <= BUILTIN_FUNC_COUNT;
 }
 
