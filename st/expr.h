@@ -146,7 +146,7 @@ struct Expr_Call : Expr {
 
 struct Expr_Variable : Expr {
     String name;
-    int var_id = 0;
+    unsigned int var_id = 0;
     Value_Type variable_type;  // @todo
 
     Expr_Variable(String var_name, int id) : name(var_name), var_id(id), variable_type(Value_Type::INTEGER)

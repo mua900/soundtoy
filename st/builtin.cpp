@@ -1,5 +1,5 @@
 #include "builtin.h"
-#include <math.h>
+#include <cmath>
 
 // custom implemented builtins
 double get_sign(double x);

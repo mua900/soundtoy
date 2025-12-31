@@ -1,6 +1,6 @@
 #include "common.h"
 
-#include <math.h>
+#include <cmath>
 
 unsigned int pop_count(u64 x)
 {

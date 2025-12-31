@@ -35,21 +35,6 @@ enum Builtin_Func_Type {
     BUILTIN_FUNC_UNKNOWN,
 };
 
-static const char* Builtin_Func_Names[BUILTIN_FUNC_COUNT] = {
-    "BUILTIN_FUNC_EXP",
-    "BUILTIN_FUNC_ABS",
-    "BUILTIN_FUNC_SIGN",
-    "BUILTIN_FUNC_CEIL",
-    "BUILTIN_FUNC_FLOOR",
-    "BUILTIN_FUNC_CLAMP_RANGE_NORMAL",
-    "BUILTIN_FUNC_CLAMP_RANGE_AUDIO",
-    "BUILTIN_FUNC_SMOOTHSTEP",
-    "BUILTIN_FUNC_SIN",
-    "BUILTIN_FUNC_COS",
-    "BUILTIN_FUNC_ARCSIN",
-    "BUILTIN_FUNC_ARCCOS",
-};
-
 enum Builtin_Variable : unsigned int {
     // constant per evaluation
     BUILTIN_VARIABLE_TIME = 0,

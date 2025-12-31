@@ -1,6 +1,6 @@
 #include "bytecode.h"
 
-#include <math.h>
+#include <cmath>
 
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program);
 static Bytecode_Opcode get_arithmetic_binop_opcode_integer(Op_Binary binary);
@@ -197,19 +197,14 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 			u32 then_length;
 			u32 else_length;
 
-			Value_Location_Type then_loc_type;
-			Value_Location_Type else_loc_type;
-			
 			{
 				// @hack
 				Bytecode_Program dumy;
 				
-				then_loc_type = compile_expr(ternary->then_, dumy).location_type;
 				then_length = dumy.code.size();
 
 			    dumy.reset();
 				
-				else_loc_type = compile_expr(ternary->else_, dumy).location_type;
 				else_length = dumy.code.size();
 				dumy.reset();
 			}

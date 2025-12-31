@@ -52,7 +52,7 @@ const char* get_token_type_string(Token_Type type)
         case TOKEN_TYPE_IDENT:              return "TOKEN_TYPE_IDENT";
         case TOKEN_TYPE_LITERAL_INT:        return "TOKEN_TYPE_LITERAL_INT";
         case TOKEN_TYPE_LITERAL_FLOAT:      return "TOKEN_TYPE_LITERAL_FLOAT";
-        // TT_LITERAL_STRING
+    	case TOKEN_TYPE_LITERAL_STRING:     return "TOKEN_TYPE_LITERAL_STRING";
         case TOKEN_TYPE_END:                return "TOKEN_TYPE_END";
     }
 }

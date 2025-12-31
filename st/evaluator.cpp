@@ -3,9 +3,7 @@
 extern const double PI;
 extern const double E;
 
-#include <math.h>
-
-// @todo get rid of panics
+#include <cmath>
 
 DArray<Token> tokenize(String expression)
 {

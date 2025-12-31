@@ -12,7 +12,6 @@ foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${CMAKE_BINARY_DIR}/lib)
 endforeach()
 
-# TODO ifdef this to be excluded on builds for other platforms
 add_executable(soundtoy
     desktop/main.cpp
     

@@ -4,3 +4,6 @@ build_debug/
 .idea/
 .vscode/
 imgui.ini
+tmp/
+*.pch
+*.gch
