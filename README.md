@@ -3,13 +3,16 @@
 This is a small demo project about generating audio from mathematical expressions.
 The user provides an expression that will be evaluated repeatedly to produce audio samples.
 
-The expression parsing and sample generation code is written in C++ and is shared between different platform implementations. It is under the st/ folder.
-There is a desktop demo under the desktop/ folder and a web version under the web/ folder.
+The expression parsing and sample generation code is written in C++ and it is under the st/ folder.
+There is a desktop demo under the desktop/ folder and a web demo under the web/ folder.
 
-Desktop version uses SDL and the companion libraries of SDL_ttf and SDL_image. They are included as git submodules under the vendor/ folder.
+Desktop version uses SDL alongside with the companion libraries of SDL_ttf and SDL_image.
+They are included as git submodules under the vendor/ folder.
 Desktop version uses cmake for building.
 
-The desktop version is a standard cmake project and you can generate the build files for your compiler with:
+## Building
+
+The desktop version is a standard cmake project and you can generate build files with:
 ```bash
 mkdir build
 cd build
