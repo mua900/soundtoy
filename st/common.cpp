@@ -136,6 +136,47 @@ double string_to_real(String s)
     double res = strtod(s.data, &end_ptr);
     return res;
 }
+	
+void File::write_string(String s) {
+	fwrite(&s.size, sizeof(s.size), 1, handle);
+	fwrite(s.data, sizeof(s.data[0]), s.size, handle);
+}
+
+void File::write_number(double n) {
+	fwrite(&n, sizeof(n), 1, handle);
+}
+
+void File::write_integer(u64 n) {
+	fwrite(&n, sizeof(n), 1, handle);
+}
+
+String File::read_string() {
+	u32 size = 0;  // type must match String.size
+	fread(&size, sizeof(size), 1, handle);
+
+	char* data = (char*) malloc(size + 1);
+	
+	fread(data, sizeof(data[0]), size, handle);
+	data[size] = '\0';
+
+	return String(data, size);
+}
+
+double File::read_number() {
+	double n = 0;
+	fread(&n, sizeof(n), 1, handle);
+	return n;
+}
+
+u64 File::read_integer() {
+	u64 n = 0;
+	fread(&n, sizeof(n), 1, handle);
+	return n;
+}
+
+void File::close() {
+	fclose(handle);
+}
 
 void String_Builder::create(int initial_capacity)
 {

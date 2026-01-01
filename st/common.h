@@ -79,6 +79,7 @@ struct String {
     int size = 0;
 
     String () {}
+	explicit String (const char* d) : data(d), size(strlen(d)) {}
     String (const char* d, int s) : data(d), size(s) {}
 
     bool operator==(String& other) const;
@@ -88,6 +89,13 @@ struct String {
 #define STRING_EMPTY ((String){.data=NULL,.size=0})
 #define CSTRING_LENGTH(s) (sizeof(s)-1)
 #define MAKE_STRING(s) (String){.data=s,.size=CSTRING_LENGTH(s)}
+
+#define SCOPE_STRING_EXP(p_s, p_name, p_size)				\
+	char p_name[p_size];  \
+	memcpy(p_name, p_s.data, p_s.size);			\
+	p_name[p_s.size] = '\0';
+
+#define SCOPE_STRING(str, name) SCOPE_STRING_EXP(str, name, 256)
 
 String make_string(const char* s);
 bool string_compare(String s1, String s2);
@@ -124,13 +132,13 @@ struct ColorF;
 
 struct Color {
     unsigned char r, g, b, a;
-    Color(unsigned char r, unsigned char b, unsigned char g, unsigned char a) : r(r), g(g), b(b), a(a) {}
+    Color(unsigned char r, unsigned char g, unsigned char b, unsigned char a) : r(r), g(g), b(b), a(a) {}
     Color(const ColorF& color);
 };
 
 struct ColorF {
     float r, g, b, a;
-    ColorF(float r, float b, float g, float a) : r(r), g(g), b(b), a(a) {}
+    ColorF(float r, float g, float b, float a) : r(r), g(g), b(b), a(a) {}
     ColorF(const Color& color);
 };
 
@@ -176,6 +184,27 @@ struct String_Builder {
 private:
     void resize();
     int grow_to_size(int size);
+};
+
+struct File {
+	FILE* handle = nullptr;
+
+    File(FILE* handle) : handle(handle) {}
+	File(String filepath, const char* access) {
+		SCOPE_STRING(filepath, buffer);
+
+		handle = fopen(buffer, access);
+	}
+	
+	void write_string(String s);
+	void write_number(double n);
+	void write_integer(u64 n);
+
+	String read_string();
+	double read_number();
+	u64 read_integer();
+	
+	void close();
 };
 
 static inline bool is_digit(char c)
