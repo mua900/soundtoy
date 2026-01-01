@@ -8,8 +8,6 @@
 #include "expr.h"
 #include "bytecode.h"
 
-DArray<Token> tokenize(String expression);
-
 struct Error {
     String message = {};
     int offset = 0;

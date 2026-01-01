@@ -378,6 +378,30 @@ void Application::handle_events()
                         }
                         break;
                     }
+                    case SDL_SCANCODE_S: {
+                        // ctrl + s to save
+                        if (keyboard.mod & SDL_KMOD_LCTRL) {
+                            const char* save_file = "save.st";
+                            printf("Saving to file %s\n", save_file);
+                            if (!save_app_state(String(save_file))) {
+                                fprintf(stderr, "Could not save state to file\n");
+                            }
+                        }
+
+                        break;
+                    }
+                    case SDL_SCANCODE_L: {
+                        // ctrl + l to load
+                        if (keyboard.mod & SDL_KMOD_CTRL) {
+                            const char* save_file = "save.st";
+                            printf("Loading file %s\n", save_file);
+                            if (!load_app_state(String(save_file))) {
+                                fprintf(stderr, "Could not load file %s\n", save_file);
+                            }
+                        }
+
+                        break;
+                    }
                     default:
                     {
                         break;
@@ -853,7 +877,7 @@ void Application::text_input_start()
     SDL_StartTextInput(m_window.window);
     doing_text_input = true;
 
-    m_background_color = {0, 0x22, 0x11, 0xff};
+    m_background_color = {0, 0x44, 0x66, 0xff};
 }
 
 void Application::toggle_text_input()
@@ -985,6 +1009,91 @@ void Application::render_waveform(St_Sampler* sampler, vec2 area_center, vec2 ar
 	}
 
 	SDL_RenderLines(m_window.renderer, waveform_sample_buffer.data, sample_count);
+}
+
+bool Application::save_app_state(String filepath) {
+	File file = File(filepath, "w");
+
+    Save_State save;
+
+	save.volume = m_audio.get_volume();
+	save.sample_rate = m_audio.get_sample_rate();
+	save.expression = m_ui.input_text_field.get_string();
+	save.playback_device = m_ui.playback_device.get_selected_option_name();
+
+
+#define BUFFER_SIZE 1024
+	char buffer[BUFFER_SIZE];
+
+	fprintf(file.handle, "volume:%f\n", save.volume);
+	fprintf(file.handle, "sample_rate:%f\n", save.sample_rate);
+
+	memcpy(buffer, save.expression.data, save.expression.size);
+	buffer[save.expression.size] = '\0';	
+	fprintf(file.handle, "expression:%s\n", buffer);
+	
+	memcpy(buffer, save.playback_device.data, save.playback_device.size);
+	buffer[save.expression.size] = '\0';	
+	fprintf(file.handle, "playback_device:%s\n", buffer);
+
+	return true;
+}
+
+bool Application::load_app_state(String filepath) {
+    BinaryData file_raw;
+	String file_content;
+
+    Save_State save = {};
+
+	{
+		SCOPE_STRING(filepath, filepath_cstr);
+		if (!load_file(filepath_cstr, file_raw)) {
+			return false;
+		}
+
+        file_content = String(file_raw);
+	}
+
+	float volume = 0;
+	float sample_rate = 0;
+	String expr = {};
+	String playback = {};
+	
+	for (int i = 0; i < 4; i++) {
+		auto line = string_cut_from_character(file_content, '\n');
+        String option = line.at(0);
+        file_content = line.at(1);
+
+        auto sep = string_cut_from_character(option, ':');
+		String name = sep.at(0);
+		String value = string_copy(sep.at(1));
+
+		name.trim();
+        value.trim();
+		
+		if (string_compare(name, String("volume"))) {
+			volume = string_to_real(value);
+		}
+		else if (string_compare(name, String("sample_rate"))) {
+			sample_rate = string_to_real(value);
+		}
+		else if (string_compare(name, String("expression"))) {
+            expr = value;
+        }
+		else if (string_compare(name, String("playback_device"))) {
+			playback = value;
+		}
+		else {
+			return false;
+		}
+	}
+	
+	save.volume = volume;
+	save.sample_rate = sample_rate;
+	save.expression = expr;
+	save.playback_device = playback;
+
+	return true;	
 }
 
 void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale)

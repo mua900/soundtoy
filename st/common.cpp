@@ -1,6 +1,7 @@
 #include "common.h"
 
 #include <cmath>
+#include <array>
 
 unsigned int pop_count(u64 x)
 {
@@ -64,6 +65,10 @@ int pop_msb(u64* x) {
     return index;
 }
 
+int string_length(const char* cstr) {
+    return strlen(cstr);
+}
+
 String make_string(const char* s)
 {
     int len = strlen(s);
@@ -83,6 +88,35 @@ bool string_compare(String s1, String s2)
 String string_slice(String s, int start, int end)
 {
     return String { s.data + start, end - start };
+}
+
+String string_slice_to_character(String s, char c) {
+    int cursor = 0;
+    while (cursor < s.size && s.data[cursor] != c) {
+        cursor += 1;
+    }
+
+    return String(s.data + cursor, s.size - cursor);
+}
+
+std::array<String, 2> string_cut_from_character(String s, char c) {
+    int cursor = 0;
+    while (cursor < s.size && s.data[cursor] != c) {
+        cursor += 1;
+    }
+
+    String first;
+    String second;
+    
+    first = String(s.data, cursor);
+    if (cursor == s.size) {
+        second = String(s.data + cursor, s.size - cursor);  // point at the en
+    }
+    else {
+        second = String(s.data + cursor + 1, s.size - cursor - 1);
+    }
+
+    return std::array<String, 2>({first, second});
 }
 
 String string_get_extension(String s)
@@ -136,6 +170,50 @@ double string_to_real(String s)
     double res = strtod(s.data, &end_ptr);
     return res;
 }
+
+long get_file_size(FILE* file) {
+	long pos = ftell(file);
+	fseek(file, 0, SEEK_END);
+	long len = ftell(file);
+	fseek(file, 0, SEEK_SET);
+	return len;
+}
+
+bool load_file(const char* filepath, BinaryData& data) {
+	FILE* handle = fopen(filepath, "r");
+	
+	auto filesize = get_file_size(handle);
+
+	u8* mem = (u8*) malloc(filesize);
+	if (!mem) {
+		panic("malloc fail");
+	}
+	
+	size_t written = fread(mem, sizeof(u8), filesize, handle);
+	if (filesize != written) {
+		free(mem);
+		return false;
+	}
+
+	fclose(handle);
+
+	data.data = mem;
+	data.size = filesize;
+	
+	return true;
+}
+
+bool load_file_text(const char* filepath, String& s)
+{
+	BinaryData binary_data;
+	if (!load_file(filepath, binary_data)) {
+		return false;
+	}
+
+	s = String(binary_data);
+
+	return true;
+}
 	
 void File::write_string(String s) {
 	fwrite(&s.size, sizeof(s.size), 1, handle);
@@ -172,10 +250,6 @@ u64 File::read_integer() {
 	u64 n = 0;
 	fread(&n, sizeof(n), 1, handle);
 	return n;
-}
-
-void File::close() {
-	fclose(handle);
 }
 
 void String_Builder::create(int initial_capacity)
@@ -316,6 +390,17 @@ String String_Builder::to_string()
 bool Rectangle::contains(vec2 p)
 {
     return p.x >= x && p.y >= y && p.x <= x + w && p.y <= y + h;
+}
+
+void String::trim() {
+	while (size > 0 && is_space(data[size-1])) {
+		size--;
+	}
+
+	while (size > 0 && is_space(data[0])) {
+		size--;
+		data++;
+	}
 }
 
 void String::print(bool newline) const

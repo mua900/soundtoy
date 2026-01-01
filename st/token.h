@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "template.h"
 
 enum Token_Type {
     TOKEN_TYPE_UNKNOWN = 0,
@@ -48,3 +49,5 @@ struct Token {
 
 void print_token(Token& token, String_Builder* sb, bool ignore_some=false);
 const char* get_token_type_string(Token_Type type);
+
+DArray<Token> tokenize(String expression);

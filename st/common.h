@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdarg>
+#include <array>
 
 #define IS_MAX_UNSIGNED(x) ((x)+1==0)
 #define BIT(x) (1U << (x))
@@ -74,16 +75,41 @@ void panic(char const* const msg);
 int pop_lsb(u64* x);
 int pop_msb(u64* x);
 
+struct BinaryData {
+	u8* data = nullptr;
+	size_t size = 0;
+
+    ~BinaryData() {
+        if (data) {
+            free(data);
+            
+            data = nullptr;
+            size = 0;
+        }
+    }
+
+	void release() {
+		if (data) {
+			free(data);
+			data = nullptr;
+		}
+	}
+};
+
+int string_length(const char* cstr);
+
 struct String {
     const char* data = NULL;
     int size = 0;
 
     String () {}
-	explicit String (const char* d) : data(d), size(strlen(d)) {}
+	explicit String (const char* d) : data(d), size(string_length(d)) {}
     String (const char* d, int s) : data(d), size(s) {}
+	String (const BinaryData& b) : data((const char*)b.data), size(b.size) {}
 
     bool operator==(String& other) const;
     void print(bool newline = false) const;
+	void trim();
 };
 
 #define STRING_EMPTY ((String){.data=NULL,.size=0})
@@ -100,6 +126,8 @@ struct String {
 String make_string(const char* s);
 bool string_compare(String s1, String s2);
 String string_slice(String s, int start, int end);
+String string_slice_to_character(String s, char c);
+std::array<String, 2> string_cut_from_character(String s, char c);
 String string_get_extension(String s);
 String string_copy(String s);
 
@@ -186,6 +214,11 @@ private:
     int grow_to_size(int size);
 };
 
+bool load_file(const char* filepath, BinaryData& bdata);
+bool load_file_text(const char* filepath, String& s);
+
+long get_file_size(FILE* file);
+
 struct File {
 	FILE* handle = nullptr;
 
@@ -195,6 +228,9 @@ struct File {
 
 		handle = fopen(buffer, access);
 	}
+	~File() {
+		fclose(handle);
+	}
 	
 	void write_string(String s);
 	void write_number(double n);
@@ -203,8 +239,6 @@ struct File {
 	String read_string();
 	double read_number();
 	u64 read_integer();
-	
-	void close();
 };
 
 static inline bool is_digit(char c)

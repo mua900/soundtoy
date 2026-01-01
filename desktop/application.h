@@ -153,6 +153,10 @@ struct Drop_Down_List {
 		return options.get(index).label.string;
 	}
 
+	String get_selected_option_name() const {
+		return get_option_name(selected);
+	}
+
 	void* get_option_data(int index) const {
 		return options.get(index).data;
 	}
@@ -194,7 +198,7 @@ struct Ui_State {
     Text_Field* get_selected_text_field();
 };
 
-#define DEFAULT_BACKGROUND_COLOR Color{ 0x88, 0x66, 0x33, 0xff }
+#define DEFAULT_BACKGROUND_COLOR Color{ 0x88, 0x33, 0x66, 0xff }
 
 #define NS_PER_SECONDS 1'000'000'000
 
@@ -207,6 +211,13 @@ enum Events {
     EVENT_INVALID_EXPRESSION,
 	EVENT_INVALID_SAMPLE_RATE,
     EVENT_COUNT,
+};
+
+struct Save_State {
+	float volume = 0.0;
+	float sample_rate = 0.0;
+	String expression = {};
+	String playback_device = {};
 };
 
 class Application {
@@ -260,6 +271,12 @@ private:
     bool mouse_input_ui();
 
     bool gen_static_text(Color color);
+
+	bool save_app_state(String filepath);
+	bool load_app_state(String filepath);
+
+	bool save_ui_layout(String filepath);
+	bool load_ui_layout(String filepath);
 
     void update_audio_spec();
     bool update_channel_count(int count);
