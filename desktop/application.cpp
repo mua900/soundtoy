@@ -569,6 +569,23 @@ void Application::draw_ui()
 
 	vec2 window_size = vec2((float) window_x, (float) window_y);
 
+	// waveform visualization
+	{
+		SDL_SetRenderDrawColor(m_window.renderer, 0x22, 0xAA, 0x11, 0xff);
+		SDL_FRect area_left = {window_size.x * (float)(1.0 / 20.0), window_size.y * (float)(1.0 / 2.0), window_size.x * (float)(1.0 / 3.0), window_size.y * (float)(1.0 / 5.0)};
+		SDL_FRect area_right = {window_size.x - (area_left.x + area_left.w), area_left.y, area_left.w, area_left.h};
+
+		SDL_RenderFillRect(m_window.renderer, &area_left);
+		SDL_RenderFillRect(m_window.renderer, &area_right);
+
+        render_waveform(sampler_waveform_left,
+					    vec2(area_left.x + area_left.w / 2, area_left.y + area_left.h / 2), vec2(area_left.w, area_left.h),
+						Color(0xBB, 0x44, 0x32, 0xff));
+        render_waveform(sampler_waveform_right,
+					    vec2(area_right.x + area_right.w / 2, area_right.y + area_right.h / 2), vec2(area_right.w, area_right.h),
+						Color(0xBB, 0x44, 0x32, 0xff));
+	}
+
     // volume slider
     {
         Rectangle volume_slider = m_ui.volume_slider;
@@ -677,23 +694,6 @@ void Application::draw_ui()
         render_dropdown(m_ui.channel_count, Color(0x55, 0x33, 0x88, 0xff), Color(0x33, 0x55, 0x88, 0xff));
         render_dropdown(m_ui.playback_device, Color(0x55, 0x33, 0x88, 0xff), Color(0x33, 0x55, 0x88, 0xff));
     }
-
-	// waveform visualization
-	{
-		SDL_SetRenderDrawColor(m_window.renderer, 0x22, 0xAA, 0x11, 0xff);
-		SDL_FRect area_left = {window_size.x * (float)(1.0 / 20.0), window_size.y * (float)(1.0 / 2.0), window_size.x * (float)(1.0 / 3.0), window_size.y * (float)(1.0 / 5.0)};
-		SDL_FRect area_right = {window_size.x - (area_left.x + area_left.w), area_left.y, area_left.w, area_left.h};
-
-		SDL_RenderFillRect(m_window.renderer, &area_left);
-		SDL_RenderFillRect(m_window.renderer, &area_right);
-
-        render_waveform(sampler_waveform_left,
-					    vec2(area_left.x + area_left.w / 2, area_left.y + area_left.h / 2), vec2(area_left.w, area_left.h),
-						Color(0xBB, 0x44, 0x32, 0xff));
-        render_waveform(sampler_waveform_right,
-					    vec2(area_right.x + area_right.w / 2, area_right.y + area_right.h / 2), vec2(area_right.w, area_right.h),
-						Color(0xBB, 0x44, 0x32, 0xff));
-	}
 
     // event text
     {
