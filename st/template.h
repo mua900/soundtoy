@@ -2,11 +2,6 @@
 
 #include "common.h"
 
-struct Find_Result {
-	int index = 0;
-	bool found = false;
-};
-
 template <typename T>
 struct DArray {
 private:

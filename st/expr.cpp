@@ -1,5 +1,19 @@
 #include "expr.h"
 
+Find_Result find_symbol(const Array<Variable> symbols, const String name) {
+    bool found = false;
+    int index = 0;
+    for (int i = 0; i < symbols.size; i++) {
+        if (string_compare(name, symbols.get(i).name)) {
+            found = true;
+            index = i;
+        }
+    }
+
+    return Find_Result(index, found);
+}
+
+
 Op_Binary get_binop(Token_Type type)
 {
     switch (type)

@@ -1,3 +1,4 @@
+#include "api.h"
 #include "evaluator.h"
 
 extern const double PI;
@@ -192,7 +193,7 @@ bool Parser::consume(Token_Type type)
 
 bool Parser::syntax_check(String expression_string) {
 	auto save_symbols = symbols;
-	symbols = Array<String>();
+	symbols = Array<Variable>();
 	Expr* expression = parse(expression_string);
 	symbols = save_symbols;
 
@@ -540,15 +541,28 @@ Expr* Parser::parse_primary_expr()
             BuiltinVar_ID builtin_var_id = get_builtin_var_id(token.token_string);
             double builtin_constant = get_builtin_constant(token.token_string);
             if (builtin_var_id != BUILTIN_VAR_ID_INVALID) {
-                return new Expr_Variable(token.token_string, builtin_var_id);
+                // the variable is a builtin
+                // all builtin variables are floating point
+                return new Expr_Variable(token.token_string, builtin_var_id, Var_Type_Real);
             }
             else if (builtin_constant != 0.0) {
                 return new Expr_Literal(builtin_constant);
             }
             else {
-                Find_Result variable = symbols.find(token.token_string);
-                if (variable.found) {
-                    return new Expr_Variable(token.token_string, variable.index);
+                Find_Result find = find_symbol(symbols, token.token_string);
+                String name = token.token_string;
+                bool found = false;
+                int index = 0;
+                for (int i = 0; i < symbols.size; i++) {
+                    if (string_compare(name, symbols.get(i).name)) {
+                        found = true;
+                        index = i;
+                    }
+                }
+
+                if (found) {
+                    Variable var = symbols.get(index);
+                    return new Expr_Variable(var.name, index, var.type);
                 }
                 else {
                     parser_error = Error(make_string("Undefined variable"), token.offset);

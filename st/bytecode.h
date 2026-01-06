@@ -177,7 +177,7 @@ struct Bytecode_Program {
 	Bytecode_Code code = {};
 	Constant_Block constant_block = {};
 
-	DArray<String> symbols;
+	DArray<Variable> symbols;
 	DArray<float> variables = {};
 
 	Bytecode_Program() : processor(), code(), constant_block() {
@@ -197,7 +197,7 @@ struct Bytecode_Program {
 
 	Value_Location_Info emit_load_constant(Constant_Id value_id);
 
-    int add_symbol(String symbol) {
+    int add_symbol(Variable symbol) {
         symbols.add(symbol);
         return variables.add(0.0);
     }

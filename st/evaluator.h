@@ -21,7 +21,7 @@ struct Parser {
 
     Expr* parse(String expression);
 
-    void set_symbols(Array<String> p_symbols) { symbols = p_symbols; }
+    void set_symbols(Array<Variable> p_symbols) { symbols = p_symbols; }
 
     bool syntax_check(String expression);
     bool check_expression_string(String expression);
@@ -29,7 +29,7 @@ struct Parser {
     Error get_error() const { return parser_error; }
 
 private:
-    Array<String> symbols = {};
+    Array<Variable> symbols = {};
     Array<Token> tokens;
 
     int cursor = 0;
@@ -77,13 +77,13 @@ struct Tree_Evaluator
     Expr* expression = nullptr;
 
     DArray<float> variables = {};
-    DArray<String> symbols = {};
+    DArray<Variable> symbols = {};
 
     Builtin_Function_List builtin_functions = {};
     double builtins[BUILTIN_VARIABLE_COUNT] = {};
     Error eval_error = {};
 
-    int add_symbol(String symbol) {
+    int add_symbol(Variable symbol) {
         symbols.add(symbol);
         return variables.add(0.0);
     }

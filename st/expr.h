@@ -1,5 +1,6 @@
 #pragma once
 
+#include "api.h"
 #include "token.h"
 #include "template.h"
 
@@ -63,6 +64,29 @@ struct Value {
 		panic("Unknown value type");
 	}
 };
+
+struct Variable {
+    String name = {};
+    Variable_Type type = Var_Type_Real;
+
+    Variable() {}
+    Variable(String n, Value_Type t) : name(n) {
+        switch (t) {
+            case Value_Type::INTEGER:   type = Var_Type_Integer;
+            case Value_Type::REAL:      type = Var_Type_Real;
+            case Value_Type::BOOL:      type = Var_Type_Boolean;
+            default:
+                panic("Invalid value type");
+        }
+    }
+    Variable(String n, Variable_Type) : name(n), type(type) {}
+
+    bool operator==(const Variable& other) const {
+        return type == other.type && name == other.name;
+    }
+};
+
+Find_Result find_symbol(const Array<Variable> symbols, const String name);
 
 enum class Expr_Type {
     Literal,
@@ -147,9 +171,9 @@ struct Expr_Call : Expr {
 struct Expr_Variable : Expr {
     String name;
     unsigned int var_id = 0;
-    Value_Type variable_type;  // @todo
+    Variable_Type variable_type;
 
-    Expr_Variable(String var_name, int id) : name(var_name), var_id(id), variable_type(Value_Type::INTEGER)
+    Expr_Variable(String var_name, int id, Variable_Type var_type) : name(var_name), var_id(id), variable_type(var_type)
 	{
         type = Expr_Type::Variable;
     }

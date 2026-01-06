@@ -8,7 +8,7 @@
 extern "C" {
 
     static void bytecode_step_time(void* program, float step);
-	static Array<String> bytecode_symbol_table_get(void* program);
+	static Array<Variable> bytecode_symbol_table_get(void* program);
 	static bool bytecode_set_expression(void* program, String expression_string);
 	static float bytecode_evaluate(void* program);
 	static void bytecode_fill(void* program, float* buffer, int sample_count);
@@ -17,7 +17,7 @@ extern "C" {
 	static void bytecode_fill_planar(void* program_left, void* program_right, float* buffer, int sample_count);
 
     static void tree_interp_step_time(void* evaluator, float step);
-	static Array<String> tree_interp_symbol_table_get(void* evaluator);
+	static Array<Variable> tree_interp_symbol_table_get(void* evaluator);
 	static bool tree_interp_set_expression(void* evaluator, String expression_string);
 	static float tree_interp_evaluate(void* evaluator);
 	static void tree_interp_fill(void* evaluator, float* buffer, int sample_count);
@@ -26,7 +26,7 @@ extern "C" {
 	static void tree_interp_fill_planar(void* evaluator_left, void* evaluator_right, float* buffer, int sample_count);
 
 
-    typedef Array<String> (*evaluator_symbol_table_get_f)(void* evaluator);
+    typedef Array<Variable> (*evaluator_symbol_table_get_f)(void* evaluator);
     typedef bool (*evaluator_set_expression_f)(void* evaluator, String expression);
     typedef float (*evaluate_expression_f)(void* evaluator);
     typedef void (*evaluator_step_time_f)(void* evaluator, float step);	
@@ -216,31 +216,32 @@ extern "C" {
         }
     }
 
-    int st_sampler_register_variable(St_Sampler* sampler, const char* name, int length) {
+    int st_sampler_register_variable(St_Sampler* sampler, const char* name, int length, Variable_Type type) {
         String symbol = String(name, length);
+        Variable var = Variable(symbol, type);
 
         if (sampler->evaluator_type == Evaluator_Type::BYTECODE_INTERP) {
             auto program = (Bytecode_Program*) sampler->evaluator;
 
-            Find_Result find = program->symbols.find(symbol);
+            Find_Result find = find_symbol(program->symbols, symbol);
             if (find.found) {
                 st_last_error = "Trying to register the same variable name more than once.";
                 return find.index;
             }
 
-            int var_id = program->add_symbol(symbol);
+            int var_id = program->add_symbol(var);
             return var_id;
         }
         else if (sampler->evaluator_type == Evaluator_Type::TREE_INTERP) {
             auto tree_interp = (Tree_Evaluator*) sampler->evaluator;
 
-            Find_Result find = tree_interp->symbols.find(symbol);
+            Find_Result find = find_symbol(tree_interp->symbols,symbol);
             if (find.found) {
                 st_last_error = "Trying to register the same variable name more than once.";
                 return find.index;
             }
 
-            int var_id = tree_interp->add_symbol(symbol);
+            int var_id = tree_interp->add_symbol(var);
             return var_id;
         }
         else {
@@ -292,7 +293,7 @@ extern "C" {
     const char* st_sampler_get_variable_name_at_index(const St_Sampler* sampler, int index) {
         // @fix returning raw pointer from string that is not guaranteed to be null terminated
 		// if we make a copy then the caller needs to free which isn't nice
-        return sampler->table.evaluator_symbol_table_get(sampler->evaluator).get(index).data;
+        return sampler->table.evaluator_symbol_table_get(sampler->evaluator).get(index).name.data;
     }
 
     int st_sampler_get_variable_count(const St_Sampler* sampler) {
@@ -337,7 +338,7 @@ extern "C" {
 		Bytecode_Program* program = (Bytecode_Program*) evaluator;
         program->step_time(step);
     }
-    static Array<String> bytecode_symbol_table_get(void* evaluator) {
+    static Array<Variable> bytecode_symbol_table_get(void* evaluator) {
 		Bytecode_Program* program = (Bytecode_Program*) evaluator;
         return program->symbols;
     }
@@ -432,7 +433,7 @@ extern "C" {
 		Tree_Evaluator* tree_interp = (Tree_Evaluator*) evaluator;
         tree_interp->step_time(step);
     }
-    static Array<String> tree_interp_symbol_table_get(void* evaluator) {
+    static Array<Variable> tree_interp_symbol_table_get(void* evaluator) {
         Tree_Evaluator* tree_interp = (Tree_Evaluator*) evaluator;
 
         return tree_interp->symbols;
@@ -469,12 +470,6 @@ extern "C" {
 	    double inv_sample_rate = 1.0 / tree_interp->get_sample_rate();
 
         for (int i = 0; i < count; i++) {
-	        /*
-	        we assume the evaluator is able to evaluate the expression here since
-	        we are in the callback and we shouldn't be here if we have an invalid expression.
-	        And we don't want to check in the callback.
-	        */
-
             buffer[i] = CLAMP(tree_interp->evaluate().value, -1.0, 1.0);
 	        tree_interp->step_time(inv_sample_rate);
         }

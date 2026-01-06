@@ -423,7 +423,7 @@ void String::print(bool newline) const
     free(mem);
 }
 
-bool String::operator==(String& other) const
+bool String::operator==(const String& other) const
 {
     return string_compare(*this, other);
 }

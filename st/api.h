@@ -7,6 +7,12 @@ extern "C" {
         TREE_INTERP,
     };
 
+    enum Variable_Type : int {
+        Var_Type_Integer,
+        Var_Type_Real,
+        Var_Type_Boolean,
+    };
+
     struct St_Sampler;
   
     bool st_initialize();
@@ -22,7 +28,7 @@ extern "C" {
     void st_sampler_set_sample_time(St_Sampler* sampler, float sample_time);
     float st_sampler_get_sample_rate(const St_Sampler* sampler);
     float st_sampler_get_sample_time(const St_Sampler* sampler);
-    int st_sampler_register_variable(St_Sampler* sampler, const char* name, int length);
+    int st_sampler_register_variable(St_Sampler* sampler, const char* name, int length, Variable_Type type);
     bool st_sampler_set_variable_value(St_Sampler* sampler, int variable, float value);
     float st_sampler_get_variable_value(const St_Sampler* sampler, int variable);
     const char* st_sampler_get_variable_name_at_index(const St_Sampler* sampler, int index);

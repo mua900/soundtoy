@@ -96,6 +96,14 @@ struct BinaryData {
 	}
 };
 
+struct Find_Result {
+	int index = 0;
+	bool found = false;
+
+    Find_Result(int index, bool found) : index(index), found(found) {}
+    Find_Result() {}
+};
+
 int string_length(const char* cstr);
 
 struct String {
@@ -107,7 +115,7 @@ struct String {
     String (const char* d, int s) : data(d), size(s) {}
 	String (const BinaryData& b) : data((const char*)b.data), size(b.size) {}
 
-    bool operator==(String& other) const;
+    bool operator==(const String& other) const;
     void print(bool newline = false) const;
 	void trim();
 };
