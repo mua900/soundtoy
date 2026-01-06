@@ -986,6 +986,15 @@ bool Application::set_eval_string(String eval_string)
         fprintf(stderr, "Failed to set sample expression\n");
     }
 
+    sampler_waveform_left = st_sampler_copy(sampler_audio_left);
+    sampler_waveform_right = st_sampler_copy(sampler_audio_right);
+
+    ASSERT(sampler_waveform_left && sampler_waveform_right);
+
+    const int waveform_sample_rate = 100;
+    st_sampler_set_sample_rate(sampler_waveform_left, waveform_sample_rate);
+    st_sampler_set_sample_rate(sampler_waveform_right, waveform_sample_rate);
+
     return success;
 }
 

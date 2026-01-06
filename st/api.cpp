@@ -36,9 +36,7 @@ extern "C" {
     typedef void (*evaluator_fill_interleaved_f)(void* evaluator_left, void* evaluator_right, float* buffer, int sample_count);
     typedef void (*evaluator_fill_planar_f)(void* evaluator_left, void* evaluator_right, float* buffer, int sample_count);
 
-    struct St_Sampler {
-        Evaluator_Type evaluator_type = Evaluator_Type::TREE_INTERP;
-        void* evaluator = nullptr;
+    struct Function_Table {
         evaluate_expression_f evaluate_expression = nullptr;
         evaluator_symbol_table_get_f evaluator_symbol_table_get = nullptr;
         evaluator_set_expression_f evaluator_set_expression = nullptr;
@@ -47,6 +45,12 @@ extern "C" {
         evaluator_fill_strided_f evaluator_fill_strided = nullptr;
     	evaluator_fill_interleaved_f evaluator_fill_interleaved = nullptr;
 		evaluator_fill_planar_f evaluator_fill_planar = nullptr;
+    };
+
+    struct St_Sampler {
+        Evaluator_Type evaluator_type = Evaluator_Type::TREE_INTERP;
+        void* evaluator = nullptr;
+        Function_Table table = {};
     };
 
     // @todo thread safe
@@ -61,7 +65,7 @@ extern "C" {
     }
 
     St_Sampler* st_sampler_create(Evaluator_Type evaluator_type, int sample_rate) {
-        St_Sampler* sampler = (St_Sampler*) malloc(sizeof(St_Sampler));
+        St_Sampler* sampler = new St_Sampler;
 
         if (!sampler) {
             st_last_error = "Could not allocate sampler";
@@ -74,32 +78,59 @@ extern "C" {
             sampler->evaluator = new Bytecode_Program();
 
             // @update
-            sampler->evaluate_expression = bytecode_evaluate;
-            sampler->evaluator_symbol_table_get = bytecode_symbol_table_get;
-            sampler->evaluator_set_expression = bytecode_set_expression;
-            sampler->evaluator_fill = bytecode_fill;
-            sampler->evaluator_fill_strided = bytecode_fill_strided;
-			sampler->evaluator_fill_interleaved = bytecode_fill_interleaved;
-			sampler->evaluator_fill_planar = bytecode_fill_planar;
-            sampler->evaluator_step_time = bytecode_step_time;
+            sampler->table.evaluate_expression = bytecode_evaluate;
+            sampler->table.evaluator_symbol_table_get = bytecode_symbol_table_get;
+            sampler->table.evaluator_set_expression = bytecode_set_expression;
+            sampler->table.evaluator_fill = bytecode_fill;
+            sampler->table.evaluator_fill_strided = bytecode_fill_strided;
+			sampler->table.evaluator_fill_interleaved = bytecode_fill_interleaved;
+			sampler->table.evaluator_fill_planar = bytecode_fill_planar;
+            sampler->table.evaluator_step_time = bytecode_step_time;
         }
         else if (evaluator_type == Evaluator_Type::TREE_INTERP) {
             sampler->evaluator = new Tree_Evaluator();
 
 			// @update
-            sampler->evaluate_expression = tree_interp_evaluate;
-            sampler->evaluator_symbol_table_get = tree_interp_symbol_table_get;
-            sampler->evaluator_set_expression = tree_interp_set_expression;
-            sampler->evaluator_step_time = tree_interp_step_time;
-            sampler->evaluator_fill = tree_interp_fill;
-            sampler->evaluator_fill_strided = tree_interp_fill_strided;
-			sampler->evaluator_fill_interleaved = tree_interp_fill_interleaved;
-			sampler->evaluator_fill_planar = tree_interp_fill_planar;
+            sampler->table.evaluate_expression = tree_interp_evaluate;
+            sampler->table.evaluator_symbol_table_get = tree_interp_symbol_table_get;
+            sampler->table.evaluator_set_expression = tree_interp_set_expression;
+            sampler->table.evaluator_step_time = tree_interp_step_time;
+            sampler->table.evaluator_fill = tree_interp_fill;
+            sampler->table.evaluator_fill_strided = tree_interp_fill_strided;
+			sampler->table.evaluator_fill_interleaved = tree_interp_fill_interleaved;
+			sampler->table.evaluator_fill_planar = tree_interp_fill_planar;
         }
 
         st_sampler_set_sample_rate(sampler, sample_rate);
 
         return sampler;
+    }
+
+    St_Sampler* st_sampler_copy(St_Sampler* sampler) {
+        St_Sampler* copy = new St_Sampler;
+
+        if (!sampler) {
+            st_last_error = "Could not allocate copy sampler";
+            return nullptr;
+        }
+
+        if (sampler->evaluator_type == Evaluator_Type::BYTECODE_INTERP) {
+            copy->evaluator = new Bytecode_Program;
+            *((Bytecode_Program*)copy->evaluator) = *((Bytecode_Program*)sampler->evaluator);
+        }
+        else if (sampler->evaluator_type == Evaluator_Type::TREE_INTERP) {
+            copy->evaluator = new Tree_Evaluator;
+            *((Tree_Evaluator*)copy->evaluator) = *((Tree_Evaluator*)sampler->evaluator);
+        }
+        else {
+            st_last_error = "Invalid sampler type";
+            return nullptr;
+        }
+
+        copy->evaluator_type = sampler->evaluator_type;
+        copy->table = sampler->table;
+
+        return copy;
     }
 
     void st_sampler_destroy(St_Sampler* sampler) {
@@ -112,7 +143,7 @@ extern "C" {
         String expression = String(expression_string, length);
 
         if (sampler_or_null) {
-			parser.set_symbols(sampler_or_null->evaluator_symbol_table_get(sampler_or_null->evaluator));
+			parser.set_symbols(sampler_or_null->table.evaluator_symbol_table_get(sampler_or_null->evaluator));
             return parser.check_expression_string(expression);
         }
         else {
@@ -122,15 +153,15 @@ extern "C" {
 
     bool st_sampler_set_expression(St_Sampler* sampler, const char* expression_string, int length) {
         String expression = String(expression_string, length);
-        return sampler->evaluator_set_expression(sampler->evaluator, expression);
+        return sampler->table.evaluator_set_expression(sampler->evaluator, expression);
     }
 
     float st_sampler_evaluate(const St_Sampler* sampler) {
-        return sampler->evaluate_expression(sampler->evaluator);
+        return sampler->table.evaluate_expression(sampler->evaluator);
     }
 
     void st_sampler_step_time(St_Sampler* sampler, float step_size) {
-        sampler->evaluator_step_time(sampler->evaluator, step_size);
+        sampler->table.evaluator_step_time(sampler->evaluator, step_size);
     }
 
     void st_sampler_set_sample_rate(St_Sampler* sampler, float sample_rate) {
@@ -261,43 +292,43 @@ extern "C" {
     const char* st_sampler_get_variable_name_at_index(const St_Sampler* sampler, int index) {
         // @fix returning raw pointer from string that is not guaranteed to be null terminated
 		// if we make a copy then the caller needs to free which isn't nice
-        return sampler->evaluator_symbol_table_get(sampler->evaluator).get(index).data;
+        return sampler->table.evaluator_symbol_table_get(sampler->evaluator).get(index).data;
     }
 
     int st_sampler_get_variable_count(const St_Sampler* sampler) {
-        return sampler->evaluator_symbol_table_get(sampler->evaluator).size;
+        return sampler->table.evaluator_symbol_table_get(sampler->evaluator).size;
     }
 
     void st_fill(St_Sampler* sampler, float* buffer, int length) {
-        sampler->evaluator_fill(sampler->evaluator, buffer, length);
+        sampler->table.evaluator_fill(sampler->evaluator, buffer, length);
     }
 
 	void st_fill_strided(St_Sampler* sampler, float* buffer, int sample_count) {
-		sampler->evaluator_fill_strided(sampler->evaluator, buffer, sample_count);
+		sampler->table.evaluator_fill_strided(sampler->evaluator, buffer, sample_count);
 	}
 
     void st_fill_interleaved(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count) {
         if (sampler_left->evaluator_type == sampler_right->evaluator_type) {
-			ASSERT(sampler_left->evaluator_fill_interleaved == sampler_right->evaluator_fill_interleaved);
+			ASSERT(sampler_left->table.evaluator_fill_interleaved == sampler_right->table.evaluator_fill_interleaved);
 
-            sampler_left->evaluator_fill_interleaved(sampler_left->evaluator, sampler_right->evaluator, buffer, sample_count);
+            sampler_left->table.evaluator_fill_interleaved(sampler_left->evaluator, sampler_right->evaluator, buffer, sample_count);
         }
         else {
-			sampler_left->evaluator_fill_strided(sampler_left->evaluator, buffer + 0, sample_count);
-			sampler_right->evaluator_fill_strided(sampler_right->evaluator, buffer + 1, sample_count);
+			sampler_left->table.evaluator_fill_strided(sampler_left->evaluator, buffer + 0, sample_count);
+			sampler_right->table.evaluator_fill_strided(sampler_right->evaluator, buffer + 1, sample_count);
 		}
     }
 
 	void st_fill_planar(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count) {
 		// @todo the else block is enough
         if (sampler_left->evaluator_type == sampler_right->evaluator_type) {
-			ASSERT(sampler_left->evaluator_fill_planar == sampler_right->evaluator_fill_planar);
+			ASSERT(sampler_left->table.evaluator_fill_planar == sampler_right->table.evaluator_fill_planar);
 
-            sampler_left->evaluator_fill_planar(sampler_left->evaluator, sampler_right->evaluator, buffer, sample_count);
+            sampler_left->table.evaluator_fill_planar(sampler_left->evaluator, sampler_right->evaluator, buffer, sample_count);
         }
         else {
-			sampler_left->evaluator_fill(sampler_left->evaluator, buffer + 0,              sample_count / 2);
-			sampler_right->evaluator_fill(sampler_right->evaluator, buffer + sample_count, sample_count / 2);
+			sampler_left->table.evaluator_fill(sampler_left->evaluator, buffer + 0,              sample_count / 2);
+			sampler_right->table.evaluator_fill(sampler_right->evaluator, buffer + sample_count, sample_count / 2);
 		}
 	}
 

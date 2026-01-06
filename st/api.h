@@ -13,6 +13,7 @@ extern "C" {
     const char* st_get_last_error();
     St_Sampler* st_sampler_create(Evaluator_Type evaluator_type, int sample_rate);
     void st_sampler_destroy(St_Sampler* sampler);
+    St_Sampler* st_sampler_copy(St_Sampler* sampler);
     bool st_check_expression_string(const St_Sampler* sampler_or_null, const char* expression_string, int length);
     bool st_sampler_set_expression(St_Sampler* sampler, const char* expression_string, int length);
     float st_sampler_evaluate(const St_Sampler* sampler);
