@@ -191,6 +191,12 @@ static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream,
 
         SDL_PutAudioStreamData(stream, sample_buffer.data, sample_buffer.size);
     }
+
+    int remaining = total_amount % sample_buffer.size;
+    if (remaining > 0) {
+        st_fill(audio->sampler_left, sample_buffer.data, remaining);
+        SDL_PutAudioStreamData(stream, sample_buffer.data, remaining);
+    }
 }
 
 static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
@@ -207,4 +213,8 @@ static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* strea
 
         SDL_PutAudioStreamData(stream, sample_buffer.data, sample_buffer.size);
     }
+
+    int remaining = total_amount % sample_buffer.size;
+    st_fill_interleaved(audio->sampler_left, audio->sampler_right, sample_buffer.data, remaining / 2);
+    SDL_PutAudioStreamData(stream, sample_buffer.data, remaining);
 }

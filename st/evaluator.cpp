@@ -1119,15 +1119,19 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
 			if (cond->type == Expr_Type::Literal) {
 				bool thruth_value = static_cast<Expr_Literal*>(cond)->value.evaluate_truth_value();
 
-				delete ternary;
+				Expr* path = nullptr;
 				if (thruth_value) {
-					free_tree(ternary->else_);
-					return new Expr_Literal(ternary->then_);
+					path = ternary->then_;
+					ternary->then_ = nullptr;
 				}
 				else {
-					free_tree(ternary->then_);
-					return new Expr_Literal(ternary->else_);
+					path = ternary->else_;
+					ternary->else_ = nullptr;
 				}
+
+				free_tree(ternary);
+
+				return path;
 			}
 
 			ternary->condition = cond;
