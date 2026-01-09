@@ -1121,11 +1121,11 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
 
 				Expr* path = nullptr;
 				if (thruth_value) {
-					path = ternary->then_;
+					path = collapse_expr_real(ternary->then_, builtin_functions, error_string);
 					ternary->then_ = nullptr;
 				}
 				else {
-					path = ternary->else_;
+					path = collapse_expr_real(ternary->else_, builtin_functions, error_string);
 					ternary->else_ = nullptr;
 				}
 
