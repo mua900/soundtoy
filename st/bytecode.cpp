@@ -852,10 +852,9 @@ double bytecode_run(Bytecode_Program& program)
                 u16 fn_id = instr.op0;
                 u16 freg = instr.op1;
 
+				Value param = Value(processor.fregs.get(freg));
                 Value result;
-                call_function(program.constant_block.builtin_function[fn_id], &result);
-                
-                // @todo
+                call_function(program.constant_block.builtin_function[fn_id], &param, &result);
 
                 processor.fregs.get_ref(freg) = result.real;
                 break;

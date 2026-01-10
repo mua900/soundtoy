@@ -7,12 +7,16 @@ double smoothstep(double x);
 double clamp_range_normal(double x);
 double clamp_range_audio(double x);  // @todo get rid
 
-bool call_function(Function func, Value* results) {
-    for (int i = 0; i < func.signature.return_types.size; i++) {
-        results[i] = Value(0.0);
-    }
+void call_function(Function func, Value* parameters, Value* results) {
+    int param_count = func.signature.parameter_types.size;
+    int return_count = func.signature.return_types.size;
 
-    return false;
+	if (param_count != 1 || return_count != 1) {
+		panic("TODO complete multiparameter function implementation");
+	}
+
+	auto f = reinterpret_cast<double (*)(double)>(func.implementation);
+	results[0] = Value(f(parameters[0].real));
 }
 
 void get_default_builtin_functions(Function* list)

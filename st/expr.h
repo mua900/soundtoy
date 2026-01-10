@@ -75,6 +75,7 @@ enum class Expr_Type {
     Grouping,
     Call,
 	Ternary,
+	Tuple,
 };
 
 struct Expr {
@@ -136,9 +137,8 @@ struct Expr_Grouping : Expr {
     }
 };
 
-// we can keep this simple since this isn't a complete programming language where expressions can evaluate to functions
 struct Expr_Call : Expr {
-    String function_name;
+    String function_name;  // @note do we need expressions that can return functions? Not currently.
     Array<Expr*> arguments;
     int fn_id = 0;  // function id assigned by parser
 
@@ -167,5 +167,15 @@ struct Expr_Ternary : Expr {
 	Expr_Ternary(Expr* condition, Expr* then_, Expr* else_) : condition(condition), then_(then_), else_(else_)
 	{
 		type = Expr_Type::Ternary;
+	}
+};
+
+struct Expr_Tuple : Expr {
+	Array<Expr*> expressions;
+	
+	Expr_Tuple(Array<Expr*> exprs)
+		: expressions(exprs)
+	{
+		type = Expr_Type::Tuple;
 	}
 };

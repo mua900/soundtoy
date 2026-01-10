@@ -1028,39 +1028,70 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 
 			if (is_builtin_function(call) && all_literals && all_reals)
 			{
-				if (call->arguments.size != 1)
-				{
-					*error_string = make_string("Builtin functions take 1 parameter");
+                Function builtin = builtin_functions[call->fn_id];
+
+				if (call->arguments.size != builtin.signature.return_types.size) {
+					*error_string = make_string("Wrong number of arguments");
 					return NULL;
 				}
 
-				Expr_Literal* lit = static_cast<Expr_Literal*>(call->arguments.data[0]);
-				double arg = lit->value.real;
-                Function builtin = builtin_functions[call->fn_id];
-                if (builtin.signature.return_types.size != 1) {
-                    panic("Functions with return count different than 1 not implemented");
-                }
+				int arg_count = call->arguments.size;
+				int ret_count = builtin.signature.return_types.size;
+				
+				if (arg_count == 1) {
+					call->arguments.data[0] = collapse_expr_real(call->arguments.data[0], builtin_functions, error_string);
 
-                Expr_Literal* ret = nullptr;
-                if (builtin.signature.return_types.size == 1 || builtin.signature.return_types.size == 0) {
+					if (call->arguments.get(0)->type == Expr_Type::Literal) {
+						Expr_Literal* lit = static_cast<Expr_Literal*>(call->arguments.get(0));
+
+						if (ret_count == 1) {
+							Value arg = Value(lit->value);
+							Value value;
+							call_function(builtin, &arg, &value);
+							free_tree(call);
+							return new Expr_Literal(value);
+						}
+					}
+				}
+
+				DArray<Value> arguments(arg_count);
+				for (int i = 0; i < arg_count; i++) {
+					// we know that all of them should be literals
+					ASSERT(static_cast<Expr_Literal*>(call->arguments.get(i))->type == Expr_Type::Literal);
+					arguments.get_ref(i) = static_cast<Expr_Literal*>(call->arguments.get(i))->value;
+				}				
+
+                Expr* ret = nullptr;
+				if (builtin.signature.return_types.size == 0) {
+					call_function(builtin, arguments.data(), nullptr);
+				}
+                else if (builtin.signature.return_types.size == 1) {
                     Value result = {};
-                    ASSERT(call_function(builtin, &result));
+                    call_function(builtin, arguments.data(), &result);
                     ret = new Expr_Literal(result);
                 }
                 else {
                     DArray<Value> res (builtin.signature.return_types.size);
-                    bool success = call_function(builtin, res.data());
-                    ASSERT(success);
-                    // @todo what do we place on the tree when there are multiple return values?
+                    call_function(builtin, arguments.data(), res.data());
+
+					DArray<Expr*> return_expressions(ret_count);
+					for (int i = 0; i < ret_count; i++) {
+						return_expressions.get_ref(i) = new Expr_Literal(res.get(i));
+					}
+
+					res.reset();
+
+					ret = new Expr_Tuple(Array<Expr*>(return_expressions));
                 }
                 
+				arguments.reset();
                 free_tree(call);
 				return ret;
 			}
 
 			break;
 		}
-    case Expr_Type::Literal:
+	case Expr_Type::Literal:
 		{
 			return expr;
 		}

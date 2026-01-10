@@ -38,7 +38,7 @@ struct Function {
 
 // results should be an array of length of func.signature.return_types.size
 // if the function doesn't return anything it can be NULL
-bool call_function(Function func, Value* results);
+void call_function(Function func, Value* parameters, Value* results);
 
 // --- Builtin functions
 
