@@ -135,9 +135,9 @@ struct Bytecode_Instr {
 };
 
 struct Constant_Block {
-	DArray<float> real = {};
-	DArray<s32> integer = {};
-	float builtin_variable[BUILTIN_VARIABLE_COUNT] = {};
+	DArray<double> real = {};
+	DArray<s64> integer = {};
+	double builtin_variable[BUILTIN_VARIABLE_COUNT] = {};
 	Builtin_Function_List builtin_function = {};
 	
 	Constant_Id add_constant(Value value);
@@ -163,8 +163,8 @@ struct Bytecode_Code {
 #define COMPARISON_RESULT_LESS_THAN		BIT(7)
 
 struct Bytecode_Processor {
-	DArray<s32> regs;
-	DArray<float> fregs;
+	DArray<s64> regs;
+	DArray<double> fregs;
 	u32 result_flags = 0;
 
 	Bytecode_Processor()
@@ -178,7 +178,7 @@ struct Bytecode_Program {
 	Constant_Block constant_block = {};
 
 	DArray<Variable> symbols;
-	DArray<float> variables = {};
+	DArray<double> variables = {};
 
 	Bytecode_Program() : processor(), code(), constant_block() {
 		get_default_builtin_functions(constant_block.builtin_function);
@@ -203,15 +203,15 @@ struct Bytecode_Program {
     }
 
 	void set_builtin_variable(double value, u32 builtin_id);
-	void set_builtin_function(Builtin_Function implementation, u32 builtin_function);
+	void set_builtin_function(GenericFunctionPointer implementation, u32 builtin_function);
 	void step_time(double time);
-	void set_sample_time(float sample_time);
-	void set_sample_rate(float sample_rate);
-	float get_sample_rate();
-	float get_sample_time();
+	void set_sample_time(double sample_time);
+	void set_sample_rate(double sample_rate);
+	double get_sample_rate();
+	double get_sample_time();
 	
 	void print_program();
 };
 
 bool bytecode_compile_expression(Bytecode_Program& program, Expr* expr);
-float bytecode_run(Bytecode_Program& program);
+double bytecode_run(Bytecode_Program& program);

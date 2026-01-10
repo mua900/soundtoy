@@ -100,8 +100,11 @@ bool Application::initialize()
 		const int sample_buffer_size_audio = 512;
 		const int sample_buffer_size_waveform = 1024;
 
-		sample_buffer.resize(sample_buffer_size_audio);
-		waveform_sample_buffer.resize(sample_buffer_size_waveform);
+        float* sample_buffer_mem = new float[sample_buffer_size_audio];
+        SDL_FPoint* waveform_sample_buffer_mem = new SDL_FPoint[sample_buffer_size_waveform];
+
+        sample_buffer = Array<float>(sample_buffer_mem, sample_buffer_size_audio);
+		waveform_sample_buffer = Array<SDL_FPoint>(waveform_sample_buffer_mem, sample_buffer_size_waveform);
     }
 
     if (!m_audio.initialize(sample_buffer, initial_sample_rate, 1, sampler_audio_left, sampler_audio_right)) {

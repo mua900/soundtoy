@@ -608,15 +608,15 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
         case Expr_Type::Literal:
         {
             auto literal = static_cast<Expr_Literal*>(expr);
-            if (literal->value.type == Value_Type::INTEGER)
+            if (literal->value.type == Var_Type_Integer)
             {
                 return { (double)literal->value.integer, true };
             }
-            else if (literal->value.type == Value_Type::REAL)
+            else if (literal->value.type == Var_Type_Real)
             {
                 return { literal->value.real, true };
             }
-            else if (literal->value.type == Value_Type::BOOL)
+            else if (literal->value.type == Var_Type_Boolean)
             {
                 NOT_IMPLEMENTED("Logical operations")
             }
@@ -715,7 +715,7 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
                     return fail;
                 }
 
-                float result = builtin_functions[call->fn_id](arg.value);
+                float result = 0.0; // @todo call
 
                 return { result, true };
             }
@@ -761,11 +761,11 @@ void print_expr(const Expr* expr, int indent)
             const auto literal = static_cast<const Expr_Literal*>(expr);
             switch (literal->value.type)
             {
-                case Value_Type::INTEGER:
+                case Var_Type_Integer:
                     printf("Integer Literal: %li\n", literal->value.integer); break;
-                case Value_Type::REAL:
+                case Var_Type_Real:
                     printf("Float Literal: %f\n", literal->value.real); break;
-                case Value_Type::BOOL:
+                case Var_Type_Boolean:
                     printf("Boolean Literal: %s\n", BOOL_STRING(literal->value.boolean)); break;
             }
             break;
@@ -930,7 +930,7 @@ void free_tree(Expr* node) {
 	delete node;
 }
 
-Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String* error_string);
+Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_string);
 Expr* collapse_expr(Expr* root, String* error_string)
 {
     static bool inited = false;
@@ -944,7 +944,7 @@ Expr* collapse_expr(Expr* root, String* error_string)
     return collapse_expr_real(root, builtin_functions, error_string);
 }
 
-Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String* error_string)
+Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_string)
 {
     Expr* expr = root;
     switch (expr->type)
@@ -978,8 +978,8 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
 				Value left_value = static_cast<Expr_Literal*>(left)->value;
 				Value right_value = static_cast<Expr_Literal*>(right)->value;
 
-				double left_numeric = (left_value.type == Value_Type::INTEGER) ? left_value.integer : left_value.real;
-				double right_numeric = (right_value.type == Value_Type::INTEGER) ? right_value.integer : right_value.real;
+				double left_numeric = (left_value.type == Var_Type_Integer) ? left_value.integer : left_value.real;
+				double right_numeric = (right_value.type == Var_Type_Integer) ? right_value.integer : right_value.real;
 
 				switch (binary->op)
 				{
@@ -1015,7 +1015,7 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
 				call->arguments.data[i] = collapse_expr_real(call->arguments.data[i], builtin_functions, error_string);
 				if (call->arguments.data[i]->type == Expr_Type::Literal)
 				{
-					if (static_cast<Expr_Literal*>(call->arguments.data[i])->value.type != Value_Type::REAL)
+					if (static_cast<Expr_Literal*>(call->arguments.data[i])->value.type != Var_Type_Real)
 					{
 						all_reals = false;
 					}
@@ -1036,9 +1036,26 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
 
 				Expr_Literal* lit = static_cast<Expr_Literal*>(call->arguments.data[0]);
 				double arg = lit->value.real;
-				double bake_value = builtin_functions[call->fn_id](arg);
-				free_tree(call);
-				return new Expr_Literal(bake_value);
+                Function builtin = builtin_functions[call->fn_id];
+                if (builtin.signature.return_types.size != 1) {
+                    panic("Functions with return count different than 1 not implemented");
+                }
+
+                Expr_Literal* ret = nullptr;
+                if (builtin.signature.return_types.size == 1 || builtin.signature.return_types.size == 0) {
+                    Value result = {};
+                    ASSERT(call_function(builtin, &result));
+                    ret = new Expr_Literal(result);
+                }
+                else {
+                    DArray<Value> res (builtin.signature.return_types.size);
+                    bool success = call_function(builtin, res.data());
+                    ASSERT(success);
+                    // @todo what do we place on the tree when there are multiple return values?
+                }
+                
+                free_tree(call);
+				return ret;
 			}
 
 			break;
@@ -1070,11 +1087,11 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
 							return NULL;
 						}
 
-						if (operand->value.type == Value_Type::INTEGER)
+						if (operand->value.type == Var_Type_Integer)
 						{
 							operand->value.integer = -operand->value.integer;
 						}
-						else if (operand->value.type == Value_Type::REAL)
+						else if (operand->value.type == Var_Type_Real)
 						{
 							operand->value.real = -operand->value.real;
 						}
@@ -1083,7 +1100,7 @@ Expr* collapse_expr_real(Expr* root, Builtin_Function* builtin_functions, String
 					}
                 case Unop_Not:
 					{
-						if (operand->value.type != Value_Type::BOOL)
+						if (operand->value.type != Var_Type_Boolean)
 						{
 							*error_string = make_string("Can not apply the operator Not to non boolean value");
 							return NULL;

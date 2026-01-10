@@ -24,14 +24,8 @@ enum Op_Binary {
     Binop_Le,
 };
 
-enum class Value_Type {
-    INTEGER,
-    REAL,
-    BOOL,
-};
-
 struct Value {
-    Value_Type type;
+    Variable_Type type;
 
     union {
         bool boolean;
@@ -39,26 +33,20 @@ struct Value {
         double real;
     };
 
-
-    Value(bool b) : boolean(b) {
-        type = Value_Type::BOOL;
-    }
-    Value(long long integer) : integer(integer) {
-        type = Value_Type::INTEGER;
-    }
-    Value(double real) : real(real) {
-        type = Value_Type::REAL;
-    }
+    Value() : type(Var_Type_Integer), integer(0) {}  // invalid state
+    Value(bool b) : type(Var_Type_Boolean), boolean(b) {}
+    Value(long long integer) : type(Var_Type_Integer), integer(integer) {}
+    Value(double real) : type(Var_Type_Real), real(real) {}
 
     bool is_numeric() {
-        return type == Value_Type::INTEGER || type == Value_Type::REAL;
+        return type == Var_Type_Integer || type == Var_Type_Real;
     }
 
 	bool evaluate_truth_value() {
 		switch (type) {
-		case Value_Type::BOOL: return boolean;
-		case Value_Type::INTEGER: return integer != 0;
-		case Value_Type::REAL: return real != 0.0;
+		case Var_Type_Boolean: return boolean;
+		case Var_Type_Integer: return integer != 0;
+		case Var_Type_Real: return real != 0.0;
 		}
 
 		panic("Unknown value type");
@@ -70,15 +58,6 @@ struct Variable {
     Variable_Type type = Var_Type_Real;
 
     Variable() {}
-    Variable(String n, Value_Type t) : name(n) {
-        switch (t) {
-            case Value_Type::INTEGER:   type = Var_Type_Integer;
-            case Value_Type::REAL:      type = Var_Type_Real;
-            case Value_Type::BOOL:      type = Var_Type_Boolean;
-            default:
-                panic("Invalid value type");
-        }
-    }
     Variable(String n, Variable_Type) : name(n), type(type) {}
 
     bool operator==(const Variable& other) const {
@@ -119,6 +98,7 @@ struct Expr_Literal : Expr {
 	{
         type = Expr_Type::Literal;
     }
+    Expr_Literal(Value val) : value(val) {}
 };
 
 struct Expr_Unary : Expr {

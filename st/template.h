@@ -213,22 +213,18 @@ struct Array {
 		return Find_Result {0, false};
 	}
 
-	void resize(int new_size) {
-		T* new_buffer = new T[new_size];
+	bool operator==(const Array<T>& other) const {
+		if (size != other.size) {
+			return false;
+		}
 
-		if (size > new_size)
-			size = new_size;
-		
 		for (int i = 0; i < size; i++) {
-			new_buffer[i] = data[i];
+			if (data[i] != other.data[i]) {
+				return false;
+			}
 		}
 
-		if (data) {
-			delete[] data;
-		}
-
-		data = new_buffer;
-		size = new_size;
+		return true;
 	}
 
 	T* begin() {
@@ -247,3 +243,8 @@ struct Array {
 		return data + size;
 	}
 };
+
+template<typename T, int N>
+Array<T> make_array(T (&arr)[N]) {
+	return Array<T>(arr, N);
+}

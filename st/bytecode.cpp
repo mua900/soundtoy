@@ -261,14 +261,14 @@ Constant_Id Constant_Block::add_constant(Value value)
 
 	switch (value.type)
 	{
-        case Value_Type::BOOL:  // fallthrough
-		case Value_Type::INTEGER:
+        case Var_Type_Boolean:  // fallthrough
+		case Var_Type_Integer:
 			{
 				const_id.constant_index = integer.add_unique(value.integer);
                 const_id.constant_type = CONSTANT_TYPE_INTEGER;
 				break;
 			}
-		case Value_Type::REAL:
+		case Var_Type_Real:
 			{
 				const_id.constant_index = real.add_unique(value.real);
                 const_id.constant_type = CONSTANT_TYPE_REAL;
@@ -390,20 +390,19 @@ void Bytecode_Program::step_time(double step)
     constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] += step;
 }
 
-void Bytecode_Program::set_sample_rate(float sample_rate) {
+void Bytecode_Program::set_sample_rate(double sample_rate) {
     constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE] = sample_rate;
 }
 
-float Bytecode_Program::get_sample_rate() {
-    float sample_rate = constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE];
-    return sample_rate;
+double Bytecode_Program::get_sample_rate() {
+    return constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE];
 }
 
-void Bytecode_Program::set_sample_time(float sample_time) {
+void Bytecode_Program::set_sample_time(double sample_time) {
     constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] = sample_time;
 }
 
-float Bytecode_Program::get_sample_time() {
+double Bytecode_Program::get_sample_time() {
     return constant_block.builtin_variable[BUILTIN_VARIABLE_TIME];
 }
 
@@ -421,8 +420,9 @@ void Bytecode_Program::set_builtin_variable(double value, u32 builtin_variable) 
     constant_block.builtin_variable[builtin_variable] = value;
 }
 
-void Bytecode_Program::set_builtin_function(Builtin_Function implementation, u32 builtin_function) {
-    constant_block.builtin_function[builtin_function] = implementation;
+// Be very careful matching the signatures before using this.
+void Bytecode_Program::set_builtin_function(GenericFunctionPointer implementation, u32 builtin_function) {
+    constant_block.builtin_function[builtin_function].implementation = implementation;
 }
 
 void Bytecode_Program::print_program() {
@@ -543,7 +543,7 @@ void Bytecode_Program::print_program() {
         }
 
         builder.append(make_string("    Builtin Variables: \n"));
-        for (float builtin : constant_block.builtin_variable) {
+        for (double builtin : constant_block.builtin_variable) {
             builder.append(make_string("    "));
             char string[64];
             snprintf(string, sizeof(string), "%.3f", builtin);
@@ -559,12 +559,12 @@ void Bytecode_Program::print_program() {
 
 // -- Bytecode runner
 
-float bytecode_run(Bytecode_Program& program)
+double bytecode_run(Bytecode_Program& program)
 {
     Bytecode_Processor& processor = program.processor;
     Constant_Block& constant_block = program.constant_block;
     Bytecode_Code& code = program.code;
-	DArray<float>& variables = program.variables;
+	DArray<double>& variables = program.variables;
 
 #define BYTECODE_PROGRAM_MAXIMUM_ITERATION_COUNT 2000
     int iteration_count = 0;
@@ -643,48 +643,48 @@ float bytecode_run(Bytecode_Program& program)
                 u16 freg = instr.op0;
                 u16 ireg = instr.op1;
 
-                processor.fregs.get_ref(freg) = (float)processor.regs.get(ireg);
+                processor.fregs.get_ref(freg) = (double)processor.regs.get(ireg);
                 break;
             }
             case INSTR_MOV_F_TO_I: {
                 u16 ireg = instr.op0;
                 u16 freg = instr.op1;
 
-                processor.regs.get_ref(ireg) = (s32)processor.fregs.get(freg);
+                processor.regs.get_ref(ireg) = (s64)processor.fregs.get(freg);
                 break;
             }
 
             case INSTR_ADD: {
-                s32 op0 = processor.regs.get(instr.op0);
-                s32 op1 = processor.regs.get(instr.op1);
+                s64 op0 = processor.regs.get(instr.op0);
+                s64 op1 = processor.regs.get(instr.op1);
 
                 processor.regs.get_ref(instr.op0) = op0 + op1;
                 break;
             }
             case INSTR_SUB: {
-                s32 op0 = processor.regs.get(instr.op0);
-                s32 op1 = processor.regs.get(instr.op1);
+                s64 op0 = processor.regs.get(instr.op0);
+                s64 op1 = processor.regs.get(instr.op1);
 
                 processor.regs.get_ref(instr.op0) = op0 - op1;
                 break;
             }
             case INSTR_MUL: {
-                s32 op0 = processor.regs.get(instr.op0);
-                s32 op1 = processor.regs.get(instr.op1);
+                s64 op0 = processor.regs.get(instr.op0);
+                s64 op1 = processor.regs.get(instr.op1);
 
                 processor.regs.get_ref(instr.op0) = op0 * op1;
                 break;
             }
             case INSTR_DIV: {
-                s32 op0 = processor.regs.get(instr.op0);
-                s32 op1 = processor.regs.get(instr.op1);
+                s64 op0 = processor.regs.get(instr.op0);
+                s64 op1 = processor.regs.get(instr.op1);
 
                 processor.regs.get_ref(instr.op0) = op0 / op1;
                 break;
             }
             case INSTR_MOD: {
-                s32 op0 = processor.regs.get(instr.op0);
-                s32 op1 = processor.regs.get(instr.op1);
+                s64 op0 = processor.regs.get(instr.op0);
+                s64 op1 = processor.regs.get(instr.op1);
 
                 processor.regs.get_ref(instr.op0) = op0 % op1;
 
@@ -692,39 +692,39 @@ float bytecode_run(Bytecode_Program& program)
             }
 
             case INSTR_ADDF: {
-                float op0 = processor.fregs.get(instr.op0);
-                float op1 = processor.fregs.get(instr.op1);
+                double op0 = processor.fregs.get(instr.op0);
+                double op1 = processor.fregs.get(instr.op1);
 
                 processor.fregs.get_ref(instr.op0) = op0 + op1;
 
                 break;
             }
             case INSTR_SUBF: {
-                float op0 = processor.fregs.get(instr.op0);
-                float op1 = processor.fregs.get(instr.op1);
+                double op0 = processor.fregs.get(instr.op0);
+                double op1 = processor.fregs.get(instr.op1);
 
                 processor.fregs.get_ref(instr.op0) = op0 - op1;
 
                 break;
             }
             case INSTR_MULF: {
-                float op0 = processor.fregs.get(instr.op0);
-                float op1 = processor.fregs.get(instr.op1);
+                double op0 = processor.fregs.get(instr.op0);
+                double op1 = processor.fregs.get(instr.op1);
 
                 processor.fregs.get_ref(instr.op0) = op0 * op1;
                 break;
             }
             case INSTR_DIVF: {
-                float op0 = processor.fregs.get(instr.op0);
-                float op1 = processor.fregs.get(instr.op1);
+                double op0 = processor.fregs.get(instr.op0);
+                double op1 = processor.fregs.get(instr.op1);
 
                 processor.fregs.get_ref(instr.op0) = op0 / op1;
 
                 break;
             }
             case INSTR_MODF: {
-                float op0 = processor.fregs.get(instr.op0);
-                float op1 = processor.fregs.get(instr.op1);
+                double op0 = processor.fregs.get(instr.op0);
+                double op1 = processor.fregs.get(instr.op1);
 
                 processor.fregs.get_ref(instr.op0) = fmodf(op0, op1);
 
@@ -732,25 +732,25 @@ float bytecode_run(Bytecode_Program& program)
             }
 
             case INSTR_NEGATE: {
-                s32 value = processor.regs.get(instr.op0);
+                s64 value = processor.regs.get(instr.op0);
                 processor.regs.get_ref(instr.op0) = - value;
                 break;
             }
             case INSTR_NOT: {
-                s32 value = processor.regs.get(instr.op0);
+                s64 value = processor.regs.get(instr.op0);
                 processor.regs.get_ref(instr.op0) = (value == 0);
                 break;
             }
 
             case INSTR_NEGATE_F: {
-                float value = processor.fregs.get(instr.op0);
+                double value = processor.fregs.get(instr.op0);
                 processor.fregs.get_ref(instr.op0) = - value;
                 break;
             }
 
             case INSTR_CMP: {
-                s32 left = processor.regs.get(instr.op0);
-                s32 right = processor.regs.get(instr.op1);
+                s64 left = processor.regs.get(instr.op0);
+                s64 right = processor.regs.get(instr.op1);
                 if (left == right) {
                     processor.result_flags |= COMPARISON_RESULT_EQUALS;
                     processor.result_flags &= ~COMPARISON_RESULT_NOT_EQUALS;
@@ -772,8 +772,8 @@ float bytecode_run(Bytecode_Program& program)
                 break;
             }
             case INSTR_CMPF: {
-                float left = processor.fregs.get(instr.op0);
-                float right = processor.fregs.get(instr.op1);
+                double left = processor.fregs.get(instr.op0);
+                double right = processor.fregs.get(instr.op1);
                 if (left == right) {
                     processor.result_flags |= COMPARISON_RESULT_EQUALS;
                     processor.result_flags &= ~COMPARISON_RESULT_NOT_EQUALS;
@@ -852,8 +852,12 @@ float bytecode_run(Bytecode_Program& program)
                 u16 fn_id = instr.op0;
                 u16 freg = instr.op1;
 
-                float result = program.constant_block.builtin_function[fn_id](processor.fregs.get(freg));
-                processor.fregs.get_ref(freg) = result;
+                Value result;
+                call_function(program.constant_block.builtin_function[fn_id], &result);
+                
+                // @todo
+
+                processor.fregs.get_ref(freg) = result.real;
                 break;
             }
 
