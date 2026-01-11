@@ -893,10 +893,7 @@ Function_ID get_function_id(String name)
         return BUILTIN_FUNC_SMOOTHSTEP;
     }
     else if (string_compare(name, make_string("clamp"))) {
-        return BUILTIN_FUNC_CLAMP_RANGE_NORMAL;
-    }
-    else if (string_compare(name, make_string("clamp_audio"))) {  // @todo get rid
-        return BUILTIN_FUNC_CLAMP_RANGE_AUDIO;
+        return BUILTIN_FUNC_CLAMP;
     }
     else if (string_compare(name, make_string("exp"))) {
         return BUILTIN_FUNC_EXP;
@@ -949,12 +946,12 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
     Expr* expr = root;
     switch (expr->type)
     {
-    case Expr_Type::Grouping:
+        case Expr_Type::Grouping:
 		{
 			auto group = static_cast<Expr_Grouping*>(expr);
 			return collapse_expr_real(group, builtin_functions, error_string);
 		}
-    case Expr_Type::Binary:
+        case Expr_Type::Binary:
 		{
 			auto binary = static_cast<Expr_Binary*>(expr);
 
@@ -1004,7 +1001,7 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 
 			break;
 		}
-    case Expr_Type::Call:
+        case Expr_Type::Call:
 		{
 			auto call = static_cast<Expr_Call*>(expr);
 
@@ -1091,11 +1088,11 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 
 			break;
 		}
-	case Expr_Type::Literal:
+	    case Expr_Type::Literal:
 		{
 			return expr;
 		}
-    case Expr_Type::Unary:
+        case Expr_Type::Unary:
 		{
 			Expr_Unary* unary = static_cast<Expr_Unary*>(expr);
 			{
@@ -1145,7 +1142,7 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 
 			break;
 		}
-    case Expr_Type::Variable:
+        case Expr_Type::Variable:
 		{
 			auto var = static_cast<Expr_Variable*>(expr);
 			if (var->var_id == BUILTIN_VAR_ID_INVALID)
@@ -1156,7 +1153,7 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			return expr;
 		}
 
-	case Expr_Type::Ternary:
+    	case Expr_Type::Ternary:
 		{
 			auto ternary = static_cast<Expr_Ternary*>(expr);
 			auto cond = collapse_expr_real(ternary->condition, builtin_functions, error_string);
@@ -1194,8 +1191,16 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			ternary->then_ = then_;
 			ternary->else_ = else_;
 
-			break;
+			return ternary;
 		}
+        case Expr_Type::Tuple:
+        {
+            auto tuple = static_cast<Expr_Tuple*>(expr);
+            for (auto& e : tuple->expressions) {
+                e = collapse_expr_real(e, builtin_functions, error_string);
+            }
+            return tuple;
+        }
     }
     return expr;
 }

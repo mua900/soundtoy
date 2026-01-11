@@ -203,7 +203,7 @@ struct Bytecode_Program {
     }
 
 	void set_builtin_variable(double value, u32 builtin_id);
-	void set_builtin_function(GenericFunctionPointer implementation, u32 builtin_function);
+	void set_builtin_function(StFunction  implementation, u32 builtin_function);
 	void step_time(double time);
 	void set_sample_time(double sample_time);
 	void set_sample_rate(double sample_rate);

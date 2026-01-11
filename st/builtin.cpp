@@ -7,70 +7,71 @@ double smoothstep(double x);
 double clamp_range_normal(double x);
 double clamp_range_audio(double x);  // @todo get rid
 
+// wrappers
+void st_fabs(Value* parameters, Value* results);
+void st_get_sign(Value* parameters, Value* results);
+void st_ceil(Value* parameters, Value* results);
+void st_floor(Value* parameters, Value* results);
+void st_smoothstep(Value* parameters, Value* results);
+void st_clamp(Value* parameters, Value* results);
+void st_sin(Value* parameters, Value* results);
+void st_cos(Value* parameters, Value* results);
+void st_asin(Value* parameters, Value* results);
+void st_acos(Value* parameters, Value* results);
+void st_exp(Value* parameters, Value* results);
+
 void call_function(Function func, Value* parameters, Value* results) {
-    int param_count = func.signature.parameter_types.size;
-    int return_count = func.signature.return_types.size;
-
-	if (param_count != 1 || return_count != 1) {
-		panic("TODO complete multiparameter function implementation");
-	}
-
-	auto f = reinterpret_cast<double (*)(double)>(func.implementation);
-	results[0] = Value(f(parameters[0].real));
+    func.implementation(parameters, results);
 }
 
 void get_default_builtin_functions(Function* list)
 {
-    // @todo remove static
     static Variable_Type single_value[1] = { Var_Type_Real };
-
+    static Variable_Type three_values[3] = { Var_Type_Real, Var_Type_Real, Var_Type_Real };
+    
     list[BUILTIN_FUNC_ABS] = Function(
-        (GenericFunctionPointer)fabs,
+        st_fabs,
         FunctionSignature(String("abs"), make_array(single_value), make_array(single_value))
     );
     list[BUILTIN_FUNC_SIGN] = Function(
-        (GenericFunctionPointer)get_sign,
+        st_get_sign,
         FunctionSignature(String("sign"), make_array(single_value), make_array(single_value))
     );
     list[BUILTIN_FUNC_CEIL] = Function(
-        (GenericFunctionPointer)ceil,
+        st_ceil,
         FunctionSignature(String("ceil"), make_array(single_value), make_array(single_value))
     );
     list[BUILTIN_FUNC_FLOOR] = Function(
-        (GenericFunctionPointer)floor,
+        st_floor,
         FunctionSignature(String("floor"), make_array(single_value), make_array(single_value))
     );
-    list[BUILTIN_FUNC_SMOOTHSTEP] = Function(
-        (GenericFunctionPointer)smoothstep,
-        FunctionSignature(String("smoothstep"), make_array(single_value), make_array(single_value))
-    );
-    list[BUILTIN_FUNC_CLAMP_RANGE_NORMAL] = Function(
-        (GenericFunctionPointer)clamp_range_normal,
-        FunctionSignature(String("clamp_normal"), make_array(single_value), make_array(single_value))
-    );
-    list[BUILTIN_FUNC_CLAMP_RANGE_AUDIO] = Function(
-        (GenericFunctionPointer)clamp_range_audio,
-        FunctionSignature(String("clamp_range_audio"), make_array(single_value), make_array(single_value))
-    );
     list[BUILTIN_FUNC_SIN] = Function(
-        (GenericFunctionPointer)sin,
+        st_sin,
         FunctionSignature(String("sin"), make_array(single_value), make_array(single_value))
     );
     list[BUILTIN_FUNC_COS] = Function(
-        (GenericFunctionPointer)cos,
+        st_cos,
         FunctionSignature(String("cos"), make_array(single_value), make_array(single_value))
     );
     list[BUILTIN_FUNC_ARCSIN] = Function(
-        (GenericFunctionPointer)asin,
+        st_asin,
         FunctionSignature(String("asin"), make_array(single_value), make_array(single_value))
     );
     list[BUILTIN_FUNC_ARCCOS] = Function(
-        (GenericFunctionPointer)acos,
+        st_acos,
         FunctionSignature(String("acos"), make_array(single_value), make_array(single_value))
     );
     list[BUILTIN_FUNC_EXP] = Function(
-        (GenericFunctionPointer)exp,
+        st_exp,
         FunctionSignature(String("exp"), make_array(single_value), make_array(single_value))
+    );
+    list[BUILTIN_FUNC_SMOOTHSTEP] = Function(
+        st_smoothstep,
+        FunctionSignature(String("smoothstep"), make_array(single_value), make_array(three_values))
+    );
+    list[BUILTIN_FUNC_CLAMP] = Function(
+        st_clamp,
+        FunctionSignature(String("clamp"), make_array(single_value), make_array(three_values))
     );
 }
 
@@ -90,15 +91,25 @@ double get_sign(double x)
     return (x > 0) - (x < 0);
 }
 
-double smoothstep(double x) {
-    x = CLAMP(x, 0.0, 1.0);
+double smoothstep(double x, double lower, double upper) {
+    x = CLAMP(x, lower, upper);
     return x * x * (3.0 - 2.0 * x);
 }
 
-double clamp_range_normal(double x) {
-    return CLAMP(x, 0.0, 1.0);
+double clamp(double x, double lower, double upper) {
+    return CLAMP(x, lower, upper);
 }
 
-double clamp_range_audio(double x) {
-    return CLAMP(x, -1.0, 1.0);
-}
+// wrappers
+
+void st_fabs(Value* parameters, Value* results) { results[0].real = fabs(parameters[0].real); }
+void st_get_sign(Value* parameters, Value* results) { results[0].real = fabs(parameters[0].real); }
+void st_ceil(Value* parameters, Value* results) { results[0].real = ceil(parameters[0].real); }
+void st_floor(Value* parameters, Value* results) { results[0].real = floor(parameters[0].real); }
+void st_smoothstep(Value* parameters, Value* results) { results[0].real = smoothstep(parameters[0].real, parameters[1].real, parameters[2].real); }
+void st_clamp(Value* parameters, Value* results) { results[0].real = clamp(parameters[0].real, parameters[1].real, parameters[2].real); }
+void st_sin(Value* parameters, Value* results) { results[0].real = sin(parameters[0].real); }
+void st_cos(Value* parameters, Value* results) { results[0].real = cos(parameters[0].real); }
+void st_asin(Value* parameters, Value* results) { results[0].real = asin(parameters[0].real); }
+void st_acos(Value* parameters, Value* results) { results[0].real = acos(parameters[0].real); }
+void st_exp(Value* parameters, Value* results) { results[0].real = exp(parameters[0].real); }

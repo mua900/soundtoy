@@ -249,6 +249,10 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 
 			return result_loc;
 		}
+        case Expr_Type::Tuple: {
+            // @todo
+            panic("How do we compile tuples?");
+        }
         default: {
             panic("Unknown expression type");
         }
@@ -421,7 +425,7 @@ void Bytecode_Program::set_builtin_variable(double value, u32 builtin_variable) 
 }
 
 // Be very careful matching the signatures before using this.
-void Bytecode_Program::set_builtin_function(GenericFunctionPointer implementation, u32 builtin_function) {
+void Bytecode_Program::set_builtin_function(StFunction implementation, u32 builtin_function) {
     constant_block.builtin_function[builtin_function].implementation = implementation;
 }
 

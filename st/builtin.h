@@ -7,6 +7,7 @@
 #define CONSTANT_TAU CONSTANT_PI * 2.0
 
 typedef void (*GenericFunctionPointer)(void);
+typedef void (*StFunction)(Value* parameters, Value* return_values);
 
 struct FunctionSignature {
     String name = {};
@@ -28,12 +29,12 @@ struct FunctionSignature {
 };
 
 struct Function {
-    GenericFunctionPointer implementation = nullptr;
+    StFunction implementation = nullptr;
     FunctionSignature signature = {};
 
     Function() {}
     Function(FunctionSignature sign) : signature(sign) {}
-    Function(GenericFunctionPointer impl, FunctionSignature sign) : implementation(impl), signature(sign) {}
+    Function(StFunction impl, FunctionSignature sign) : implementation(impl), signature(sign) {}
 };
 
 // results should be an array of length of func.signature.return_types.size
@@ -42,24 +43,20 @@ void call_function(Function func, Value* parameters, Value* results);
 
 // --- Builtin functions
 
-// it is trivial to add new builtin functions as long as they have the above signature.
-// add an enum entry here
-// go to get_function_id and add a new case for the name of the function to match
-// and finaly go to get_default_builtin_functions and add an implementaion of your function to the list
+// @todo rewrite how to add new functions
 enum Builtin_Func_Type {
     BUILTIN_FUNC_EXP,
     BUILTIN_FUNC_ABS,
     BUILTIN_FUNC_SIGN,
     BUILTIN_FUNC_CEIL,
     BUILTIN_FUNC_FLOOR,
-    // @todo get rid of different versions of the same function
-    BUILTIN_FUNC_CLAMP_RANGE_NORMAL,    // clamp between 0 and 1
-    BUILTIN_FUNC_CLAMP_RANGE_AUDIO,     // clamp between -1 and 1
-    BUILTIN_FUNC_SMOOTHSTEP,            // smoothstep between 0 and 1
     BUILTIN_FUNC_SIN,
     BUILTIN_FUNC_COS,
     BUILTIN_FUNC_ARCSIN,
     BUILTIN_FUNC_ARCCOS,
+
+    BUILTIN_FUNC_CLAMP,
+    BUILTIN_FUNC_SMOOTHSTEP,
 
     BUILTIN_FUNC_COUNT,
 
