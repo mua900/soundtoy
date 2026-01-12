@@ -172,15 +172,44 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
             Value_Location_Info location;
 
             if (is_builtin_function(call)) {
-                Expr* argument = call->arguments.get(0);
-                Value_Location_Info arg_location = compile_expr(argument, program);
+                Function builtin = program.constant_block.builtin_function[call->fn_id];
 
-                u16 freg = program.get_value_to_fp_register(arg_location);
+                // should be checked before
+                ASSERT (call->arguments.size == builtin.signature.parameter_types.size);
 
-                program.emit_bytecode_instruction(INSTR_CALL_BUILTIN, call->fn_id, freg);
+                int arg_count = builtin.signature.parameter_types.size;
 
-                location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
-                location.floating_point_register = freg;
+                if (arg_count == 1) {
+                    Expr* argument = call->arguments.get(0);
+                    Value_Location_Info arg_location = compile_expr(argument, program);
+
+                    u16 freg = program.get_value_to_fp_register(arg_location);
+
+                    program.emit_bytecode_instruction(INSTR_CALL_BUILTIN, call->fn_id, freg);
+
+                    location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+                    location.floating_point_register = freg;
+                }
+                else {
+                    // @todo support multiple return values
+
+                    program.processor.stack.ensure_size(arg_count);
+
+                    u16 ret_register = program.allocate_fp_register();
+
+                    for (int i = 0; i < arg_count; i++) {
+                        Expr* argument = call->arguments.get(i);
+
+                        Value_Location_Info loc = compile_expr(argument, program);
+                        u16 freg = program.get_value_to_fp_register(loc);
+                        program.emit_bytecode_instruction(INSTR_PUSH, freg, 0);
+                    }
+
+                    program.emit_bytecode_instruction(INSTR_CALL, ret_register, 0);
+
+                    location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+                    location.floating_point_register = ret_register;
+                }
             }
             else {
                 panic("User defined functions not implemented");
@@ -861,6 +890,29 @@ double bytecode_run(Bytecode_Program& program)
                 call_function(program.constant_block.builtin_function[fn_id], &param, &result);
 
                 processor.fregs.get_ref(freg) = result.real;
+                break;
+            }
+
+            case INSTR_CALL: {
+                u16 fn_id = instr.op0;
+                u16 result_fregister = instr.op1;
+
+                Value result;
+                call_function(constant_block.builtin_function[fn_id], processor.stack.data(), &result);
+
+                processor.stack.discard_data();  // the parameter values are used in the call.
+
+                processor.fregs.get_ref(result_fregister) = result.real;
+
+                break;
+            }
+
+            case INSTR_PUSH: {
+                u16 freg = instr.op0;
+
+                Value val = Value(processor.fregs.get(freg));
+                processor.stack.add(val);
+
                 break;
             }
 

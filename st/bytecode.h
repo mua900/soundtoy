@@ -79,6 +79,15 @@ enum Bytecode_Opcode : u32
 	// and that register is overwriten with the result of the call to return the value
 	INSTR_CALL_BUILTIN,	// call_builtin func_id freg
 
+	// @todo support multiple return values
+
+	// calls the function identified by func_id and place the result in the freg
+	// the arguments are placed on the stack per call and used by the called function
+	INSTR_CALL,			// call func_id freg
+
+	// push a value to the value stack
+	INSTR_PUSH,			// push freg
+
 	INSTR_RET,			// ret freg  -- return the floating point value in the freg the result of the expression
 
 	INSTR_COUNT,
@@ -163,8 +172,11 @@ struct Bytecode_Code {
 #define COMPARISON_RESULT_LESS_THAN		BIT(7)
 
 struct Bytecode_Processor {
-	DArray<s64> regs;
-	DArray<double> fregs;
+	DArray<s64> regs = {};
+	DArray<double> fregs = {};
+
+	DArray<Value> stack = {};
+
 	u32 result_flags = 0;
 
 	Bytecode_Processor()

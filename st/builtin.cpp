@@ -102,14 +102,14 @@ double clamp(double x, double lower, double upper) {
 
 // wrappers
 
-void st_fabs(Value* parameters, Value* results) { results[0].real = fabs(parameters[0].real); }
-void st_get_sign(Value* parameters, Value* results) { results[0].real = fabs(parameters[0].real); }
-void st_ceil(Value* parameters, Value* results) { results[0].real = ceil(parameters[0].real); }
-void st_floor(Value* parameters, Value* results) { results[0].real = floor(parameters[0].real); }
-void st_smoothstep(Value* parameters, Value* results) { results[0].real = smoothstep(parameters[0].real, parameters[1].real, parameters[2].real); }
-void st_clamp(Value* parameters, Value* results) { results[0].real = clamp(parameters[0].real, parameters[1].real, parameters[2].real); }
-void st_sin(Value* parameters, Value* results) { results[0].real = sin(parameters[0].real); }
-void st_cos(Value* parameters, Value* results) { results[0].real = cos(parameters[0].real); }
-void st_asin(Value* parameters, Value* results) { results[0].real = asin(parameters[0].real); }
-void st_acos(Value* parameters, Value* results) { results[0].real = acos(parameters[0].real); }
-void st_exp(Value* parameters, Value* results) { results[0].real = exp(parameters[0].real); }
+void st_fabs(Value* parameters, Value* results) { results[0] = Value(fabs(parameters[0].real)); }
+void st_get_sign(Value* parameters, Value* results) { results[0] = Value(fabs(parameters[0].real)); }
+void st_ceil(Value* parameters, Value* results) { results[0] = Value(ceil(parameters[0].real)); }
+void st_floor(Value* parameters, Value* results) { results[0] = Value(floor(parameters[0].real)); }
+void st_sin(Value* parameters, Value* results) { results[0] = Value(sin(parameters[0].real)); }
+void st_cos(Value* parameters, Value* results) { results[0] = Value(cos(parameters[0].real)); }
+void st_asin(Value* parameters, Value* results) { results[0] = Value(asin(parameters[0].real)); }
+void st_acos(Value* parameters, Value* results) { results[0] = Value(acos(parameters[0].real)); }
+void st_exp(Value* parameters, Value* results) { results[0] = Value(exp(parameters[0].real)); }
+void st_smoothstep(Value* parameters, Value* results) { results[0] = Value(smoothstep(parameters[0].real, parameters[1].real, parameters[2].real)); }
+void st_clamp(Value* parameters, Value* results) { results[0] = Value(clamp(parameters[0].real, parameters[1].real, parameters[2].real)); }

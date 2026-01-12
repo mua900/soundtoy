@@ -99,7 +99,9 @@ struct Expr_Literal : Expr {
 	{
         type = Expr_Type::Literal;
     }
-    Expr_Literal(Value val) : value(val) {}
+    Expr_Literal(Value val) : value(val) {
+        type = Expr_Type::Literal;
+    }
 };
 
 struct Expr_Unary : Expr {
@@ -140,7 +142,7 @@ struct Expr_Grouping : Expr {
 struct Expr_Call : Expr {
     String function_name;  // @note do we need expressions that can return functions? Not currently.
     Array<Expr*> arguments;
-    int fn_id = 0;  // function id assigned by parser
+    int fn_id = 0;
 
     Expr_Call(String f_name, Array<Expr*> args, int func_id) : function_name(f_name), arguments(args), fn_id(func_id)
 	{

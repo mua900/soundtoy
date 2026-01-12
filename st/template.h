@@ -55,7 +55,7 @@ public:
 
 	int add(T elem)	{
 		int ret_index = m_size;
-		if (m_size + 1 >= m_cap)
+		if (m_size + 1 > m_cap)
 		{
 			grow();
 		}
@@ -128,6 +128,12 @@ public:
 
 	void free()	{
 		reset();
+	}
+
+	void ensure_size(int size) {
+		if (m_size < size) {
+			resize(size);
+		}
 	}
 
 	void resize(int size) {

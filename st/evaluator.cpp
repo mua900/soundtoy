@@ -458,56 +458,46 @@ Expr* Parser::parse_call_expr()
     // function call
     cursor++;  // (
 
-    int arg_count = 0;
-    int paren_close = cursor;
     DArray<Expr*> arguments;
 
-    // count and collect the arguments
-    if (tokens.get(cursor).type != TOKEN_TYPE_PAREN_CLOSE)
+    int num_open_parens = 1;
+    while (num_open_parens != 0)
     {
-        arg_count++;
+        if (tokens.get(cursor).type == TOKEN_TYPE_END) {
+            parser_error = Error(make_string("Missing ')'"), tokens.get(cursor).offset);
 
-        while (true)
-        {
-            if (!(tokens.get(paren_close).type != TOKEN_TYPE_END && cursor < tokens.size))
-            {
-                parser_error.message = make_string("Reached end of input before being able to parse all the arguments to function call");
-                parser_error.offset = paren_close;
-                return NULL;
-            }
-
-            if (tokens.get(paren_close).type == TOKEN_TYPE_PAREN_CLOSE)
-            {
-                break;
-            }
-
-            if (tokens.get(paren_close).type == TOKEN_TYPE_COMMA)
-                arg_count++;
-
-            paren_close++;
-        }
-    }
-
-    arguments = DArray<Expr*>(arg_count);
-
-    while (cursor < paren_close)
-    {
-        Expr* arg = parse_expression();
-
-        if (arg)
-            arguments.add(arg);
-
-        if (cursor == paren_close) break;
-
-        if (!(arg && tokens.get(cursor).type == TOKEN_TYPE_COMMA))
-        {
             arguments.free();
             return NULL;
         }
 
-        cursor++;
+        Expr* expression = parse_expression();
+        if (!expression) {
+            arguments.free();
+            return NULL;
+        }
+
+        arguments.add(expression);
+
+        if (tokens.get(cursor).type != TOKEN_TYPE_COMMA && tokens.get(cursor).type != TOKEN_TYPE_PAREN_CLOSE) {
+            parser_error = Error(make_string("Expected ',' to seperate or otherwise ')' to close argument list to function call"), tokens.get(cursor).offset);
+            arguments.free();
+
+            return NULL;
+        }
+
+        if (tokens.get(cursor).type == TOKEN_TYPE_COMMA) {
+            cursor += 1;
+        }
+
+        if (tokens.get(cursor).type == TOKEN_TYPE_PAREN_CLOSE) {
+            num_open_parens -= 1;
+        }
+        else if (tokens.get(cursor).type == TOKEN_TYPE_PAREN_OPEN) {
+            num_open_parens += 1;
+        }
     }
 
+    ASSERT(tokens.get(cursor).type == TOKEN_TYPE_PAREN_CLOSE);
     cursor++; // )
 
     Function_ID fn_id = get_function_id(name);
@@ -723,22 +713,25 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
                 NOT_IMPLEMENTED("User defined functions")
             }
         }
-	case Expr_Type::Ternary: {
-		auto ternary = static_cast<Expr_Ternary*>(expr);
-		Eval result = evaluate_expression(ternary->condition);
+        case Expr_Type::Ternary: {
+            auto ternary = static_cast<Expr_Ternary*>(expr);
+            Eval result = evaluate_expression(ternary->condition);
 
-		if (!result.success) return fail;
-		
-		if (result.value == 0.0) {
-			return evaluate_expression(ternary->else_);
-		}
-		else {
-			return evaluate_expression(ternary->then_);
-		}
-	}
-	default: {
-		panic("Unknown expression type");
-	}
+            if (!result.success) return fail;
+            
+            if (result.value == 0.0) {
+                return evaluate_expression(ternary->else_);
+            }
+            else {
+                return evaluate_expression(ternary->then_);
+            }
+        }
+        case Expr_Type::Tuple: {
+            panic("We don't know what to do with tuples yet");
+        }
+        default: {
+            panic("Unknown expression type");
+        }
     }
 }
 
@@ -811,18 +804,27 @@ void print_expr(const Expr* expr, int indent)
 
             break;
         }
-	case Expr_Type::Ternary: {
-		const auto ternary = static_cast<const Expr_Ternary*>(expr);
-		printf("Ternary Expression\n");
-		print_expr(ternary->condition, indent + 1);
-		print_expr(ternary->then_, indent + 2);
-		print_expr(ternary->else_, indent + 2);
+        case Expr_Type::Ternary: {
+            const auto ternary = static_cast<const Expr_Ternary*>(expr);
+            printf("Ternary Expression\n");
+            print_expr(ternary->condition, indent + 1);
+            print_expr(ternary->then_, indent + 2);
+            print_expr(ternary->else_, indent + 2);
 
-		break;
-	}
-	default: {
+            break;
+        }
+        case Expr_Type::Tuple: {
+            const auto tuple = static_cast<const Expr_Tuple*>(expr);
+            printf("Tuple expression\n");
+            for (const Expr* e : tuple->expressions) {
+                print_expr(e, indent + 1);
+            }
+
+            break;
+        }
+        default: {
             panic("Unknown expression type");
-	}
+        }
     }
 }
 
@@ -1027,7 +1029,7 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			{
                 Function builtin = builtin_functions[call->fn_id];
 
-				if (call->arguments.size != builtin.signature.return_types.size) {
+				if (call->arguments.size != builtin.signature.parameter_types.size) {
 					*error_string = make_string("Wrong number of arguments");
 					return NULL;
 				}
@@ -1055,12 +1057,24 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 				for (int i = 0; i < arg_count; i++) {
 					// we know that all of them should be literals
 					ASSERT(static_cast<Expr_Literal*>(call->arguments.get(i))->type == Expr_Type::Literal);
-					arguments.get_ref(i) = static_cast<Expr_Literal*>(call->arguments.get(i))->value;
-				}				
+					arguments.add(static_cast<Expr_Literal*>(call->arguments.get(i))->value);
+				}
 
                 Expr* ret = nullptr;
 				if (builtin.signature.return_types.size == 0) {
-					call_function(builtin, arguments.data(), nullptr);
+                    // @todo do we actually allow for functions that don't return anything.
+                    // the current assumption is that since they are signal generators, all functions are pure.
+                    // so it wouldn't make sense for a function to not return anything and currently no such functions exist.
+                    // but if we decide to add them how their semantics should be depends on what exactly they are or what exactly they do.
+                    // so we can't decide on that.
+
+                    // if they mess up with some settings to the system like setting some global variables or settings only once then we can safely only "execute" them once and not put them on the tree.
+                    // but magic functions that mess with settings sounds like a horrible idea so we will probably never add them.
+                    // if they do something per sample then we should put them to the tree and if they ever exist.
+                    // the second one is the more probable future hence the active path instead of the commented out one.
+
+                    return call;
+					// call_function(builtin, arguments.data(), nullptr);
 				}
                 else if (builtin.signature.return_types.size == 1) {
                     Value result = {};
