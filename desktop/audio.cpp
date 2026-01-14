@@ -201,7 +201,7 @@ static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream,
 
 static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
 {
-    total_amount /= sizeof(float);
+    total_amount /= sizeof(float) * 2;
 
 	Audio* audio = (Audio*)userdata;
 

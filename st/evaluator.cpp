@@ -699,15 +699,45 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
             auto call = static_cast<Expr_Call*>(expr);
             if (is_builtin_function(call))
             {
-                Eval arg = evaluate_expression(call->arguments.data[0]);
-                if (!arg.success)
-                {
-                    return fail;
+                Function builtin = builtin_functions[call->fn_id];
+
+                double ret = 0.0;
+
+                if (builtin.signature.parameter_types.size == 0) {
+                    // what do we do with functions that doesn't return anything?
+                }
+                else if (builtin.signature.parameter_types.size == 1) {
+                    Eval arg = evaluate_expression(call->arguments.data[0]);
+
+                    if (!arg.success)
+                    {
+                        return fail;
+                    }
+
+                    Value argument = Value(arg.value);
+                    Value result;
+                    call_function(builtin, &argument, &result);
+
+                    ret = result.real;
+                }
+                else {
+                    static Value buffer[10];  // @todo fix
+                    for (int i = 0; i < builtin.signature.parameter_types.size; i++) {
+                        Eval eval = evaluate_expression(call->arguments.get(i));
+                        if (!eval.success) {
+                            return fail;
+                        }
+
+                        buffer[i] = Value(eval.value);
+                    }
+
+                    Value result;
+                    call_function(builtin, buffer, &result);
+
+                    ret = result.real;
                 }
 
-                float result = 0.0; // @todo call
-
-                return { result, true };
+                return { ret, true };
             }
             else {
                 NOT_IMPLEMENTED("User defined functions")
@@ -727,7 +757,7 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
             }
         }
         case Expr_Type::Tuple: {
-            panic("We don't know what to do with tuples yet");
+            panic("We don't know how to evaluate with tuples yet");
         }
         default: {
             panic("Unknown expression type");

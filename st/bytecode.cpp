@@ -218,9 +218,6 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
             return location;
         }
     	case Expr_Type::Ternary: {
-			// This uses weird hacks to go around the fact that we are trying to compile a part of a program with non-linear control flow in a simple way and in a single go.
-			// Ideally we want to restructure the system to detect and compile basic blocks individually and then combine them into a program which can open up additional optimizations but i don't have time for that right now.
-			
 			auto ternary = static_cast<Expr_Ternary*>(expr);
 
 			u32 then_length;
@@ -446,6 +443,7 @@ void Bytecode_Program::reset() {
     code.code.reset();
     constant_block.real.reset();
     constant_block.integer.reset();
+    constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] = 0.0;
     get_default_builtin_functions(constant_block.builtin_function);
 }
 

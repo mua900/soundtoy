@@ -451,6 +451,9 @@ extern "C" {
 
 		print_expression(expression);
 		
+        // reset state
+        tree_interp->builtins[BUILTIN_VARIABLE_TIME] = 0.0;
+
         auto eval = tree_interp->evaluate_expression(expression);
         if (!eval.success) {
             return false;
