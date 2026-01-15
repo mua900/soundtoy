@@ -12,6 +12,8 @@ foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${CMAKE_BINARY_DIR}/lib)
 endforeach()
 
+set(CMAKE_CXX_STANDARD 20)
+
 add_executable(soundtoy
     desktop/main.cpp
     
@@ -52,6 +54,9 @@ add_library(soundtoy_lib STATIC
     st/bytecode.h
     st/bytecode.cpp
     st/template.h
+
+    st/platform.h
+    st/platform.cpp
 
     st/api.h
     st/api.cpp

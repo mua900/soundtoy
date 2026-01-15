@@ -4,8 +4,21 @@
 #include "template.h"
 #include "evaluator.h"
 #include "bytecode.h"
+#include "platform.h"
+
+#include <bit>
 
 extern "C" {
+    static const double min_flt_dp = std::bit_cast<double>(0x0010000000000000);
+    static const float  min_flt_sp = std::bit_cast<float>(0x00800000);
+
+    double flush_subnormal_dp(double x) {
+        return (x < min_flt_dp) ? 0.0 : x;
+    }
+
+    float flush_subnormal_sp(float x) {
+        return (x < min_flt_sp) ? 0.0 : x;
+    }
 
     static void bytecode_step_time(void* program, float step);
 	static Array<Variable> bytecode_symbol_table_get(void* program);
@@ -55,8 +68,10 @@ extern "C" {
 
     // @todo thread safe
     static const char* st_last_error = nullptr;
+    static bool allow_subnormals = false;
 
-    bool st_initialize() {
+    bool st_initialize(bool p_allow_subnormals) {
+        allow_subnormals = p_allow_subnormals;
         return true;
     }
 
@@ -450,7 +465,7 @@ extern "C" {
         }
 
 		print_expression(expression);
-		
+
         // reset state
         tree_interp->builtins[BUILTIN_VARIABLE_TIME] = 0.0;
 
