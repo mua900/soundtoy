@@ -945,12 +945,14 @@ bool opcode_is_binary(Bytecode_Opcode opcode) {
 
 
 const char* opcode_string(Bytecode_Opcode opcode) {
+    // @update
     switch (opcode) {
         case INSTR_LOAD: return "INSTR_LOAD";
         case INSTR_LOADF: return "INSTR_LOADF";
         case INSTR_LOAD_BUILTIN: return "INSTR_LOAD_BUILTIN";
 	    case INSTR_LOAD_VAR: return "INSTR_LOAD_VAR";
     	case INSTR_LOAD_I_TO_F: return "INSTR_LOAD_I_TO_F";
+        case INSTR_LOAD_F_TO_I: return "INSTR_LOAD_F_TO_I";
         case INSTR_MOV: return "INSTR_MOV";
         case INSTR_MOVF: return "INSTR_MOVF";
         case INSTR_MOV_I_TO_F: return "INSTR_MOV_I_TO_F";
@@ -976,12 +978,18 @@ const char* opcode_string(Bytecode_Opcode opcode) {
         case INSTR_CMP: return "INSTR_CMP";
         case INSTR_CMPF: return "INSTR_CMPF";
 
+        case INSTR_TEST: return "INSTR_TEST";
+        case INSTR_TEST_F: return "INSTR_TEST_F";
+
         case INSTR_TEST_RESULT: return "INSTR_TEST_RESULT";
 
         case INSTR_JMP: return "INSTR_JMP";
         case INSTR_JMP_COND: return "INSTR_JMP_COND";
 
         case INSTR_CALL_BUILTIN: return "INSTR_CALL_BUILTIN";
+        case INSTR_CALL: return "INSTR_CALL";
+
+        case INSTR_PUSH: return "INSTR_PUSH";
 
         case INSTR_RET: return "INSTR_RET";
 

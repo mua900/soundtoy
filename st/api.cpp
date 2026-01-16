@@ -7,18 +7,22 @@
 #include "platform.h"
 
 #include <bit>
+#include <cmath>
 
 extern "C" {
     static const double min_flt_dp = std::bit_cast<double>(0x0010000000000000);
     static const float  min_flt_sp = std::bit_cast<float>(0x00800000);
 
     double flush_subnormal_dp(double x) {
-        return (x < min_flt_dp) ? 0.0 : x;
+        return (fabs(x) < min_flt_dp) ? 0.0 : x;
     }
 
     float flush_subnormal_sp(float x) {
-        return (x < min_flt_sp) ? 0.0 : x;
+        return (fabsf(x) < min_flt_sp) ? 0.0 : x;
     }
+
+    static double bc_evaluate(Bytecode_Program* program);
+    static double tree_evaluate(Tree_Evaluator* tree_interp);
 
     static void bytecode_step_time(void* program, float step);
 	static Array<Variable> bytecode_symbol_table_get(void* program);
@@ -379,8 +383,7 @@ extern "C" {
     }
     static float bytecode_evaluate(void* evaluator) {
 		Bytecode_Program* program = (Bytecode_Program*) evaluator;
-		float result = bytecode_run(*program);
-        return CLAMP(result, -1.0, 1.0);
+        return bc_evaluate(program);
     }
     static void bytecode_fill(void* evaluator, float* buffer, int count) {
 		Bytecode_Program* program = (Bytecode_Program*) evaluator;
@@ -388,7 +391,7 @@ extern "C" {
         double inv_sample_rate = 1.0 / program->get_sample_rate();
 
         for (int i = 0; i < count; i++) {
-            buffer[i] = CLAMP(bytecode_run(*program), -1.0, 1.0);
+            buffer[i] = bc_evaluate(program);
 	        program->step_time(inv_sample_rate);
         }
     }
@@ -398,7 +401,7 @@ extern "C" {
 		double inv_sample_rate = 1.0 / program->get_sample_rate();
 		for (int i = 0; i < sample_count; i++) {
 			int index = i * 2;
-			buffer[index] = CLAMP(bytecode_run(*program), -1.0, 1.0);
+			buffer[index] = bc_evaluate(program);
 
 			program->step_time(inv_sample_rate);
 		}
@@ -414,8 +417,8 @@ extern "C" {
             int left = i * 2 + 0;
             int right = i * 2 + 1;
 
-            buffer[left] = CLAMP(bytecode_run(*program_left), -1.0, 1.0);
-            buffer[right] = CLAMP(bytecode_run(*program_right), -1.0, 1.0);
+            buffer[left] = bc_evaluate(program_left);
+            buffer[right] = bc_evaluate(program_right);
 
 	        program_left->step_time(left_inv_sr);
 	        program_right->step_time(right_inv_sr);
@@ -434,11 +437,11 @@ extern "C" {
         }
 
     	for (int i = 0; i < sample_count / 2; i++) {
-    		buffer[i] = CLAMP(bytecode_run(*program_left), -1.0, 1.0);
+    		buffer[i] = bc_evaluate(program_left);
     		program_left->step_time(left_inv_sr);
     	}
     	for (int i = sample_count / 2; i < sample_count; i++) {
-    		buffer[i] = CLAMP(bytecode_run(*program_right), -1.0, 1.0);
+    		buffer[i] = bc_evaluate(program_right);
     		program_right->step_time(right_inv_sr);
     	}
     }
@@ -479,8 +482,7 @@ extern "C" {
     }
     static float tree_interp_evaluate(void* evaluator) {
         Tree_Evaluator* tree_interp = (Tree_Evaluator*) evaluator;
-
-        return CLAMP(tree_interp->evaluate().value, -1.0, 1.0);
+        return tree_evaluate(tree_interp);
     }
     static void tree_interp_fill(void* evaluator, float* buffer, int count) {
 		Tree_Evaluator* tree_interp = (Tree_Evaluator*) evaluator;
@@ -488,7 +490,7 @@ extern "C" {
 	    double inv_sample_rate = 1.0 / tree_interp->get_sample_rate();
 
         for (int i = 0; i < count; i++) {
-            buffer[i] = CLAMP(tree_interp->evaluate().value, -1.0, 1.0);
+            buffer[i] = tree_evaluate(tree_interp);
 	        tree_interp->step_time(inv_sample_rate);
         }
     }
@@ -498,7 +500,7 @@ extern "C" {
 		double inv_sample_rate = tree_interp->get_sample_rate();
 		for (int i = 0; i < sample_count; i++) {
 			int index = i * 2;
-			buffer[index] = tree_interp->evaluate().value;
+			buffer[index] = tree_evaluate(tree_interp);
 			tree_interp->step_time(inv_sample_rate);
 		}
 	}
@@ -513,8 +515,8 @@ extern "C" {
             int left = i * 2 + 0;
             int right = i * 2 + 1;
 
-            buffer[left] = CLAMP(tree_left->evaluate().value, -1.0, 1.0);
-            buffer[right] = CLAMP(tree_right->evaluate().value, -1.0, 1.0);
+            buffer[left] = tree_evaluate(tree_left);
+            buffer[right] = tree_evaluate(tree_right);
 
             tree_left->step_time(left_inv_sr);
             tree_right->step_time(right_inv_sr);
@@ -533,12 +535,25 @@ extern "C" {
         }
 
 		for (int i = 0; i < sample_count / 2; i++) {
-			buffer[i] = CLAMP(tree_left->evaluate().value, -1.0, 1.0);
+			buffer[i] = tree_evaluate(tree_left);
 			tree_left->step_time(left_inv_sr);
 		}
 		for (int i = sample_count / 2; i < sample_count; i++) {
-			buffer[i] = CLAMP(tree_right->evaluate().value, -1.0, 1.0);
+			buffer[i] = tree_evaluate(tree_right);
 			tree_right->step_time(right_inv_sr);
 		}
 	}
+
+
+    static double bc_evaluate(Bytecode_Program* program) {
+        double result = bytecode_run(*program);
+        result = flush_subnormal_dp(CLAMP(result, -1.0, 1.0));
+        return result;
+    }
+
+    static double tree_evaluate(Tree_Evaluator* tree_interp) {
+        double result = tree_interp->evaluate().value;
+        result = flush_subnormal_dp(CLAMP(result, -1.0, 1.0));
+        return result;
+    }
 }
