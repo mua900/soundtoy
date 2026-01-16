@@ -981,7 +981,7 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
         case Expr_Type::Grouping:
 		{
 			auto group = static_cast<Expr_Grouping*>(expr);
-			return collapse_expr_real(group, builtin_functions, error_string);
+			return collapse_expr_real(group->expr, builtin_functions, error_string);
 		}
         case Expr_Type::Binary:
 		{
