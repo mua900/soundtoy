@@ -266,23 +266,28 @@ bool Application::load_assets()
 {
     String_Builder sb(256);
     const char* base_path = SDL_GetBasePath();
-    char* pref_path = SDL_GetPrefPath(org_name, soundtoy_name);
+    char* pref_path = SDL_GetPrefPath(org_name, soundtoy_name);  // need to free
 
-    sb.append(make_string(pref_path));
+    sb.append(make_string(base_path));
 
-    SDL_free(pref_path);
-    pref_path = nullptr;
-
-    bool load_from_pref_path = st_load_assets(sb);
-    if (load_from_pref_path) {
+    bool load_from_base_path = st_load_assets(sb);
+    if (load_from_base_path) {
         // success
+
+        SDL_free(pref_path);
+        pref_path = nullptr;
+
         return true;
     }
     else {
-        // failed to load from pref path. Try base path
-        sb.clear_and_append(String(base_path));
-        bool load_from_base_path = st_load_assets(sb);
-        return load_from_base_path;
+        // failed to load from base path. Try pref path
+        sb.clear_and_append(String(pref_path));
+
+        SDL_free(pref_path);
+        pref_path = nullptr;
+
+        bool load_from_pref_path = st_load_assets(sb);
+        return load_from_pref_path;
     }
 }
 
