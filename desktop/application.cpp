@@ -43,6 +43,10 @@ bool Application::initialize()
             ImGui::CreateContext();
 
             ImGuiIO& imgui_io = ImGui::GetIO();
+            imgui_io.IniFilename = nullptr;
+            imgui_io.LogFilename = nullptr;
+            imgui_io.IniSavingRate = 0;
+
             imgui_io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
             ImGui::StyleColorsDark();
