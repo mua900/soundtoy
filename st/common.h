@@ -203,6 +203,12 @@ struct String_Builder {
 
     String_Builder(int initial_capacity);
 
+    ~String_Builder() {
+        if (buffer) {
+            free(buffer);
+        }
+    }
+
     void create(int initial_capacity);
     void append(String string);
     void append_char(char ch);

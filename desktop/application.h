@@ -264,6 +264,7 @@ private:
     void set_event_deactive(int event_index);
 
     bool load_assets();
+    bool st_load_assets(String_Builder& sb);  // helper
 
     void draw_ui();
     void draw_imgui();

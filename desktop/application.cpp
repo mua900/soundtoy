@@ -9,8 +9,15 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
 
+static const char* org_name = "flying-carpet";
+static const char* soundtoy_identifier = "flying-carpet.soundtoy";
+static const char* soundtoy_name = "soundtoy";
+static const char* soundtoy_version = "0.1.0";
+
 bool Application::initialize()
 {
+    SDL_SetAppMetadata(soundtoy_name, soundtoy_version, soundtoy_identifier);
+
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         std::cerr << "Failed to init SDL\n";
         return false;
@@ -258,12 +265,36 @@ bool Application::update_channel_count(int channels)
 bool Application::load_assets()
 {
     String_Builder sb(256);
-    sb.append(make_string(SDL_GetBasePath()));
+    const char* base_path = SDL_GetBasePath();
+    char* pref_path = SDL_GetPrefPath(org_name, soundtoy_name);
+
+    sb.append(make_string(pref_path));
+
+    SDL_free(pref_path);
+    pref_path = nullptr;
+
+    bool load_from_pref_path = st_load_assets(sb);
+    if (load_from_pref_path) {
+        // success
+        return true;
+    }
+    else {
+        // failed to load from pref path. Try base path
+        sb.clear_and_append(String(base_path));
+        bool load_from_base_path = st_load_assets(sb);
+        return load_from_base_path;
+    }
+}
+
+bool Application::st_load_assets(String_Builder& sb) {
+    printf("Searching for assets in %s\n", sb.c_string());
+
 #ifdef _WIN32
     String path_seperator = make_string("\\");
 #else
     String path_seperator = make_string("/");
 #endif
+
     sb.append(make_string("asset"));
     sb.append(path_seperator);
 

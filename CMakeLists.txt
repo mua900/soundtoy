@@ -93,3 +93,31 @@ target_link_libraries(
     SDL3_image::SDL3_image
     SDL3_ttf::SDL3_ttf
 )
+
+include(GNUInstallDirs)
+
+install(TARGETS soundtoy
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+install(DIRECTORY asset
+	DESTINATION ${CMAKE_INSTALL_DATADIR}/flying-carpet/soundtoy
+)
+
+option(INSTALL_VENDORED_SDL "Install vendored SDL libraries" OFF)
+
+if (INSTALL_VENDORED_SDL)
+	get_target_property(SDL3_TARGET SDL3::SDL3 ALIASED_TARGET)
+	get_target_property(SDL3_IMAGE_TARGET SDL3_image::SDL3_image ALIASED_TARGET)
+	get_target_property(SDL3_TTF_TARGET SDL3_ttf::SDL3_ttf ALIASED_TARGET)
+
+	install(
+		TARGETS
+			${SDL3_TARGET}
+			${SDL3_IMAGE_TARGET}
+			${SDL3_TTF_TARGET}
+
+			RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+			LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	)
+endif()
