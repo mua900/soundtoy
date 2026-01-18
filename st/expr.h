@@ -58,7 +58,7 @@ struct Variable {
     Variable_Type type = Var_Type_Real;
 
     Variable() {}
-    Variable(String n, Variable_Type) : name(n), type(type) {}
+    Variable(String n, Variable_Type p_type) : name(n), type(p_type) {}
 
     bool operator==(const Variable& other) const {
         return type == other.type && name == other.name;

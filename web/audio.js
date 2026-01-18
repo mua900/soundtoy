@@ -47,7 +47,7 @@ export class StAudio {
         this.paused = false;
     }
 
-    toggle_pause() {
+    async toggle_pause() {
         if (this.paused) {
             this.unpause();
         }

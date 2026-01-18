@@ -3,8 +3,8 @@
 extern "C" {
 
     enum Evaluator_Type : int {
-        BYTECODE_INTERP,
-        TREE_INTERP,
+        BYTECODE_INTERP = 0,
+        TREE_INTERP = 1,
     };
 
     enum Variable_Type : int {

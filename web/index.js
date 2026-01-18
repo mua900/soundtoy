@@ -95,17 +95,41 @@ async function setup_samplers () {
 	return true;
 }
 
+let audio;
+let set_up_audio = false;
+
+function setup_audio() {
+	if (!set_up_audio) {
+		audio = new StAudio(sample_rate_default, channel_count_default, sampler_left, sampler_right);
+
+		audio.initialize();
+
+		set_up_audio = true;
+	}
+}
+
 // ui elements
-let button;
+let pause_play_button;
+let interact_button;
 let expression_input;
 let sample_rate_box;
 
 function setup_ui() {
-    button = document.getElementById("HelloButton");
+	pause_play_button = document.getElementById("PausePlayButton");
+    interact_button = document.getElementById("HelloButton");
     expression_input = document.getElementById("ExpressionInput");
     sample_rate_box = document.getElementById("SampleRateBox");
 
-    button.addEventListener("click", () => { console.log("Hello"); });
+    interact_button.addEventListener("click", () => {
+		setup_audio();
+	});
+
+	pause_play_button.addEventListener("click", () => {
+		if (set_up_audio)
+		{
+			audio.toggle_pause();
+		}
+	});
 
     expression_input.setAttribute("placeholder", expression_default);
     sample_rate_box.setAttribute("placeholder", String(sample_rate_default));
@@ -113,18 +137,9 @@ function setup_ui() {
     expression_input.addEventListener("change", event => {console.log(this.value)});
 }
 
-let audio;
-
-function setup_audio() {
-	audio = new StAudio(sample_rate_default, channel_count_default, sampler_left, sampler_right);
-
-	audio.initialize();
-}
-
 function main() {
     setup_ui();
     setup_samplers();
-    setup_audio();
 }
 
 main();
