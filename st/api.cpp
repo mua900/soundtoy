@@ -72,10 +72,8 @@ extern "C" {
 
     // @todo thread safe
     static const char* st_last_error = nullptr;
-    static bool allow_subnormals = false;
 
-    bool st_initialize(bool p_allow_subnormals) {
-        allow_subnormals = p_allow_subnormals;
+    bool st_initialize() {
         return true;
     }
 

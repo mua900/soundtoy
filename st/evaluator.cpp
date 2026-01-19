@@ -253,6 +253,7 @@ Expr* Parser::parse_expression()
         if (!expr)
         {
             fprintf(stderr, "Collapse expression failed\n");
+			fprintf(stderr, "%s\n", error_string.data);
         }
     }
 
@@ -1055,7 +1056,9 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 				}
 			}
 
-			if (is_builtin_function(call) && all_literals && all_reals)
+			bool computable_now = is_builtin_function(call) && all_literals && all_reals;
+
+			if (is_builtin_function(call))
 			{
                 Function builtin = builtin_functions[call->fn_id];
 
@@ -1064,10 +1067,12 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 					return NULL;
 				}
 
+				// @todo proper typechecking for arguments
+				
 				int arg_count = call->arguments.size;
 				int ret_count = builtin.signature.return_types.size;
 				
-				if (arg_count == 1) {
+				if (arg_count == 1 && computable_now) {
 					call->arguments.data[0] = collapse_expr_real(call->arguments.data[0], builtin_functions, error_string);
 
 					if (call->arguments.get(0)->type == Expr_Type::Literal) {
@@ -1083,51 +1088,62 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 					}
 				}
 
-				DArray<Value> arguments(arg_count);
-				for (int i = 0; i < arg_count; i++) {
-					// we know that all of them should be literals
-					ASSERT(static_cast<Expr_Literal*>(call->arguments.get(i))->type == Expr_Type::Literal);
-					arguments.add(static_cast<Expr_Literal*>(call->arguments.get(i))->value);
-				}
-
-                Expr* ret = nullptr;
-				if (builtin.signature.return_types.size == 0) {
-                    // @todo do we actually allow for functions that don't return anything.
-                    // the current assumption is that since they are signal generators, all functions are pure.
-                    // so it wouldn't make sense for a function to not return anything and currently no such functions exist.
-                    // but if we decide to add them how their semantics should be depends on what exactly they are or what exactly they do.
-                    // so we can't decide on that.
-
-                    // if they mess up with some settings to the system like setting some global variables or settings only once then we can safely only "execute" them once and not put them on the tree.
-                    // but magic functions that mess with settings sounds like a horrible idea so we will probably never add them.
-                    // if they do something per sample then we should put them to the tree and if they ever exist.
-                    // the second one is the more probable future hence the active path instead of the commented out one.
-
-                    return call;
-					// call_function(builtin, arguments.data(), nullptr);
-				}
-                else if (builtin.signature.return_types.size == 1) {
-                    Value result = {};
-                    call_function(builtin, arguments.data(), &result);
-                    ret = new Expr_Literal(result);
-                }
-                else {
-                    DArray<Value> res (builtin.signature.return_types.size);
-                    call_function(builtin, arguments.data(), res.data());
-
-					DArray<Expr*> return_expressions(ret_count);
-					for (int i = 0; i < ret_count; i++) {
-						return_expressions.get_ref(i) = new Expr_Literal(res.get(i));
+				if (computable_now)
+				{
+					DArray<Value> arguments(arg_count);
+					for (int i = 0; i < arg_count; i++) {
+						// we know that all of them should be literals
+						ASSERT(static_cast<Expr_Literal*>(call->arguments.get(i))->type == Expr_Type::Literal);
+						Value value = static_cast<Expr_Literal*>(call->arguments.get(i))->value;
+						arguments.add(value);
 					}
 
-					res.reset();
+					Expr* ret = nullptr;
 
-					ret = new Expr_Tuple(Array<Expr*>(return_expressions));
-                }
-                
-				arguments.reset();
-                free_tree(call);
-				return ret;
+					if (builtin.signature.return_types.size == 0) {
+						// @todo do we actually allow for functions that don't return anything.
+						// the current assumption is that since they are signal generators, all functions are pure.
+						// so it wouldn't make sense for a function to not return anything and currently no such functions exist.
+						// but if we decide to add them how their semantics should be depends on what exactly they are or what exactly they do.
+						// so we can't decide on that.
+
+						// if they mess up with some settings to the system like setting some global variables or settings only once then we can safely only "execute" them once and not put them on the tree.
+						// but magic functions that mess with settings sounds like a horrible idea so we will probably never add them.
+						// if they do something per sample then we should put them to the tree and if they ever exist.
+						// the second one is the more probable future hence the active path instead of the commented out one.
+
+						return call;
+						// call_function(builtin, arguments.data(), nullptr);
+					}
+					else if (builtin.signature.return_types.size == 1) {
+						Value result = {};
+						call_function(builtin, arguments.data(), &result);
+						ret = new Expr_Literal(result);
+					}
+					else {
+						DArray<Value> res (builtin.signature.return_types.size);
+						call_function(builtin, arguments.data(), res.data());
+
+						DArray<Expr*> return_expressions(ret_count);
+						for (int i = 0; i < ret_count; i++) {
+							return_expressions.get_ref(i) = new Expr_Literal(res.get(i));
+						}
+
+						res.reset();
+
+						ret = new Expr_Tuple(Array<Expr*>(return_expressions));
+					}
+
+					arguments.reset();
+					free_tree(call);
+					return ret;
+				}
+				else {
+					return call;
+				}
+			}
+			else {
+				panic("User defined functions not implemented");
 			}
 
 			break;

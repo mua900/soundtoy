@@ -36,7 +36,7 @@ float Audio::get_volume()
 void Audio::set_volume(float volume)
 {
     m_volume = volume;
-    SDL_SetAudioDeviceGain(m_playback, volume);  // @fix
+    SDL_SetAudioStreamGain(m_audio_stream, volume);
 }
 
 bool Audio::set_channel_count(int channel_count) {
@@ -69,6 +69,8 @@ bool Audio::create_audio_stream(int freq, int channels)
     }
 
     SDL_AudioStream* stream = SDL_CreateAudioStream(&spec, &device_spec);
+	SDL_SetAudioStreamGain(stream, m_volume);
+
     if (!stream)
     {
         return false;
@@ -122,7 +124,7 @@ bool Audio::initialize(Array<float> p_sample_buffer, int freq, int channels, St_
     create_audio_stream(freq, channels);
 
     SDL_PauseAudioDevice(m_playback);
-    SDL_SetAudioDeviceGain(m_playback, 0.0);
+	SDL_SetAudioDeviceGain(m_playback, 1.0);
 
     printf("Audio Backend: %s\n", SDL_GetCurrentAudioDriver());
     auto dev_name = SDL_GetAudioDeviceName(m_playback);
@@ -134,6 +136,8 @@ bool Audio::initialize(Array<float> p_sample_buffer, int freq, int channels, St_
     m_sample_rate = freq;
     m_channel_count = channels;
 
+	m_volume = 0.0;
+
 	this->sample_buffer = p_sample_buffer;
 
     return true;
@@ -141,6 +145,7 @@ bool Audio::initialize(Array<float> p_sample_buffer, int freq, int channels, St_
 
 bool Audio::reinitialize(int freq, int channels) {
     SDL_DestroyAudioStream(m_audio_stream);
+	m_audio_stream = NULL;
 
     return create_audio_stream(freq, channels);
 }

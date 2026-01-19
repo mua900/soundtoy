@@ -943,7 +943,7 @@ void Ui_State::update(Window window)
     pause_button.x = (window_size.x - pause_button.w) / 2;
     pause_button.y = (window_size.y - pause_button.h) / 2;
 
-    input_text_field.m_area.x = (window_size.x - input_text_field.m_area.w) / 2;
+    input_text_field.m_area.x = (window_size.x - input_text_field.m_area.w) * (2.0 / 3.0);
     input_text_field.m_area.y = ((float)window_size.y * (4.0 / 5.0)) - input_text_field.m_area.h/2;
 
     sample_rate_box.m_area.x = window_size.x * (3.0 / 5.0);
