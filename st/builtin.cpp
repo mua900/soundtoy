@@ -4,8 +4,6 @@
 // custom implemented builtins
 double get_sign(double x);
 double smoothstep(double x);
-double clamp_range_normal(double x);
-double clamp_range_audio(double x);  // @todo get rid
 
 // wrappers
 void st_fabs(Value* parameters, Value* results);
@@ -19,6 +17,7 @@ void st_cos(Value* parameters, Value* results);
 void st_asin(Value* parameters, Value* results);
 void st_acos(Value* parameters, Value* results);
 void st_exp(Value* parameters, Value* results);
+void st_pow(Value* parameters, Value* results);
 
 void call_function(Function func, Value* parameters, Value* results) {
     func.implementation(parameters, results);
@@ -27,6 +26,7 @@ void call_function(Function func, Value* parameters, Value* results) {
 void get_default_builtin_functions(Function* list)
 {
     static Variable_Type single_value[1] = { Var_Type_Real };
+    static Variable_Type two_values[2] = { Var_Type_Real, Var_Type_Real };
     static Variable_Type three_values[3] = { Var_Type_Real, Var_Type_Real, Var_Type_Real };
     
     list[BUILTIN_FUNC_ABS] = Function(
@@ -67,11 +67,15 @@ void get_default_builtin_functions(Function* list)
     );
     list[BUILTIN_FUNC_SMOOTHSTEP] = Function(
         st_smoothstep,
-        FunctionSignature(String("smoothstep"), make_array(single_value), make_array(three_values))
+        FunctionSignature(String("smoothstep"), make_array(single_value), make_array(single_value))
     );
     list[BUILTIN_FUNC_CLAMP] = Function(
         st_clamp,
         FunctionSignature(String("clamp"), make_array(single_value), make_array(three_values))
+    );
+    list[BUILTIN_FUNC_POW] = Function(
+    	st_pow,
+    	FunctionSignature(String("pow"), make_array(single_value), make_array(two_values))
     );
 }
 
@@ -91,8 +95,8 @@ double get_sign(double x)
     return (x > 0) - (x < 0);
 }
 
-double smoothstep(double x, double lower, double upper) {
-    x = CLAMP(x, lower, upper);
+double smoothstep(double x) {
+    x = CLAMP(x, 0.0, 1.0);
     return x * x * (3.0 - 2.0 * x);
 }
 
@@ -111,5 +115,6 @@ void st_cos(Value* parameters, Value* results) { results[0] = Value(cos(paramete
 void st_asin(Value* parameters, Value* results) { results[0] = Value(asin(parameters[0].real)); }
 void st_acos(Value* parameters, Value* results) { results[0] = Value(acos(parameters[0].real)); }
 void st_exp(Value* parameters, Value* results) { results[0] = Value(exp(parameters[0].real)); }
-void st_smoothstep(Value* parameters, Value* results) { results[0] = Value(smoothstep(parameters[0].real, parameters[1].real, parameters[2].real)); }
+void st_smoothstep(Value* parameters, Value* results) { results[0] = Value(smoothstep(parameters[0].real)); }
 void st_clamp(Value* parameters, Value* results) { results[0] = Value(clamp(parameters[0].real, parameters[1].real, parameters[2].real)); }
+void st_pow(Value* parameters, Value* results) { results[0] = Value(pow(parameters[0].real, parameters[1].real)); }

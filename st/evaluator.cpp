@@ -931,6 +931,9 @@ Function_ID get_function_id(String name)
     else if (string_compare(name, make_string("exp"))) {
         return BUILTIN_FUNC_EXP;
     }
+    else if (string_compare(name, make_string("pow"))) {
+    	return BUILTIN_FUNC_POW;
+    }
 
     return FUNC_ID_INVALID; // @todo user defined functions
 }

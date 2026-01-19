@@ -83,7 +83,7 @@ bool Application::initialize()
             return false;
         }
 
-		const int waveform_sample_rate = 100;
+		const int waveform_sample_rate = 64;
 
         St_Sampler* audio_left = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, initial_sample_rate);
         St_Sampler* audio_right = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, initial_sample_rate);
@@ -109,7 +109,7 @@ bool Application::initialize()
 		sampler_waveform_right = waveform_right;
 
 		const int sample_buffer_size_audio = 512;
-		const int sample_buffer_size_waveform = 1024;
+		const int sample_buffer_size_waveform = 512;
 
         float* sample_buffer_mem = new float[sample_buffer_size_audio];
         SDL_FPoint* waveform_sample_buffer_mem = new SDL_FPoint[sample_buffer_size_waveform];
