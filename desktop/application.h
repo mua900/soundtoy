@@ -220,6 +220,10 @@ struct Save_State {
 	String playback_device = {};
 };
 
+struct AudioData {
+    Array<float> samples;
+};
+
 class Application {
 public:
     Window m_window = {};
@@ -247,6 +251,8 @@ public:
     Array<Text> m_rendered_text_cache = {};
 
     float m_volume = 0.0;
+
+    AudioData m_audio_data;
 
     bool quit = false;
     bool doing_text_input = false;
@@ -276,6 +282,8 @@ private:
 	bool save_app_state(String filepath);
 	bool load_app_state(String filepath);
 
+    bool load_audio_file(String path);
+
 	bool save_ui_layout(String filepath);
 	bool load_ui_layout(String filepath);
 
@@ -292,6 +300,8 @@ private:
     bool set_eval_string(String s);
     bool select_playback_device(SDL_AudioDeviceID device);
 
+	void render_audio_data(vec2 area_center, vec2 area_scale, Color color);
+	
     void render_waveform(St_Sampler* sampler, vec2 area_center, vec2 area_scale, Color waveform_color);
     void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
 };

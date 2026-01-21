@@ -61,6 +61,11 @@ bool Application::initialize()
         }
     }
 
+    {
+        // accept drop events
+        SDL_SetEventEnabled(SDL_EVENT_DROP_FILE, true);
+    }
+
     // ttf
     {
         if (!TTF_Init())
@@ -519,6 +524,26 @@ void Application::handle_events()
                 break;
             }
             case SDL_EVENT_AUDIO_DEVICE_FORMAT_CHANGED: { break; }
+
+            case SDL_EVENT_DROP_FILE: {
+                SDL_DropEvent drop = e.drop;
+
+                printf("Received drop event\n");
+
+                if (drop.data) {
+					if (m_audio_data.samples.data) {
+						SDL_free(m_audio_data.samples.data);
+						m_audio_data.samples.data = nullptr;
+						m_audio_data.samples.size = 0;
+					}
+					
+                    if (!load_audio_file(String(drop.data))) {
+                        fprintf(stderr, "Could not load file %s\n", drop.data);
+                    }
+                }
+				
+                break;
+            }
 
             default:
             {
@@ -1041,6 +1066,30 @@ bool Application::set_eval_string(String eval_string)
     return success;
 }
 
+// @todo we can do cooler things with rendering waveforms or audio data
+
+void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color color) {
+	if (!m_audio_data.samples.data) {
+		return;  // no data to render
+	}
+
+	float step = area_scale.x / float(m_audio_data.samples.size);
+	float base_height = area_center.y;
+	int sample_count = m_audio_data.samples.size;
+	
+	SDL_FPoint* points = (SDL_FPoint*) malloc(sizeof(SDL_FPoint) * sample_count);
+	for (int i = 0; i < sample_count; i++)
+	{
+		points[i].x = area_center.x - (area_scale.x / 2) + (step * i);
+		points[i].y = base_height + m_audio_data.samples.data[i] * (area_scale.y / 2.0);
+	}
+
+	free(points);  // @todo preallocated buffer
+	
+	SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
+	SDL_RenderLines(m_window.renderer, points, sample_count);
+}
+
 void Application::render_waveform(St_Sampler* sampler, vec2 area_center, vec2 area_scale, Color waveform_color) {
 	SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(waveform_color));
 
@@ -1061,6 +1110,29 @@ void Application::render_waveform(St_Sampler* sampler, vec2 area_center, vec2 ar
 	}
 
 	SDL_RenderLines(m_window.renderer, waveform_sample_buffer.data, sample_count);
+}
+
+bool Application::load_audio_file(String path) {
+    SCOPE_STRING(path, path_c_str);
+    SDL_AudioSpec spec;
+
+    // @todo try to reload or do something more clever with this to update the loaded data if the spec changes
+    spec.freq = m_audio.get_sample_rate();
+    spec.channels = m_audio.get_channel_count();
+    spec.format = SDL_AUDIO_F32;
+
+	// @todo other file formats
+	
+    u8* buffer = nullptr;
+    u32 audio_length = 0;
+    if (!SDL_LoadWAV(path_c_str, &spec, &buffer, &audio_length)) {
+        fprintf(stderr, "Couldn't load audio file %s: %s\n", SDL_GetError());
+        return false;
+    }
+
+    m_audio_data.samples = Array<float>((float*)buffer, audio_length);
+
+    return true;
 }
 
 bool Application::save_app_state(String filepath) {
