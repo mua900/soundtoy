@@ -8,6 +8,7 @@
 struct Audio {
     SDL_AudioDeviceID m_playback = 0;
     SDL_AudioStream* m_audio_stream = nullptr;
+    SDL_AudioFormat m_format = SDL_AUDIO_F32;
 
 	// Non owning pointers
 	St_Sampler* sampler_left = nullptr;

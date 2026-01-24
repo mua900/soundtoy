@@ -221,7 +221,23 @@ struct Save_State {
 };
 
 struct AudioData {
-    Array<float> samples;
+    void* samples = nullptr;
+    SDL_AudioFormat format = SDL_AUDIO_F32;
+    int channel_count = 0;
+    int frequency = 0;
+    int frame_count = 0;
+
+    void reset() {
+        if (samples) {
+            free(samples);
+        }
+
+        samples = nullptr;
+        format = SDL_AUDIO_F32;
+        channel_count = 0;
+        frequency = 0;
+        frame_count = 0;
+    }
 };
 
 class Application {

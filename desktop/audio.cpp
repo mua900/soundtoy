@@ -133,6 +133,7 @@ bool Audio::initialize(Array<float> p_sample_buffer, int freq, int channels, St_
         printf("Audio Device Name: %s\n", dev_name);
     }
 
+    m_format = spec.format;
     m_sample_rate = freq;
     m_channel_count = channels;
 
