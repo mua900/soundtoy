@@ -178,7 +178,6 @@ struct Drop_Down_List {
 
 enum Text_Input_Target : u8 {
     TEXT_INPUT_TEXT_FIELD,
-    TEXT_INPUT_SAMPLE_RATE,
 };
 
 struct Ui_State {
@@ -187,7 +186,6 @@ struct Ui_State {
 
     Rectangle pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
     Text_Field input_text_field = { { INIT_WINDOW_WIDTH / 2 - 500, INIT_WINDOW_HEIGHT * (4.0 / 5.0) - 100, 1000, 200 } };
-    Text_Field sample_rate_box = { { INIT_WINDOW_WIDTH * (3.0 / 5.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0), INIT_WINDOW_WIDTH / 5.0, INIT_WINDOW_HEIGHT / 5.0 } };
 
     Drop_Down_List channel_count = {};
     Drop_Down_List playback_device = {};
@@ -303,7 +301,6 @@ private:
 	bool save_ui_layout(String filepath);
 	bool load_ui_layout(String filepath);
 
-    void update_audio_spec();
     bool update_channel_count(int count);
 
     void text_input_start();
