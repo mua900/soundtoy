@@ -198,6 +198,8 @@ bool Application::gen_static_text(Color color)
 	Text invalid_sample_rate = create_text(make_string("Invalid Sample Rate"), color);
     Text valid_expression = create_text(make_string("Valid Expression"), color);
     Text sample_rate = create_text(make_string("sample rate"), color);
+    Text text_sound_mode = create_text(make_string("sound mode"), color);
+    Text text_graph_mode = create_text(make_string("graph mode"), color);
 
     if (!
 		(paused.texture &&
@@ -218,6 +220,8 @@ bool Application::gen_static_text(Color color)
     m_rendered_text_cache.data[TEXT_INVALID_EXPRESSION] = invalid_expression;
     m_rendered_text_cache.data[TEXT_INVALID_SAMPLE_RATE] = invalid_sample_rate;
     m_rendered_text_cache.data[TEXT_VALID_EXPRESSION] = valid_expression;
+    m_rendered_text_cache.data[TEXT_SOUND_MODE] = text_sound_mode;
+    m_rendered_text_cache.data[TEXT_GRAPH_MODE] = text_graph_mode;
 
     return true;
 }
@@ -601,7 +605,14 @@ void Application::draw()
     SDL_SetRenderDrawColor(renderer, COLOR_ARG(m_background_color));
     SDL_RenderClear(renderer);
 
-    draw_ui();
+    draw_common_ui();
+
+    if (mode == AppModeSound) {
+        draw_sound_mode_ui();
+    }
+    else if (mode == AppModeGraph) {
+        draw_graph_mode_ui();
+    }
 
     ImGui::Render();
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
@@ -609,7 +620,7 @@ void Application::draw()
     SDL_RenderPresent(renderer);
 }
 
-void Application::draw_ui()
+void Application::draw_sound_mode_ui()
 {
     int window_x, window_y;
     SDL_GetWindowSize(m_window.window, &window_x, &window_y);
@@ -668,18 +679,10 @@ void Application::draw_ui()
 
     // pause/resume button
     {
-        Rectangle button = m_ui.pause_button;
-
-        SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x55, 0x55, 0xff);
-        SDL_FRect pbutton = { button.x, button.y, button.w, button.h };
-        SDL_RenderFillRect(m_window.renderer, &pbutton);
-
-        float tex_w, tex_h;
-        SDL_Texture* texture = m_audio.paused ? m_assets.resume_texture : m_assets.pause_texture;
-        SDL_GetTextureSize(texture, &tex_w, &tex_h);
-        SDL_FRect src = {0,0,tex_w,tex_h};
-        SDL_FRect dst = pbutton;
-        SDL_RenderTexture(m_window.renderer, texture, &src, &dst);
+        render_textured_rectangle(m_ui.pause_button,
+            m_audio.paused ? m_assets.resume_texture : m_assets.pause_texture,
+            Color(0x66, 0x55, 0x55, 0xff)
+        );
     }
 
     // paused/playing text
@@ -712,10 +715,24 @@ void Application::draw_ui()
         }
     }
 
-    // waveforms
     {
         render_dropdown(m_ui.channel_count, Color(0x55, 0x33, 0x88, 0xff), Color(0x33, 0x55, 0x88, 0xff));
         render_dropdown(m_ui.playback_device, Color(0x55, 0x33, 0x88, 0xff), Color(0x33, 0x55, 0x88, 0xff));
+    }
+}
+
+void Application::draw_graph_mode_ui() {
+    // @todo
+}
+
+void Application::draw_common_ui() {
+    // graphs button
+    {
+        int text = (mode == ApplicationMode::AppModeSound) ? TEXT_GRAPH_MODE : TEXT_SOUND_MODE;
+        render_textured_rectangle(m_ui.graphs_button,
+            m_rendered_text_cache[text].texture,
+            Color(0x66, 0x55, 0x55, 0xff)
+        );
     }
 
     // event text
@@ -777,6 +794,11 @@ bool Application::mouse_input_ui()
         m_audio.toggle_pause();
 
         return true;
+    }
+
+    if (m_ui.graphs_button.contains(m_mouse.pos))
+    {
+        switch_modes();
     }
 
     {
@@ -864,6 +886,17 @@ bool Application::mouse_input_ui()
     return false;
 }
 
+void Application::switch_modes() {
+    if (mode == ApplicationMode::AppModeSound) {
+        mode = ApplicationMode::AppModeGraph;
+
+        m_audio.pause();
+    }
+    else if (mode == ApplicationMode::AppModeGraph) {
+        mode = ApplicationMode::AppModeSound;
+    }
+}
+
 void Application::text_input_stop()
 {
     SDL_StopTextInput(m_window.window);
@@ -896,6 +929,9 @@ void Ui_State::update(vec2 window_size)
 {
     pause_button.x = (window_size.x - pause_button.w) / 2;
     pause_button.y = (window_size.y - pause_button.h) / 2;
+
+    graphs_button.x = window_size.x * (4.0 / 5.0);
+    graphs_button.y = window_size.y * (1.0 / 5.0);
 
     input_text_field.m_area.x = (window_size.x - input_text_field.m_area.w) * (2.0 / 3.0);
     input_text_field.m_area.y = ((float)window_size.y * (4.0 / 5.0)) - input_text_field.m_area.h/2;
@@ -1069,12 +1105,14 @@ bool Application::load_audio_file(String path) {
 
     printf("%s\n", SDL_GetAudioFormatName(spec.format)); // @debug
 
-    int frame_count = audio_length / SDL_AUDIO_BYTESIZE(spec.format);
+    int frame_count = audio_length / (SDL_AUDIO_BYTESIZE(spec.format) * spec.channels);
 
-    switch (spec.format)
-    {
-        
-    }
+    // @update
+    m_audio_data.samples = buffer;
+    m_audio_data.channel_count = spec.channels;
+    m_audio_data.format = spec.format;
+    m_audio_data.frequency = spec.freq;
+    m_audio_data.frame_count = frame_count;
 
     return true;
 }
@@ -1162,6 +1200,18 @@ bool Application::load_app_state(String filepath) {
 	save.playback_device = playback;
 
 	return true;	
+}
+
+void Application::render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color) {
+    SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
+    SDL_FRect area = { rect.x, rect.y, rect.w, rect.h };
+    SDL_RenderFillRect(m_window.renderer, &area);
+
+    float tex_w, tex_h;
+    SDL_GetTextureSize(texture, &tex_w, &tex_h);
+    SDL_FRect src = {0,0,tex_w,tex_h};
+    SDL_FRect dst = area;
+    SDL_RenderTexture(m_window.renderer, texture, &src, &dst);
 }
 
 void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale)

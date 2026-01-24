@@ -9,6 +9,11 @@
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 
+enum ApplicationMode {
+    AppModeSound,
+    AppModeGraph,
+};
+
 struct Window {
     SDL_Window* window;
     SDL_Renderer* renderer;
@@ -71,6 +76,8 @@ struct AudioData {
 
 class Application {
 public:
+    ApplicationMode mode = ApplicationMode::AppModeSound;
+
     Window m_window = {};
     Mouse_State m_mouse = {};
 
@@ -117,7 +124,9 @@ private:
     bool load_assets();
     bool st_load_assets(String_Builder& sb);  // helper
 
-    void draw_ui();
+    void draw_common_ui();
+    void draw_sound_mode_ui();
+    void draw_graph_mode_ui();
     void draw_imgui();
 
     bool mouse_input_ui();
@@ -139,6 +148,8 @@ private:
     void toggle_text_input();
     bool update_input_string();
 
+    void switch_modes();
+
     Text create_text(String text, Color color);
 
     bool set_eval_string(String s);
@@ -146,6 +157,8 @@ private:
 
 	void render_audio_data(vec2 area_center, vec2 area_scale, Color color);
 	
+    void render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color);
+
     void render_waveform(St_Sampler* sampler, vec2 area_center, vec2 area_scale, Color waveform_color);
     void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
 };

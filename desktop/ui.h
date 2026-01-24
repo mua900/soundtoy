@@ -27,6 +27,8 @@ enum Text_Id : int {
     TEXT_INVALID_EXPRESSION,
     TEXT_VALID_EXPRESSION,
 	TEXT_INVALID_SAMPLE_RATE,
+    TEXT_SOUND_MODE,
+    TEXT_GRAPH_MODE,
 
     // dynamic text
     TEXT_VOLUME_VALUE,
@@ -163,6 +165,7 @@ struct Ui_State {
     Rectangle volume_slider = { 100, 100, 100, 10 };
 
     Rectangle pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
+    Rectangle graphs_button = { INIT_WINDOW_WIDTH * (4.0 / 5.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0), 200, 100 };
     Text_Field input_text_field = { { INIT_WINDOW_WIDTH / 2 - 500, INIT_WINDOW_HEIGHT * (4.0 / 5.0) - 100, 1000, 200 } };
 
     Drop_Down_List channel_count = {};
