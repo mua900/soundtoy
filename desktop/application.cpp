@@ -140,7 +140,10 @@ bool Application::initialize()
 
     // ui
     {
-        m_ui.update(m_window);
+        ivec2 ws;
+        SDL_GetWindowSize(m_window.window, &ws.x, &ws.y);
+
+        m_ui.update(vec2(ws.x, ws.y));
 
         Text mono = create_text(make_string("mono"), Color(0x44, 0x22, 0x55, 0xff));
         Text stereo = create_text(make_string("stereo"), Color(0x44, 0x22, 0x55, 0xff));
@@ -452,7 +455,10 @@ void Application::handle_events()
             }
             case SDL_EVENT_WINDOW_RESIZED:
             {
-                m_ui.update(m_window);
+                ivec2 ws;
+                SDL_GetWindowSize(m_window.window, &ws.x, &ws.y);
+
+                m_ui.update(vec2(ws.x, ws.y));
                 break;
             }
             case SDL_EVENT_TEXT_INPUT:
@@ -630,9 +636,11 @@ void Application::draw_ui()
     // volume slider
     {
         Rectangle volume_slider = m_ui.volume_slider;
-        vec2 knob_scale = m_ui.volume_slider_knob_scale;
+        const vec2 knob_scale = { 0.1, 2 };
+
         const float slider_knob_width = volume_slider.w * knob_scale.x;
         const float slider_knob_height = volume_slider.h * knob_scale.y;
+
         SDL_SetRenderDrawColor(m_window.renderer, 0x55, 0x44, 0x22, 0xff);
         SDL_FRect slider = { volume_slider.x, volume_slider.y, volume_slider.w, volume_slider.h };
         SDL_RenderFillRect(m_window.renderer, &slider);
@@ -884,26 +892,21 @@ void Application::toggle_text_input()
     }
 }
 
-void Ui_State::update(Window window)
+void Ui_State::update(vec2 window_size)
 {
-    ivec2 window_size;
-    SDL_GetWindowSize(window.window, &window_size.x, &window_size.y);
-
     pause_button.x = (window_size.x - pause_button.w) / 2;
     pause_button.y = (window_size.y - pause_button.h) / 2;
 
     input_text_field.m_area.x = (window_size.x - input_text_field.m_area.w) * (2.0 / 3.0);
     input_text_field.m_area.y = ((float)window_size.y * (4.0 / 5.0)) - input_text_field.m_area.h/2;
 
-    channel_count.set_area(
-						   vec2(window_size.x / 2,
+    channel_count.set_area(vec2(window_size.x / 2,
 								window_size.y * (1.0 / 5.0)),
 						   vec2((float)window_size.x * (1.0 / 5.0),
 								(float)window_size.y * (1.0 / 10.0))
 						   );
 
-    playback_device.set_area(
-							 vec2(window_size.x * (0.8 / 3.0),
+    playback_device.set_area(vec2(window_size.x * (0.8 / 3.0),
 								  window_size.y * (1.5 / 5.0)),
 							 vec2((float)window_size.x * (1.0 / 5.0),
 								  (float)window_size.y * (1.0 / 10.0))
@@ -1070,7 +1073,7 @@ bool Application::load_audio_file(String path) {
 
     switch (spec.format)
     {
-
+        
     }
 
     return true;
