@@ -90,11 +90,11 @@ bool Application::initialize()
 
 		const int waveform_sample_rate = 64;
 
-        St_Sampler* audio_left = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, initial_sample_rate);
-        St_Sampler* audio_right = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, initial_sample_rate);
+        St_Sampler* audio_left = st_sampler_create(initial_sample_rate);
+        St_Sampler* audio_right = st_sampler_create(initial_sample_rate);
 
-		St_Sampler* waveform_left = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, waveform_sample_rate);
-		St_Sampler* waveform_right = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, waveform_sample_rate);
+		St_Sampler* waveform_left = st_sampler_create(waveform_sample_rate);
+		St_Sampler* waveform_right = st_sampler_create(waveform_sample_rate);
 
         if (!(audio_left && audio_right && waveform_left && waveform_right)) {
             fprintf(stderr, "Could not create a samplers\n");

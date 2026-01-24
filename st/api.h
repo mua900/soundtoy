@@ -2,11 +2,6 @@
 
 extern "C" {
 
-    enum Evaluator_Type : int {
-        BYTECODE_INTERP = 0,
-        TREE_INTERP = 1,
-    };
-
     enum Variable_Type : int {
         Var_Type_Integer,
         Var_Type_Real,
@@ -17,7 +12,7 @@ extern "C" {
   
     bool st_initialize();
     const char* st_get_last_error();
-    St_Sampler* st_sampler_create(Evaluator_Type evaluator_type, int sample_rate);
+    St_Sampler* st_sampler_create(int sample_rate);
     void st_sampler_destroy(St_Sampler* sampler);
     St_Sampler* st_sampler_copy(St_Sampler* sampler);
     bool st_check_expression_string(const St_Sampler* sampler_or_null, const char* expression_string, int length);
