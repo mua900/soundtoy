@@ -533,8 +533,24 @@ Expr* Parser::parse_primary_expr()
             double builtin_constant = get_builtin_constant(token.token_string);
             if (builtin_var_id != BUILTIN_VAR_ID_INVALID) {
                 // the variable is a builtin
-                // all builtin variables are floating point
-                return new Expr_Variable(token.token_string, builtin_var_id, Var_Type_Real);
+
+                switch (builtin_var_id) {
+                    case BUILTIN_VARIABLE_TIME:  // fallthrough
+                    case BUILTIN_VARIABLE_SAMPLE_RATE: {
+                        return new Expr_Variable(token.token_string, builtin_var_id, Var_Type_Real);
+                    }
+                    case BUILTIN_VARIABLE_SAMPLE_INDEX: {
+                        return new Expr_Variable(token.token_string, builtin_var_id, Var_Type_Integer);
+                    }
+                    case BUILTIN_VARIABLE_INPUT_SAMPLE: {
+                        Expr* input_sample = new Expr_Variable(token.token_string, builtin_var_id, Var_Type_Real);
+                        input_sample->flags |= EXPR_USES_INPUT_SAMPLES;
+
+                        return input_sample;
+                    }
+                    
+                    default: panic("Invalid variable id");  // bug
+                }
             }
             else if (builtin_constant != 0.0) {
                 return new Expr_Literal(builtin_constant);
@@ -872,6 +888,18 @@ BuiltinVar_ID get_builtin_var_id(String name)
             )
     {
         return BUILTIN_VARIABLE_SAMPLE_RATE;
+    }
+    else if (string_compare(make_string("sample_index"), name) ||
+             string_compare(make_string("si"), name)
+            )
+    {
+        return BUILTIN_VARIABLE_SAMPLE_INDEX;
+    }
+    else if (string_compare(make_string("sample"), name) ||
+             string_compare(make_string("s"), name)
+            )
+    {
+        return BUILTIN_VARIABLE_INPUT_SAMPLE;
     }
     else
     {

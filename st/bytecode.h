@@ -184,10 +184,24 @@ struct Bytecode_Processor {
 	{}
 };
 
+struct InputStream {
+	Array<float> samples = {};
+	int stride = 0;
+	int sample_index = 0; // @todo a builtin variable to access this
+
+	InputStream() {}
+	InputStream(Array<float> p_samples, int p_stride)
+		:
+		samples(p_samples), stride(p_stride)
+	{}
+};
+
 struct Bytecode_Program {
 	Bytecode_Processor processor = {};
 	Bytecode_Code code = {};
 	Constant_Block constant_block = {};
+	InputStream input_stream = {};
+	int sample_index = 0;
 
 	DArray<Variable> symbols;
 	DArray<double> variables = {};
@@ -213,6 +227,8 @@ struct Bytecode_Program {
         symbols.add(symbol);
         return variables.add(0.0);
     }
+
+	void set_input_stream(InputStream istream);
 
 	void set_builtin_variable(double value, u32 builtin_id);
 	void set_builtin_function(StFunction  implementation, u32 builtin_function);

@@ -158,6 +158,14 @@ extern "C" {
         return sampler->program->variables.size();
     }
 
+    void st_set_input_stream(St_Sampler* sampler, float* input_stream, int input_stream_size, int stride) {
+        sampler->program->set_input_stream(InputStream(Array<float>(input_stream, input_stream_size), stride));
+    }
+
+    void st_clear_input_stream(St_Sampler* sampler) {
+        sampler->program->input_stream = InputStream();
+    }
+
     void st_fill(St_Sampler* sampler, float* buffer, int length) {
         bytecode_fill(sampler->program, buffer, length);
     }
@@ -188,6 +196,16 @@ extern "C" {
         Expr* expression = parser.parse(expression_string);
         if (!expression) {
             return false;
+        }
+
+        if (expression->flags & EXPR_USES_INPUT_SAMPLES)
+        {
+            if (program->input_stream.samples.data == nullptr)
+            {
+                st_last_error = "No input stream to get samples.";
+
+                return false;
+            }
         }
 
 		print_expression(expression);

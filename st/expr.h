@@ -8,7 +8,7 @@ enum Op_Unary {
     Unop_Negate, Unop_Not
 };
 
-// @todo bitwise operators, ternary
+// @todo bitwise operators
 enum Op_Binary {
     Binop_Unknown = 0,
     Binop_Add,
@@ -78,8 +78,13 @@ enum class Expr_Type {
 	Tuple,
 };
 
+using ExprFlags = u8;
+
+#define EXPR_USES_INPUT_SAMPLES BIT(0)
+
 struct Expr {
     Expr_Type type;
+    ExprFlags flags = 0;
 };
 
 void print_expr(const Expr* expr, int indent);

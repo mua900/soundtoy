@@ -43,3 +43,33 @@ private:
     bool set_channel_count(int channel_count);	
     bool create_audio_stream(int freq, int channels);
 };
+
+
+#define DESIRED_AUDIO_FORMAT SDL_AUDIO_F32
+#define DESIRED_AUDIO_SAMPLE_RATE 48000
+
+struct AudioData {
+    void* samples = nullptr;
+    SDL_AudioFormat format = DESIRED_AUDIO_FORMAT;
+    int channel_count = 0;
+    int frequency = 0;
+    int frame_count = 0;
+
+    void reset()
+    {
+        if (samples) {
+            free(samples);
+        }
+
+        samples = nullptr;
+        format = DESIRED_AUDIO_FORMAT;
+        channel_count = 0;
+        frequency = 0;
+        frame_count = 0;
+    }
+
+    bool is_in_desired_spec()
+    {
+        return (samples != nullptr) && (format == DESIRED_AUDIO_FORMAT) && (channel_count == 2) && (frequency == DESIRED_AUDIO_SAMPLE_RATE);
+    }
+};

@@ -10,8 +10,7 @@ static bool opcode_is_unary(Bytecode_Opcode opcode);
 
 
 bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
-
-	program.reset();
+    program.reset();
 
     Value_Location_Info location = compile_expr(root, program);
     if (location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
@@ -420,6 +419,11 @@ void Bytecode_Program::step_time(double step)
     constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] += step;
 }
 
+void Bytecode_Program::set_input_stream(InputStream istream)
+{
+    input_stream = istream;
+}
+
 void Bytecode_Program::set_sample_rate(double sample_rate) {
     constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE] = sample_rate;
 }
@@ -445,6 +449,7 @@ void Bytecode_Program::reset() {
     constant_block.integer.reset();
     constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] = 0.0;
     get_default_builtin_functions(constant_block.builtin_function);
+    sample_index = 0;
 }
 
 void Bytecode_Program::set_builtin_variable(double value, u32 builtin_variable) {

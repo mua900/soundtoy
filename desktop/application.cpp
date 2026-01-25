@@ -14,6 +14,8 @@ static const char* soundtoy_identifier = "flying-carpet.soundtoy";
 static const char* soundtoy_name = "soundtoy";
 static const char* soundtoy_version = "0.1.0";
 
+#define DEFAULT_EXPRESSION "sin(t*tau)"
+
 bool Application::initialize()
 {
     SDL_SetAppMetadata(soundtoy_name, soundtoy_version, soundtoy_identifier);
@@ -101,7 +103,7 @@ bool Application::initialize()
             return false;
         }
 
-        String expression_default = make_string("sin(2*PI*t*440)");
+        String expression_default = make_string(DEFAULT_EXPRESSION);
         ASSERT(st_sampler_set_expression(audio_left, expression_default.data, expression_default.size));
         ASSERT(st_sampler_set_expression(audio_right, expression_default.data, expression_default.size));
         ASSERT(st_sampler_set_expression(waveform_left, expression_default.data, expression_default.size));
@@ -524,7 +526,22 @@ void Application::handle_events()
                         fprintf(stderr, "Could not load file %s\n", drop.data);
                     }
                 }
-				
+
+                if (m_audio_data.is_in_desired_spec())
+                {
+                    m_audio.pause();
+
+                    st_set_input_stream(sampler_audio_left,  ((float*) m_audio_data.samples) + 0, m_audio_data.frame_count, 2);
+                    st_set_input_stream(sampler_audio_right, ((float*) m_audio_data.samples) + 1, m_audio_data.frame_count, 2);
+
+                    st_set_input_stream(sampler_waveform_left,  ((float*) m_audio_data.samples) + 0, m_audio_data.frame_count, 2);
+                    st_set_input_stream(sampler_waveform_right, ((float*) m_audio_data.samples) + 1, m_audio_data.frame_count, 2);
+                }
+                else
+                {
+                    fprintf(stderr, "Audio data is not in the desired format\n");
+                }
+
                 break;
             }
 
@@ -721,8 +738,14 @@ void Application::draw_sound_mode_ui()
     }
 }
 
-void Application::draw_graph_mode_ui() {
-    // @todo
+void Application::draw_graph_mode_ui()
+{
+    int window_x, window_y;
+    SDL_GetWindowSize(m_window.window, &window_x, &window_y);
+
+	vec2 window_size = vec2((float) window_x, (float) window_y);
+    
+    render_audio_data(vec2(window_size.x/2, window_size.y/2), vec2(window_size.x * (7.0 / 8.0), window_size.y * (7.0 / 8.0)), Color(0x44, 0x22, 0x77, 0xff));
 }
 
 void Application::draw_common_ui() {
@@ -891,6 +914,12 @@ void Application::switch_modes() {
         mode = ApplicationMode::AppModeGraph;
 
         m_audio.pause();
+
+        st_sampler_set_expression(sampler_audio_left, DEFAULT_EXPRESSION, string_length(DEFAULT_EXPRESSION));
+        st_sampler_set_expression(sampler_audio_right, DEFAULT_EXPRESSION, string_length(DEFAULT_EXPRESSION));
+
+        st_sampler_set_expression(sampler_waveform_left, DEFAULT_EXPRESSION, string_length(DEFAULT_EXPRESSION));
+        st_sampler_set_expression(sampler_waveform_right, DEFAULT_EXPRESSION, string_length(DEFAULT_EXPRESSION));
     }
     else if (mode == ApplicationMode::AppModeGraph) {
         mode = ApplicationMode::AppModeSound;
@@ -1031,39 +1060,44 @@ void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color col
 		return;  // no data to render
 	}
 
-    auto samples = (const float*)(m_audio_data.samples);
+    SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
 
-    // @todo static
+    const int downsample = 100;
+
+    float* samples = (float*) m_audio_data.samples;
+
     #define BLOCK_SIZE 100
     static SDL_FPoint points[BLOCK_SIZE];
 
-	float step = area_scale.x / float(m_audio_data.frame_count);
+	float step = (area_scale.x / float(m_audio_data.frame_count)) * downsample;
 	float base_height = area_center.y;
 	int sample_count = m_audio_data.frame_count;
 
-    int iter_count = m_audio_data.frame_count / BLOCK_SIZE;
+    int iter_count = m_audio_data.frame_count / BLOCK_SIZE / downsample;
 
     for (int block = 0; block < iter_count; block++)
 	{
         int block_start = block * BLOCK_SIZE;
 
-        for (int i = 0; i < BLOCK_SIZE; i++)
+        for (int i = 0; i < BLOCK_SIZE; i+=1)
         {
-            int index = block_start + i;
+            int index = block_start + i * downsample;
 
-            points[index].x = area_center.x - (area_scale.x / 2) + (step * index);
-            points[index].y = base_height + samples[index] * (area_scale.y / 2.0);
+            points[i].x = area_center.x - (area_scale.x / 2) + (step * index);
+            points[i].y = base_height + samples[index] * (area_scale.y / 2.0);
+
+            SDL_RenderLines(m_window.renderer, points, BLOCK_SIZE);
         }
 	}
 
     int remaining = m_audio_data.frame_count - iter_count * BLOCK_SIZE;
-    for (int i = iter_count * BLOCK_SIZE; i < m_audio_data.frame_count; i++) {
-        points[i].x = area_center.x - (area_scale.x / 2) + (step * i);
-        points[i].y = base_height + samples[i] * (area_scale.y / 2.0);
+    for (int i = 0; i < BLOCK_SIZE; i+=1) {
+        int index = iter_count * BLOCK_SIZE + i * downsample;
+        points[i].x = area_center.x - (area_scale.x / 2) + (step * index);
+        points[i].y = base_height + samples[index] * (area_scale.y / 2.0);
+
+    	SDL_RenderLines(m_window.renderer, points, BLOCK_SIZE);
     }
-    
-	SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
-	SDL_RenderLines(m_window.renderer, points, sample_count);
 }
 
 void Application::render_waveform(St_Sampler* sampler, vec2 area_center, vec2 area_scale, Color waveform_color) {
@@ -1092,27 +1126,48 @@ void Application::render_waveform(St_Sampler* sampler, vec2 area_center, vec2 ar
 bool Application::load_audio_file(String path) {
     SCOPE_STRING(path, path_c_str);
 
-	// @todo other file formats than wav
+    u8* output_buffer;
+    int output_length = 0;
 
-    SDL_AudioSpec spec;  // output parameter
-    
-    u8* buffer = nullptr;
-    u32 audio_length = 0;
-    if (!SDL_LoadWAV(path_c_str, &spec, &buffer, &audio_length)) {
-        fprintf(stderr, "Couldn't load audio file %s: %s\n", SDL_GetError());
-        return false;
+    // the spec we want
+    SDL_AudioSpec desired_spec;
+    desired_spec.channels = 2;
+    desired_spec.format = SDL_AUDIO_F32;
+    desired_spec.freq = 48000;
+
+    {
+        // @todo other file formats than wav
+
+        SDL_AudioSpec spec;  // output parameter
+        u8* buffer = nullptr;
+        u32 audio_length = 0;
+        if (!SDL_LoadWAV(path_c_str, &spec, &buffer, &audio_length)) {
+            fprintf(stderr, "Couldn't load audio file %s: %s\n", SDL_GetError());
+            return false;
+        }
+
+        printf("%s\n", SDL_GetAudioFormatName(spec.format));
+
+        bool convert_success = SDL_ConvertAudioSamples(&spec, buffer, audio_length, &desired_spec, &output_buffer, &output_length);
+
+        SDL_free(buffer);
+        audio_length = 0;
+
+        if (!convert_success)
+        {
+            fprintf(stderr, "Couldn't convert audio samples to desired spec. %s\n", SDL_GetError());
+            return false;
+        }
     }
 
-    printf("%s\n", SDL_GetAudioFormatName(spec.format)); // @debug
-
-    int frame_count = audio_length / (SDL_AUDIO_BYTESIZE(spec.format) * spec.channels);
-
     // @update
-    m_audio_data.samples = buffer;
-    m_audio_data.channel_count = spec.channels;
-    m_audio_data.format = spec.format;
-    m_audio_data.frequency = spec.freq;
-    m_audio_data.frame_count = frame_count;
+    m_audio_data.samples = output_buffer;
+    m_audio_data.channel_count = desired_spec.channels;
+    m_audio_data.format = desired_spec.format;
+    m_audio_data.frequency = desired_spec.freq;
+    m_audio_data.frame_count = output_length / (SDL_AUDIO_BYTESIZE(desired_spec.format) * desired_spec.channels);
+
+    ASSERT(m_audio_data.is_in_desired_spec());
 
     return true;
 }

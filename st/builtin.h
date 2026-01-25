@@ -65,9 +65,12 @@ enum Builtin_Func_Type {
 };
 
 enum Builtin_Variable : unsigned int {
-    // constant per evaluation
     BUILTIN_VARIABLE_TIME = 0,
-    BUILTIN_VARIABLE_SAMPLE_RATE,
+    BUILTIN_VARIABLE_SAMPLE_RATE = 1,
+    BUILTIN_VARIABLE_SAMPLE_INDEX = 2,
+
+    // avalible if there is any bound input streams
+    BUILTIN_VARIABLE_INPUT_SAMPLE = 3,
 
     BUILTIN_VARIABLE_COUNT
 };
