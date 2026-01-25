@@ -139,6 +139,7 @@ private:
 	
     void render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color);
 
+    void render_slider(Rectangle area, vec2 knob_scale, float value, Color slider_color, Color knob_color, const Text& text);
     void render_waveform(St_Sampler* sampler, vec2 area_center, vec2 area_scale, Color waveform_color);
     void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
 };

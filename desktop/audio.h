@@ -47,6 +47,7 @@ private:
 
 #define DESIRED_AUDIO_FORMAT SDL_AUDIO_F32
 #define DESIRED_AUDIO_SAMPLE_RATE 48000
+#define DESIRED_AUDIO_CHANNEL_COUNT 2
 
 struct AudioData {
     void* samples = nullptr;

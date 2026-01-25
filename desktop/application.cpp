@@ -661,37 +661,23 @@ void Application::draw_sound_mode_ui()
 						Color(0xBB, 0x44, 0x32, 0xff));
 	}
 
+
     // volume slider
     {
-        Rectangle volume_slider = m_ui.volume_slider;
-        const vec2 knob_scale = { 0.1, 2 };
+        vec2 knob_scale = { 0.1, 2 };
+        Color slider_color = Color(0x55, 0x44, 0x22, 0xff);
+        Color knob_color = Color(0x66, 0x55, 0x22, 0xff);
 
-        const float slider_knob_width = volume_slider.w * knob_scale.x;
-        const float slider_knob_height = volume_slider.h * knob_scale.y;
+        render_slider(m_ui.volume_slider, knob_scale, m_audio.get_volume(), slider_color, knob_color, m_rendered_text_cache.data[TEXT_VOLUME_VALUE]);
+    }
 
-        SDL_SetRenderDrawColor(m_window.renderer, 0x55, 0x44, 0x22, 0xff);
-        SDL_FRect slider = { volume_slider.x, volume_slider.y, volume_slider.w, volume_slider.h };
-        SDL_RenderFillRect(m_window.renderer, &slider);
-        float percentage = m_audio.get_volume();
-        SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x55, 0x22, 0xff);
-        SDL_FRect slider_knob = {
-            volume_slider.x - (slider_knob_width / 2) + (volume_slider.w * percentage), volume_slider.y - volume_slider.h / 2,
-            slider_knob_width, slider_knob_height
-        };
-        SDL_RenderFillRect(m_window.renderer, &slider_knob);
+    // pan slider
+    {
+        vec2 knob_scale = { 0.02, 1 };
+        Color slider_color = Color(0x55, 0x44, 0x22, 0xff);
+        Color knob_color = Color(0x88, 0xBB, 0xAA, 0xff);
 
-        // volume text
-        {
-            Text text = m_rendered_text_cache.data[TEXT_VOLUME_VALUE];
-            int measured_width = 0;
-            TTF_MeasureString(m_assets.font.font, text.string.data, text.string.size, 0, &measured_width, NULL);
-            float tex_w, tex_h;
-            SDL_GetTextureSize(text.texture, &tex_w, &tex_h);
-            SDL_FRect src = { 0, 0, tex_w, tex_h };
-            int margin = 10;
-            SDL_FRect dst = { volume_slider.x - tex_w / 5, volume_slider.y + volume_slider.h + margin, tex_w, tex_h};
-            SDL_RenderTexture(m_window.renderer, text.texture, &src, &dst);
-        }
+        render_slider(m_ui.pan_slider, knob_scale, m_audio.get_volume(), slider_color, knob_color, m_rendered_text_cache.data[TEXT_VOLUME_VALUE]);
     }
 
     // pause/resume button
@@ -767,6 +753,35 @@ void Application::draw_common_ui() {
             auto tf_area = m_ui.input_text_field.m_area;
             render_text(m_window.renderer, m_assets.font, m_rendered_text_cache.get(TEXT_INVALID_EXPRESSION), vec2(tf_area.x + tf_area.w/2, tf_area.y + tf_area.h), text_scale);
         }
+    }
+}
+
+void Application::render_slider(Rectangle area, vec2 knob_scale, float value, Color slider_color, Color knob_color, const Text& text)
+{
+    float slider_knob_width = area.w * knob_scale.x;
+    float slider_knob_height = area.h * knob_scale.y;
+
+    SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(slider_color));
+    SDL_FRect slider = { area.x, area.y, area.w, area.h };
+    SDL_RenderFillRect(m_window.renderer, &slider);
+    float percentage = value;
+    SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(knob_color));
+    SDL_FRect slider_knob = {
+        slider.x - (slider_knob_width / 2) + (slider.w * percentage), slider.y + slider.h / 2 - slider_knob_height / 2,
+        slider_knob_width, slider_knob_height
+    };
+    SDL_RenderFillRect(m_window.renderer, &slider_knob);
+
+    // text
+    {
+        int measured_width = 0;
+        TTF_MeasureString(m_assets.font.font, text.string.data, text.string.size, 0, &measured_width, NULL);
+        float tex_w, tex_h;
+        SDL_GetTextureSize(text.texture, &tex_w, &tex_h);
+        SDL_FRect src = { 0, 0, tex_w, tex_h };
+        const int margin = 10;
+        SDL_FRect dst = { slider.x - tex_w / 5, slider.y + slider.h + margin, tex_w, tex_h};
+        SDL_RenderTexture(m_window.renderer, text.texture, &src, &dst);
     }
 }
 
@@ -959,6 +974,11 @@ void Ui_State::update(vec2 window_size)
     pause_button.x = (window_size.x - pause_button.w) / 2;
     pause_button.y = (window_size.y - pause_button.h) / 2;
 
+    pan_slider.w = window_size.x * (5.0 / 8.0);
+    pan_slider.h = window_size.y * (1.0 / 16.0);
+    pan_slider.x = window_size.x * (1.0 / 2.0) - pan_slider.w / 2;
+    pan_slider.y = window_size.y * (1.0 / 12.0) - pan_slider.h / 2;
+
     graphs_button.x = window_size.x * (4.0 / 5.0);
     graphs_button.y = window_size.y * (1.0 / 5.0);
 
@@ -1056,24 +1076,23 @@ bool Application::set_eval_string(String eval_string)
 // @todo we can do cooler things with rendering waveforms or audio data
 
 void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color color) {
-	if (!m_audio_data.samples) {
-		return;  // no data to render
+	if (!(m_audio_data.samples && m_audio_data.is_in_desired_spec())) {
+		return;
 	}
 
     SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
 
-    const int downsample = 100;
-
     float* samples = (float*) m_audio_data.samples;
 
     #define BLOCK_SIZE 100
-    static SDL_FPoint points[BLOCK_SIZE];
+    static SDL_FPoint points[DESIRED_AUDIO_CHANNEL_COUNT][BLOCK_SIZE];
 
-	float step = (area_scale.x / float(m_audio_data.frame_count)) * downsample;
+    float vertical_step = area_scale.y / DESIRED_AUDIO_CHANNEL_COUNT;
+	float step = (area_scale.x / float(m_audio_data.frame_count));
 	float base_height = area_center.y;
 	int sample_count = m_audio_data.frame_count;
 
-    int iter_count = m_audio_data.frame_count / BLOCK_SIZE / downsample;
+    int iter_count = m_audio_data.frame_count / BLOCK_SIZE;
 
     for (int block = 0; block < iter_count; block++)
 	{
@@ -1081,22 +1100,41 @@ void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color col
 
         for (int i = 0; i < BLOCK_SIZE; i+=1)
         {
-            int index = block_start + i * downsample;
+            int frame_index = block * BLOCK_SIZE + i;
+            int sample_index = (block_start + i) * DESIRED_AUDIO_CHANNEL_COUNT;
 
-            points[i].x = area_center.x - (area_scale.x / 2) + (step * index);
-            points[i].y = base_height + samples[index] * (area_scale.y / 2.0);
+            for (int ch = 0; ch < DESIRED_AUDIO_CHANNEL_COUNT; ch++)
+            {
+                points[ch][i].x = area_center.x - (area_scale.x / 2) + (step * frame_index);
+                points[ch][i].y = (base_height + samples[sample_index + ch] * (area_scale.y / 2.0)) / DESIRED_AUDIO_CHANNEL_COUNT + (ch * vertical_step);
+            }
+        }
 
-            SDL_RenderLines(m_window.renderer, points, BLOCK_SIZE);
+        for (int ch = 0; ch < DESIRED_AUDIO_CHANNEL_COUNT; ch++)
+        {
+            SDL_RenderLines(m_window.renderer, points[ch], BLOCK_SIZE);
         }
 	}
 
-    int remaining = m_audio_data.frame_count - iter_count * BLOCK_SIZE;
-    for (int i = 0; i < BLOCK_SIZE; i+=1) {
-        int index = iter_count * BLOCK_SIZE + i * downsample;
-        points[i].x = area_center.x - (area_scale.x / 2) + (step * index);
-        points[i].y = base_height + samples[index] * (area_scale.y / 2.0);
+    int remaining = m_audio_data.frame_count - (iter_count * BLOCK_SIZE);
 
-    	SDL_RenderLines(m_window.renderer, points, BLOCK_SIZE);
+    ASSERT(remaining < BLOCK_SIZE);
+
+    for (int i = 0; i < remaining; i+=1)
+    {
+        int frame_index = iter_count * BLOCK_SIZE + i;
+        int sample_index = (iter_count * BLOCK_SIZE + i) * DESIRED_AUDIO_CHANNEL_COUNT;
+
+        for (int ch = 0; ch < DESIRED_AUDIO_CHANNEL_COUNT; ch++)
+        {
+            points[ch][i].x = area_center.x - (area_scale.x / 2) + (step * frame_index);
+            points[ch][i].y = base_height + samples[sample_index + ch] * (area_scale.y / 2.0) + (ch * vertical_step);
+        }
+    }
+
+    for (int ch = 0; ch < DESIRED_AUDIO_CHANNEL_COUNT; ch++)
+    {
+        SDL_RenderLines(m_window.renderer, points[ch], remaining);
     }
 }
 

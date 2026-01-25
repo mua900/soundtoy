@@ -163,6 +163,9 @@ struct Drop_Down_List {
 
 struct Ui_State {
     Rectangle volume_slider = { 100, 100, 100, 10 };
+    Rectangle pan_slider = {
+        INIT_WINDOW_WIDTH * (1.0 / 2.0) - INIT_WINDOW_WIDTH * (5.0 / 16.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0) - INIT_WINDOW_HEIGHT * (1.0 / 32.0),
+        INIT_WINDOW_WIDTH * (5.0 / 8.0), INIT_WINDOW_HEIGHT * (1.0 / 16.0) };
 
     Rectangle pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
     Rectangle graphs_button = { INIT_WINDOW_WIDTH * (4.0 / 5.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0), 200, 100 };

@@ -46,8 +46,8 @@ static inline unsigned int msvc_leading_zeros(u64 x)
 }
 
 #define POP_COUNT(x)      pop_count(x)
-#define LEADING_ZEROS(x)  msvc_trailing_zeros(x)
-#define TRAILING_ZEROS(x) msvc_leading_zeros(x)
+#define LEADING_ZEROS(x)  msvc_leading_zeros(x)
+#define TRAILING_ZEROS(x) msvc_trailing_zeros(x)
 
 #else // _MSC_VER
 

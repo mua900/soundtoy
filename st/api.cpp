@@ -63,20 +63,20 @@ extern "C" {
     St_Sampler* st_sampler_copy(St_Sampler* sampler) {
         St_Sampler* copy = new St_Sampler;
 
-        if (!sampler) {
+        if (!copy) {
             st_last_error = "Could not allocate copy sampler";
             return nullptr;
         }
 
         copy->program = new Bytecode_Program;
-        *((Bytecode_Program*)copy->program) = *((Bytecode_Program*)sampler->program);
+        copy->program = sampler->program;
 
         return copy;
     }
 
     void st_sampler_destroy(St_Sampler* sampler) {
-        free(sampler->program);
-        free(sampler);
+        delete sampler->program;
+        delete sampler;
     }
 
     bool st_check_expression_string(const St_Sampler* sampler_or_null, const char* expression_string, int length) {
@@ -215,6 +215,8 @@ extern "C" {
             return false;
         }
 
+        free_tree(expression);
+
         return true;
     }
     static float bytecode_evaluate(void* evaluator) {
@@ -267,10 +269,6 @@ extern "C" {
 
         double left_inv_sr = 1.0 / program_left->get_sample_rate();
         double right_inv_sr = 1.0 / program_right->get_sample_rate();
-
-        if (sample_count % 2 == 1) {
-        	st_last_error = "Sample count for planar stereo buffer not a multiple of 2.";
-        }
 
     	for (int i = 0; i < sample_count / 2; i++) {
     		buffer[i] = bc_evaluate(program_left);
