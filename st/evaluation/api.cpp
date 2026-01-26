@@ -4,7 +4,6 @@
 #include "template.h"
 #include "evaluator.h"
 #include "bytecode.h"
-#include "platform.h"
 
 #include <bit>
 #include <cmath>

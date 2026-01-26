@@ -288,3 +288,33 @@ static inline char to_lower_ascii(char c)
 #define BOOL_STRING(b) ((b) ? ("true") : ("false"))
 
 float snap_value(float val, float bound1, float bound2, float threshold);
+
+// simple custom complex number
+struct Complex {
+	float real = 0.0;
+	float imaginary = 0.0;
+
+	Complex() {}
+    Complex(float r, float i) : real(r), imaginary(i) {}
+};
+
+// overloads for complex
+
+inline Complex operator+(const Complex lhs, const Complex rhs)
+{
+	return Complex(lhs.real + rhs.real, lhs.imaginary + rhs.imaginary);
+}
+
+inline Complex operator-(const Complex lhs, const Complex rhs)
+{
+	return Complex(lhs.real - rhs.real, lhs.imaginary - rhs.imaginary);
+}
+
+inline Complex operator*(const Complex lhs, const Complex rhs)
+{
+	return Complex(lhs.real * rhs.real - lhs.imaginary * rhs.imaginary, lhs.real * rhs.imaginary + lhs.imaginary * rhs.real);
+}
+
+#define MATH_PI  3.14159265359
+#define MATH_E   2.71828182846
+#define MATH_TAU CONSTANT_PI * 2.0

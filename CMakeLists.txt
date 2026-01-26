@@ -42,27 +42,35 @@ target_include_directories(soundtoy PRIVATE vendor/imgui/backends)
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT soundtoy)
 
 add_library(soundtoy_lib STATIC
-    st/common.h
-    st/common.cpp
-    st/evaluator.h
-    st/evaluator.cpp
-    st/builtin.h
-    st/builtin.cpp
-    st/token.h
-    st/expr.h
-    st/expr.cpp
-    st/bytecode.h
-    st/bytecode.cpp
-    st/template.h
+    # common
+    st/common/common.h
+    st/common/common.cpp
+    st/common/template.h
 
-    st/platform.h
-    st/platform.cpp
+    # evaluation
+    st/evaluation/evaluator.h
+    st/evaluation/evaluator.cpp
+    st/evaluation/builtin.h
+    st/evaluation/builtin.cpp
+    st/evaluation/token.h
+    st/evaluation/expr.h
+    st/evaluation/expr.cpp
+    st/evaluation/bytecode.h
+    st/evaluation/bytecode.cpp
+    st/evaluation/api.h
+    st/evaluation/api.cpp
 
-    st/api.h
-    st/api.cpp
+    # dsp
+    st/dsp/fft.h
+    st/dsp/fft.cpp
 )
 
-target_include_directories(soundtoy PRIVATE st)
+target_include_directories(soundtoy_lib PRIVATE st/common)
+
+target_include_directories(soundtoy PRIVATE st/common)
+target_include_directories(soundtoy PRIVATE st/evaluation)
+target_include_directories(soundtoy PRIVATE st/dsp)
+
 target_link_libraries(soundtoy PRIVATE soundtoy_lib)
 
 
