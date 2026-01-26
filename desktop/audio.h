@@ -5,7 +5,7 @@
 #include "template.h"
 #include "api.h"
 
-struct Audio {
+struct ExpressionAudio {
     SDL_AudioDeviceID m_playback = 0;
     SDL_AudioStream* m_audio_stream = nullptr;
     SDL_AudioFormat m_format = SDL_AUDIO_F32;

@@ -62,7 +62,9 @@ public:
     Mouse_State m_mouse = {};
 
     Assets m_assets = {};
-    Audio m_audio = {};
+    ExpressionAudio m_expr_audio = {};
+    AudioPlayer m_audio_player = {};
+    AudioData m_audio_data = {};
 
 	Array<float> sample_buffer = {};  // audio sample buffer
 	Array<SDL_FPoint> waveform_sample_buffer = {};
@@ -83,8 +85,6 @@ public:
     Array<Text> m_rendered_text_cache = {};
 
     float m_volume = 0.0;
-
-    AudioData m_audio_data;
 
     bool quit = false;
     bool doing_text_input = false;
@@ -144,4 +144,5 @@ private:
     void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
 };
 
-void render_text(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale = vec2(0, 0));
+void render_text_size(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 absolute_scale = vec2(0, 0));
+void render_text_scale(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale_factor = vec2(0,0));

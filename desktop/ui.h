@@ -168,7 +168,7 @@ struct Ui_State {
         INIT_WINDOW_WIDTH * (5.0 / 8.0), INIT_WINDOW_HEIGHT * (1.0 / 16.0) };
 
     Rectangle pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
-    Rectangle graphs_button = { INIT_WINDOW_WIDTH * (4.0 / 5.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0), 200, 100 };
+    Rectangle graphs_button = { INIT_WINDOW_WIDTH * (4.0 / 5.0), 0, INIT_WINDOW_WIDTH * (1.0 / 5.0), 100 };
     Text_Field input_text_field = { { INIT_WINDOW_WIDTH / 2 - 500, INIT_WINDOW_HEIGHT * (4.0 / 5.0) - 100, 1000, 200 } };
 
     Drop_Down_List channel_count = {};

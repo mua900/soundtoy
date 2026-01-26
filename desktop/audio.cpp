@@ -8,19 +8,19 @@ SDL_AudioStream* create_audio_stream(SDL_AudioDeviceID device, SDL_AudioSpec spe
 static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
 static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
 
-void Audio::pause()
+void ExpressionAudio::pause()
 {
     paused = true;
     SDL_PauseAudioDevice(m_playback);
 }
 
-void Audio::unpause()
+void ExpressionAudio::unpause()
 {
     paused = false;
     SDL_ResumeAudioDevice(m_playback);
 }
 
-void Audio::toggle_pause()
+void ExpressionAudio::toggle_pause()
 {
     if (paused) {
         unpause();
@@ -30,18 +30,18 @@ void Audio::toggle_pause()
     }
 }
 
-float Audio::get_volume()
+float ExpressionAudio::get_volume()
 {
     return m_volume;
 }
 
-void Audio::set_volume(float volume)
+void ExpressionAudio::set_volume(float volume)
 {
     m_volume = volume;
     SDL_SetAudioStreamGain(m_audio_stream, volume);
 }
 
-bool Audio::set_channel_count(SDL_AudioStream* stream, int channel_count) {
+bool ExpressionAudio::set_channel_count(SDL_AudioStream* stream, int channel_count) {
     if (channel_count == 1) {
         SDL_SetAudioStreamGetCallback(stream, audio_callback_mono, this);
     }
@@ -58,7 +58,7 @@ bool Audio::set_channel_count(SDL_AudioStream* stream, int channel_count) {
 }
 
 
-void Audio::cleanup()
+void ExpressionAudio::cleanup()
 {
     SDL_CloseAudioDevice(m_playback);
     SDL_DestroyAudioStream(m_audio_stream);
@@ -69,7 +69,7 @@ void Audio::cleanup()
     m_audio_stream = NULL;
 }
 
-bool Audio::initialize(Array<float> p_sample_buffer, int freq, int channels, St_Sampler* left, St_Sampler* right)
+bool ExpressionAudio::initialize(Array<float> p_sample_buffer, int freq, int channels, St_Sampler* left, St_Sampler* right)
 {
     SDL_AudioSpec spec = {};
     spec.freq = freq;
@@ -120,7 +120,7 @@ bool Audio::initialize(Array<float> p_sample_buffer, int freq, int channels, St_
     return true;
 }
 
-bool Audio::reinitialize(int freq, int channels) {
+bool ExpressionAudio::reinitialize(int freq, int channels) {
 	pause();
 	
     SDL_DestroyAudioStream(m_audio_stream);
@@ -149,7 +149,7 @@ bool Audio::reinitialize(int freq, int channels) {
 	return true;
 }
 
-bool Audio::set_playback_device(SDL_AudioDeviceID p_device) {
+bool ExpressionAudio::set_playback_device(SDL_AudioDeviceID p_device) {
 	if (m_playback) {
 		SDL_CloseAudioDevice(m_playback);
 		m_playback = 0;
@@ -186,7 +186,7 @@ static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream,
 {
     total_amount /= sizeof(float);
 
-	Audio* audio = (Audio*) userdata;
+	ExpressionAudio* audio = (ExpressionAudio*) userdata;
 	
     St_Sampler* sampler = audio->sampler_left;
 	auto sample_buffer = audio->sample_buffer;
@@ -209,7 +209,7 @@ static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* strea
 {
     total_amount /= sizeof(float) * 2;
 
-	Audio* audio = (Audio*)userdata;
+	ExpressionAudio* audio = (ExpressionAudio*)userdata;
 
 	auto sample_buffer = audio->sample_buffer;
 
