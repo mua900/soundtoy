@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -142,50 +143,6 @@ String string_copy(String s);
 int string_to_integer(String s, bool* success);
 double string_to_real(String s);
 
-struct ivec2 {
-    int x, y;
-};
-
-struct vec2 {
-    float x = 0, y = 0;
-    vec2() {}
-    vec2(float p_x, float p_y) : x(p_x), y(p_y) {}
-};
-
-struct Rectangle {
-    float x, y, w, h;
-
-    Rectangle() {}
-    Rectangle(vec2 pos, vec2 scale) : x(pos.x), y(pos.y), w(scale.x), h(scale.y) {}
-    Rectangle(float p_x, float p_y, float p_w, float p_h)
-        : x(p_x), y(p_y), w(p_w), h(p_h)
-    {}
-
-    bool contains(vec2 p);
-};
-
-struct ColorF;
-
-struct Color {
-    unsigned char r, g, b, a;
-    Color(unsigned char r, unsigned char g, unsigned char b, unsigned char a) : r(r), g(g), b(b), a(a) {}
-    Color(const ColorF& color);
-};
-
-struct ColorF {
-    float r, g, b, a;
-    ColorF(float r, float g, float b, float a) : r(r), g(g), b(b), a(a) {}
-    ColorF(const Color& color);
-};
-
-#define COLOR_WHITE ((Color){0xff,0xff,0xff,0xff})
-#define COLOR_BLACK ((Color){0,0,0,0xff})
-#define COLOR_RED   ((Color){0xff,0,0,0xff})
-#define COLOR_GREEN ((Color){0,0xff,0,0xff})
-#define COLOR_BLUE  ((Color){0,0,0xff,0xff})
-
-#define COLOR_ARG(color) color.r,color.g,color.b,color.a
-
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
 #define MIN(x,y) (((x) > (y)) ? (y) : (x))
@@ -288,6 +245,65 @@ static inline char to_lower_ascii(char c)
 #define BOOL_STRING(b) ((b) ? ("true") : ("false"))
 
 float snap_value(float val, float bound1, float bound2, float threshold);
+
+struct ivec2 {
+    int x, y;
+};
+
+struct vec2 {
+    float x = 0, y = 0;
+    vec2() {}
+    vec2(float p_x, float p_y) : x(p_x), y(p_y) {}
+
+    vec2 normalized() const
+    {
+        float mag = sqrt(x*x+y*y);
+        return vec2(x/mag,y/mag);
+    }
+};
+
+inline vec2 operator+(const vec2 a, const vec2 b)
+{
+    return vec2(a.x + b.x, a.y + b.y);
+}
+inline vec2 operator-(const vec2 a, const vec2 b)
+{
+    return vec2(a.x - b.x, a.y - b.y);
+}
+
+struct Rectangle {
+    float x, y, w, h;
+
+    Rectangle() {}
+    Rectangle(vec2 pos, vec2 scale) : x(pos.x), y(pos.y), w(scale.x), h(scale.y) {}
+    Rectangle(float p_x, float p_y, float p_w, float p_h)
+        : x(p_x), y(p_y), w(p_w), h(p_h)
+    {}
+
+    bool contains(vec2 p);
+};
+
+struct ColorF;
+
+struct Color {
+    unsigned char r, g, b, a;
+    Color(unsigned char r, unsigned char g, unsigned char b, unsigned char a) : r(r), g(g), b(b), a(a) {}
+    Color(const ColorF& color);
+};
+
+struct ColorF {
+    float r, g, b, a;
+    ColorF(float r, float g, float b, float a) : r(r), g(g), b(b), a(a) {}
+    ColorF(const Color& color);
+};
+
+#define COLOR_WHITE ((Color){0xff,0xff,0xff,0xff})
+#define COLOR_BLACK ((Color){0,0,0,0xff})
+#define COLOR_RED   ((Color){0xff,0,0,0xff})
+#define COLOR_GREEN ((Color){0,0xff,0,0xff})
+#define COLOR_BLUE  ((Color){0,0,0xff,0xff})
+
+#define COLOR_ARG(color) color.r,color.g,color.b,color.a
 
 // simple custom complex number
 struct Complex {

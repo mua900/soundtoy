@@ -30,11 +30,6 @@ void ExpressionAudio::toggle_pause()
     }
 }
 
-float ExpressionAudio::get_volume()
-{
-    return m_volume;
-}
-
 void ExpressionAudio::set_volume(float volume)
 {
     m_volume = volume;
@@ -298,7 +293,7 @@ void AudioPlayer::toggle_pause()
     }
 }
 
-double AudioPlayer::get_volume()
+double AudioPlayer::get_volume() const
 {
     return volume;
 }

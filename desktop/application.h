@@ -66,7 +66,8 @@ public:
     AudioPlayer m_audio_player = {};
     AudioData m_audio_data = {};
 
-	Array<float> sample_buffer = {};  // audio sample buffer
+    // audio sample buffer populated by the audio callback with a reference passed to ExpressionAudio
+	Array<float> sample_buffer = {};
 	Array<SDL_FPoint> waveform_sample_buffer = {};
 
 	St_Sampler* sampler_audio_left      = nullptr;
@@ -82,7 +83,7 @@ public:
 
     Event_Timeout m_events[EVENT_COUNT] = {};
 
-    Array<Text> m_rendered_text_cache = {};
+    Array<Text> m_rendered_text = {};
 
     float m_volume = 0.0;
 
@@ -146,3 +147,5 @@ private:
 
 void render_text_size(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 absolute_scale = vec2(0, 0));
 void render_text_scale(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale_factor = vec2(0,0));
+
+void draw_arrowhead(SDL_Renderer* renderer, vec2 position, vec2 direction, float scale, ColorF color);

@@ -133,11 +133,11 @@ bool Application::initialize()
     // info string
     {
         auto texts = new Text[TEXT_COUNT];
-        m_rendered_text_cache = Array<Text>(texts, TEXT_COUNT);
+        m_rendered_text = Array<Text>(texts, TEXT_COUNT);
 
         gen_static_text(Color{0x44, 0x22, 0x33, 0xff});
         // dynamic text
-        m_rendered_text_cache.data[TEXT_VOLUME_VALUE] = create_text(make_string("0.0"), Color(0x54, 0x22, 0x77, 0xff));
+        m_rendered_text.data[TEXT_VOLUME_VALUE] = create_text(make_string("0.0"), Color(0x54, 0x22, 0x77, 0xff));
     }
 
     // ui
@@ -216,14 +216,14 @@ bool Application::gen_static_text(Color color)
         return false;
     }
 
-    m_rendered_text_cache.data[TEXT_PAUSED] = paused;
-    m_rendered_text_cache.data[TEXT_PLAYING] = playing;
-    m_rendered_text_cache.data[TEXT_SAMPLE_RATE] = sample_rate;
-    m_rendered_text_cache.data[TEXT_INVALID_EXPRESSION] = invalid_expression;
-    m_rendered_text_cache.data[TEXT_INVALID_SAMPLE_RATE] = invalid_sample_rate;
-    m_rendered_text_cache.data[TEXT_VALID_EXPRESSION] = valid_expression;
-    m_rendered_text_cache.data[TEXT_SOUND_MODE] = text_sound_mode;
-    m_rendered_text_cache.data[TEXT_GRAPH_MODE] = text_graph_mode;
+    m_rendered_text.data[TEXT_PAUSED] = paused;
+    m_rendered_text.data[TEXT_PLAYING] = playing;
+    m_rendered_text.data[TEXT_SAMPLE_RATE] = sample_rate;
+    m_rendered_text.data[TEXT_INVALID_EXPRESSION] = invalid_expression;
+    m_rendered_text.data[TEXT_INVALID_SAMPLE_RATE] = invalid_sample_rate;
+    m_rendered_text.data[TEXT_VALID_EXPRESSION] = valid_expression;
+    m_rendered_text.data[TEXT_SOUND_MODE] = text_sound_mode;
+    m_rendered_text.data[TEXT_GRAPH_MODE] = text_graph_mode;
 
     return true;
 }
@@ -668,7 +668,7 @@ void Application::draw_sound_mode_ui()
         Color slider_color = Color(0x55, 0x44, 0x22, 0xff);
         Color knob_color = Color(0x66, 0x55, 0x22, 0xff);
 
-        render_slider(m_ui.volume_slider, knob_scale, m_expr_audio.get_volume(), slider_color, knob_color, m_rendered_text_cache.data[TEXT_VOLUME_VALUE]);
+        render_slider(m_ui.volume_slider, knob_scale, m_expr_audio.get_volume(), slider_color, knob_color, m_rendered_text.data[TEXT_VOLUME_VALUE]);
     }
 
     // pan slider
@@ -677,7 +677,7 @@ void Application::draw_sound_mode_ui()
         Color slider_color = Color(0x55, 0x44, 0x22, 0xff);
         Color knob_color = Color(0x88, 0xBB, 0xAA, 0xff);
 
-        render_slider(m_ui.pan_slider, knob_scale, m_expr_audio.get_volume(), slider_color, knob_color, m_rendered_text_cache.data[TEXT_VOLUME_VALUE]);
+        render_slider(m_ui.pan_slider, knob_scale, m_expr_audio.get_volume(), slider_color, knob_color, m_rendered_text.data[TEXT_VOLUME_VALUE]);
     }
 
     // pause/resume button
@@ -694,7 +694,7 @@ void Application::draw_sound_mode_ui()
         const int margin = 5;
         Font font = m_assets.font;
         render_text_size(m_window.renderer, font,
-            m_rendered_text_cache.data[(m_expr_audio.paused) ? TEXT_PAUSED : TEXT_PLAYING],
+            m_rendered_text.data[(m_expr_audio.paused) ? TEXT_PAUSED : TEXT_PLAYING],
             vec2(pause_button.x, pause_button.y + pause_button.h + font.size/2));
     }
 
@@ -739,7 +739,7 @@ void Application::draw_common_ui() {
     {
         int text = (mode == ApplicationMode::AppModeSound) ? TEXT_GRAPH_MODE : TEXT_SOUND_MODE;
         render_textured_rectangle(m_ui.graphs_button,
-            m_rendered_text_cache[text].texture,
+            m_rendered_text[text].texture,
             Color(0x66, 0x55, 0x55, 0xff)
         );
     }
@@ -751,7 +751,7 @@ void Application::draw_common_ui() {
         if (m_events[EVENT_INVALID_EXPRESSION].active)
         {
             auto tf_area = m_ui.input_text_field.m_area;
-            render_text_size(m_window.renderer, m_assets.font, m_rendered_text_cache.get(TEXT_INVALID_EXPRESSION),
+            render_text_size(m_window.renderer, m_assets.font, m_rendered_text.get(TEXT_INVALID_EXPRESSION),
                     vec2(tf_area.x + tf_area.w/2, tf_area.y + tf_area.h), text_scale);
         }
     }
@@ -818,7 +818,7 @@ bool Application::mouse_input_ui()
 
         char buffer[64];
         snprintf(buffer, sizeof(buffer), "%.3f", volume);
-        m_rendered_text_cache.data[TEXT_VOLUME_VALUE] = create_text(make_string(buffer), Color(0x54, 0x22, 0x77, 0xff));
+        m_rendered_text.data[TEXT_VOLUME_VALUE] = create_text(make_string(buffer), Color(0x54, 0x22, 0x77, 0xff));
 
         printf("%f\n", m_expr_audio.get_volume());
         return true;
@@ -1336,4 +1336,28 @@ void render_text_scale(SDL_Renderer* renderer, Font font, Text text, vec2 where,
     SDL_FRect dst = {where.x - scale.x/2, where.y - scale.y/2, scale.x, scale.y};
 
     SDL_RenderTexture(renderer, text.texture, &src, &dst);
+}
+
+void draw_arrowhead(SDL_Renderer* renderer, vec2 position, vec2 direction, float scale, ColorF color)
+{
+    SDL_Vertex vertices[3] = {};
+
+    vec2 dir = direction.normalized();
+    vec2 dir_ortho = vec2(-dir.y, dir.x);
+
+    vertices[0].position.x = position.x + dir.x * scale;
+    vertices[0].position.y = position.y + dir.y * scale;
+    vertices[0].color = SDL_FColor{ color.r, color.g, color.b, color.a };
+
+    vertices[1].position.x = position.x + dir_ortho.x * scale;
+    vertices[1].position.y = position.y + dir_ortho.y * scale;
+    vertices[1].color = SDL_FColor{ color.r, color.g, color.b, color.a };
+
+    vertices[2].position.x = position.x - dir_ortho.x * scale;
+    vertices[2].position.y = position.y - dir_ortho.y * scale;
+    vertices[2].color = SDL_FColor{ color.r, color.g, color.b, color.a };
+
+    int indices[3] = {0, 1, 2};
+
+    SDL_RenderGeometry(renderer, NULL, vertices, 3, indices, 3);
 }

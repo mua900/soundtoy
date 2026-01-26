@@ -5,6 +5,8 @@
 #include "template.h"
 #include "api.h"
 
+// @todo speed control for playback maybe? Take a look at FrequencyRatio.
+
 struct ExpressionAudio {
     SDL_AudioDeviceID m_playback = 0;
     SDL_AudioStream* m_audio_stream = nullptr;
@@ -17,6 +19,7 @@ struct ExpressionAudio {
 	Array<float> sample_buffer;
 	
     float m_volume = 0.0;
+    float m_pan = 0.0;
 
     int m_sample_rate = 0;
     int m_channel_count = 0;
@@ -37,8 +40,10 @@ struct ExpressionAudio {
     void pause();
     void unpause();
     void toggle_pause();
-    float get_volume();
+    float get_volume() const { return m_volume; }
     void set_volume(float volume);
+    float get_pan() const { return m_pan; }
+    void set_pan(float pan) { m_pan = pan; }
 private:
     bool set_channel_count(SDL_AudioStream* stream, int channel_count);	
 };
@@ -82,6 +87,7 @@ struct AudioPlayer
 	SDL_AudioStream* stream = {};
 
 	double volume = 0.0;
+    double pan = 0.0;
 	bool paused = true;
 	
 	bool initialize(int freq, int channels, double vol);
@@ -93,5 +99,7 @@ struct AudioPlayer
 	void resume();
 	void toggle_pause();
 	void set_volume(double volume);
-	double get_volume();
+	double get_volume() const;
+    double get_pan() const { return pan; }
+    void set_pan(float p) { pan = p; }
 };
