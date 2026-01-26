@@ -9,7 +9,7 @@ extern "C" {
     };
 
     struct St_Sampler;
-  
+	
     bool st_initialize();
     const char* st_get_last_error();
     St_Sampler* st_sampler_create(int sample_rate);
@@ -17,7 +17,7 @@ extern "C" {
     St_Sampler* st_sampler_copy(St_Sampler* sampler);
     bool st_check_expression_string(const St_Sampler* sampler_or_null, const char* expression_string, int length);
     bool st_sampler_set_expression(St_Sampler* sampler, const char* expression_string, int length);
-    float st_sampler_evaluate(const St_Sampler* sampler);
+    float st_sampler_evaluate(St_Sampler* sampler);
     void st_sampler_step_time(St_Sampler* sampler, float step_size);
     void st_sampler_set_sample_rate(St_Sampler* sampler, float sample_rate);
     void st_sampler_set_sample_time(St_Sampler* sampler, float sample_time);

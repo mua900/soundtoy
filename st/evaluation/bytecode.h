@@ -235,10 +235,10 @@ struct Bytecode_Program {
 	void step_time(double time);
 	void set_sample_time(double sample_time);
 	void set_sample_rate(double sample_rate);
-	double get_sample_rate();
-	double get_sample_time();
+	double get_sample_rate() const;
+	double get_sample_time() const;
 	
-	void print_program();
+	void print_program() const;
 };
 
 bool bytecode_compile_expression(Bytecode_Program& program, Expr* expr);

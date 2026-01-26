@@ -20,18 +20,17 @@ extern "C" {
         return (fabsf(x) < min_flt_sp) ? 0.0 : x;
     }
 
-    static double bc_evaluate(Bytecode_Program* program);
+    static float bc_evaluate(Bytecode_Program* program);
 
-    static void bytecode_step_time(void* program, float step);
-	static bool bytecode_set_expression(void* program, String expression_string);
-	static float bytecode_evaluate(void* program);
-	static void bytecode_fill(void* program, float* buffer, int sample_count);
-	static void bytecode_fill_strided(void* program, float* buffer, int sample_count);
-	static void bytecode_fill_interleaved(void* program_left, void* program_right, float* buffer, int sample_count);
-	static void bytecode_fill_planar(void* program_left, void* program_right, float* buffer, int sample_count);
+	static bool bytecode_set_expression(Bytecode_Program* program, String expression_string);
+	static float bytecode_evaluate(Bytecode_Program* program);
+	static void bytecode_fill(Bytecode_Program* program, float* buffer, int sample_count);
+	static void bytecode_fill_strided(Bytecode_Program* program, float* buffer, int sample_count);
+	static void bytecode_fill_interleaved(Bytecode_Program* program_left, Bytecode_Program* program_right, float* buffer, int sample_count);
+	static void bytecode_fill_planar(Bytecode_Program* program_left, Bytecode_Program* program_right, float* buffer, int sample_count);
 
     struct St_Sampler {
-        Bytecode_Program* program = nullptr;
+        Bytecode_Program program = {};
     };
 
     // @todo thread safe
@@ -53,7 +52,6 @@ extern "C" {
             return nullptr;
         }
 
-        sampler->program = new Bytecode_Program();
         st_sampler_set_sample_rate(sampler, sample_rate);
 
         return sampler;
@@ -67,14 +65,12 @@ extern "C" {
             return nullptr;
         }
 
-        copy->program = new Bytecode_Program;
         copy->program = sampler->program;
 
         return copy;
     }
 
     void st_sampler_destroy(St_Sampler* sampler) {
-        delete sampler->program;
         delete sampler;
     }
 
@@ -83,7 +79,7 @@ extern "C" {
         String expression = String(expression_string, length);
 
         if (sampler_or_null) {
-			parser.set_symbols(sampler_or_null->program->symbols);
+			parser.set_symbols(sampler_or_null->program.symbols);
             return parser.check_expression_string(expression);
         }
         else {
@@ -93,102 +89,96 @@ extern "C" {
 
     bool st_sampler_set_expression(St_Sampler* sampler, const char* expression_string, int length) {
         String expression = String(expression_string, length);
-        return bytecode_set_expression(sampler->program, expression);
+        return bytecode_set_expression(&sampler->program, expression);
     }
 
-    float st_sampler_evaluate(const St_Sampler* sampler) {
-        return bytecode_evaluate(sampler->program);
+    float st_sampler_evaluate(St_Sampler* sampler) {
+        return bytecode_evaluate(&sampler->program);
     }
 
     void st_sampler_step_time(St_Sampler* sampler, float step_size) {
-        bytecode_step_time(sampler->program, step_size);
+        sampler->program.step_time(step_size);
     }
 
     void st_sampler_set_sample_rate(St_Sampler* sampler, float sample_rate) {
-        sampler->program->set_sample_rate(sample_rate);
+        sampler->program.set_sample_rate(sample_rate);
     }
 
     void st_sampler_set_sample_time(St_Sampler* sampler, float sample_time) {
-        sampler->program->set_sample_time(sample_time);
+        sampler->program.set_sample_time(sample_time);
     }
 
     float st_sampler_get_sample_time(const St_Sampler* sampler) {
-        return sampler->program->get_sample_time();
+        return sampler->program.get_sample_time();
     }
 
     float st_sampler_get_sample_rate(const St_Sampler* sampler) {
-        return sampler->program->get_sample_rate();
+        return sampler->program.get_sample_rate();
     }
 
     int st_sampler_register_variable(St_Sampler* sampler, const char* name, int length, Variable_Type type) {
         String symbol = String(name, length);
         Variable var = Variable(symbol, type);
 
-        Find_Result find = find_symbol(sampler->program->symbols, symbol);
+        Find_Result find = find_symbol(sampler->program.symbols, symbol);
         if (find.found) {
             st_last_error = "Trying to register the same variable name more than once.";
             return find.index;
         }
 
-        int var_id = sampler->program->add_symbol(var);
+        int var_id = sampler->program.add_symbol(var);
         return var_id;
     }
 
     bool st_sampler_set_variable_value(St_Sampler* sampler, int variable, float value) {
-        if (!sampler->program->variables.in_bounds(variable)) {
+        if (!sampler->program.variables.in_bounds(variable)) {
             return false;
         }
 
-        sampler->program->variables.get_ref(variable) = value;
+        sampler->program.variables.get_ref(variable) = value;
         return true;
     }
 
     float st_sampler_get_variable_value(const St_Sampler* sampler, int variable) {
-        return sampler->program->variables.get(variable);
+        return sampler->program.variables.get(variable);
     }
 
     const char* st_sampler_get_variable_name_at_index(const St_Sampler* sampler, int index) {
         // @fix returning raw pointer from string that is not guaranteed to be null terminated
 		// if we make a copy then the caller needs to free which isn't nice
-        return sampler->program->symbols.get(index).name.data;
+        return sampler->program.symbols.get(index).name.data;
     }
 
     int st_sampler_get_variable_count(const St_Sampler* sampler) {
-        return sampler->program->variables.size();
+        return sampler->program.variables.size();
     }
 
     void st_set_input_stream(St_Sampler* sampler, float* input_stream, int input_stream_size, int stride) {
-        sampler->program->set_input_stream(InputStream(Array<float>(input_stream, input_stream_size), stride));
+        sampler->program.set_input_stream(InputStream(Array<float>(input_stream, input_stream_size), stride));
     }
 
     void st_clear_input_stream(St_Sampler* sampler) {
-        sampler->program->input_stream = InputStream();
+        sampler->program.input_stream = InputStream();
     }
 
     void st_fill(St_Sampler* sampler, float* buffer, int length) {
-        bytecode_fill(sampler->program, buffer, length);
+        bytecode_fill(&sampler->program, buffer, length);
     }
 
 	void st_fill_strided(St_Sampler* sampler, float* buffer, int sample_count) {
-        bytecode_fill_strided(sampler->program, buffer, sample_count);
+        bytecode_fill_strided(&sampler->program, buffer, sample_count);
 	}
 
     void st_fill_interleaved(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count) {
-        bytecode_fill_interleaved(sampler_left->program, sampler_right->program, buffer, sample_count);
+        bytecode_fill_interleaved(&sampler_left->program, &sampler_right->program, buffer, sample_count);
     }
 
 	void st_fill_planar(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count) {
-        bytecode_fill_planar(sampler_left->program, sampler_right->program, buffer, sample_count);
+        bytecode_fill_planar(&sampler_left->program, &sampler_right->program, buffer, sample_count);
 	}
 
 
-    static void bytecode_step_time(void* evaluator, float step) {
-		Bytecode_Program* program = (Bytecode_Program*) evaluator;
-        program->step_time(step);
-    }
-    static bool bytecode_set_expression(void* evaluator, String expression_string) {
-		Bytecode_Program* program = (Bytecode_Program*) evaluator;
-
+    static bool bytecode_set_expression(Bytecode_Program* program, String expression_string) {
         Parser parser = {};
 
 		parser.set_symbols(program->symbols);
@@ -218,24 +208,19 @@ extern "C" {
 
         return true;
     }
-    static float bytecode_evaluate(void* evaluator) {
-		Bytecode_Program* program = (Bytecode_Program*) evaluator;
+    static float bytecode_evaluate(Bytecode_Program* program) {
         return bc_evaluate(program);
     }
-    static void bytecode_fill(void* evaluator, float* buffer, int count) {
-		Bytecode_Program* program = (Bytecode_Program*) evaluator;
-
-        double inv_sample_rate = 1.0 / program->get_sample_rate();
+    static void bytecode_fill(Bytecode_Program* program, float* buffer, int count) {
+        float inv_sample_rate = 1.0 / program->get_sample_rate();
 
         for (int i = 0; i < count; i++) {
             buffer[i] = bc_evaluate(program);
 	        program->step_time(inv_sample_rate);
         }
     }
-	static void bytecode_fill_strided(void* evaluator, float* buffer, int sample_count) {
-		Bytecode_Program* program = (Bytecode_Program*) evaluator;
-
-		double inv_sample_rate = 1.0 / program->get_sample_rate();
+	static void bytecode_fill_strided(Bytecode_Program* program, float* buffer, int sample_count) {
+		float inv_sample_rate = 1.0 / program->get_sample_rate();
 		for (int i = 0; i < sample_count; i++) {
 			int index = i * 2;
 			buffer[index] = bc_evaluate(program);
@@ -243,12 +228,10 @@ extern "C" {
 			program->step_time(inv_sample_rate);
 		}
 	}
-    static void bytecode_fill_interleaved(void* evaluator_left, void* evaluator_right, float* buffer, int count) {
-		Bytecode_Program* program_left = (Bytecode_Program*) evaluator_left;
-		Bytecode_Program* program_right = (Bytecode_Program*) evaluator_right;
+    static void bytecode_fill_interleaved(Bytecode_Program* program_left, Bytecode_Program* program_right, float* buffer, int count) {
 		
-    	double left_inv_sr = 1.0 / program_left->get_sample_rate();
-    	double right_inv_sr = 1.0 / program_right->get_sample_rate();
+    	float left_inv_sr = 1.0 / program_left->get_sample_rate();
+    	float right_inv_sr = 1.0 / program_right->get_sample_rate();
 
         for (int i = 0; i < count; i++) {
             int left = i * 2 + 0;
@@ -262,12 +245,9 @@ extern "C" {
         }
     }
 
-    static void bytecode_fill_planar(void* evaluator_left, void* evaluator_right, float* buffer, int sample_count) {
-    	Bytecode_Program* program_left = (Bytecode_Program*) evaluator_left;
-    	Bytecode_Program* program_right = (Bytecode_Program*) evaluator_right;
-
-        double left_inv_sr = 1.0 / program_left->get_sample_rate();
-        double right_inv_sr = 1.0 / program_right->get_sample_rate();
+    static void bytecode_fill_planar(Bytecode_Program* program_left, Bytecode_Program* program_right, float* buffer, int sample_count) {
+        float left_inv_sr = 1.0 / program_left->get_sample_rate();
+        float right_inv_sr = 1.0 / program_right->get_sample_rate();
 
     	for (int i = 0; i < sample_count / 2; i++) {
     		buffer[i] = bc_evaluate(program_left);
@@ -280,9 +260,9 @@ extern "C" {
     }
 
 
-    static double bc_evaluate(Bytecode_Program* program) {
-        double result = bytecode_run(*program);
-        result = flush_subnormal_dp(CLAMP(result, -1.0, 1.0));
+    static float bc_evaluate(Bytecode_Program* program) {
+        float result = bytecode_run(*program);
+        result = flush_subnormal_sp(CLAMP(result, -1.0, 1.0));
         return result;
     }
 }

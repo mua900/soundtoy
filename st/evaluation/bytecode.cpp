@@ -428,7 +428,7 @@ void Bytecode_Program::set_sample_rate(double sample_rate) {
     constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE] = sample_rate;
 }
 
-double Bytecode_Program::get_sample_rate() {
+double Bytecode_Program::get_sample_rate() const {
     return constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE];
 }
 
@@ -436,7 +436,7 @@ void Bytecode_Program::set_sample_time(double sample_time) {
     constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] = sample_time;
 }
 
-double Bytecode_Program::get_sample_time() {
+double Bytecode_Program::get_sample_time() const {
     return constant_block.builtin_variable[BUILTIN_VARIABLE_TIME];
 }
 
@@ -461,7 +461,7 @@ void Bytecode_Program::set_builtin_function(StFunction implementation, u32 built
     constant_block.builtin_function[builtin_function].implementation = implementation;
 }
 
-void Bytecode_Program::print_program() {
+void Bytecode_Program::print_program() const {
     String_Builder builder(1024);
 
     builder.append(make_string("=== Bytecode Program ===\n"));

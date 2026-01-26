@@ -40,8 +40,7 @@ struct Audio {
     float get_volume();
     void set_volume(float volume);
 private:
-    bool set_channel_count(int channel_count);	
-    bool create_audio_stream(int freq, int channels);
+    bool set_channel_count(SDL_AudioStream* stream, int channel_count);	
 };
 
 
@@ -73,4 +72,26 @@ struct AudioData {
     {
         return (samples != nullptr) && (format == DESIRED_AUDIO_FORMAT) && (channel_count == 2) && (frequency == DESIRED_AUDIO_SAMPLE_RATE);
     }
+};
+
+
+struct AudioPlayer
+{
+	AudioData audio_data = {};
+	SDL_AudioDeviceID device = {};
+	SDL_AudioStream* stream = {};
+
+	double volume = 0.0;
+	bool paused = true;
+	
+	bool initialize(int freq, int channels, double vol);
+	void destroy();
+
+	bool set_audio_data(AudioData data);
+
+	void pause();
+	void resume();
+	void toggle_pause();
+	void set_volume(double volume);
+	double get_volume();
 };
