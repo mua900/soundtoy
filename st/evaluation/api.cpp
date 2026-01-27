@@ -219,9 +219,9 @@ extern "C" {
 	        program->step_time(inv_sample_rate);
         }
     }
-	static void bytecode_fill_strided(Bytecode_Program* program, float* buffer, int sample_count) {
+	static void bytecode_fill_strided(Bytecode_Program* program, float* buffer, int frame_count) {
 		float inv_sample_rate = 1.0 / program->get_sample_rate();
-		for (int i = 0; i < sample_count; i++) {
+		for (int i = 0; i < frame_count; i++) {
 			int index = i * 2;
 			buffer[index] = bc_evaluate(program);
 

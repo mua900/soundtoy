@@ -115,14 +115,18 @@ bool Application::initialize()
 		sampler_waveform_left = waveform_left;
 		sampler_waveform_right = waveform_right;
 
-		const int sample_buffer_size_audio = 512;
-		const int sample_buffer_size_waveform = 512;
 
+        const int sample_buffer_size_audio = 512;
         float* sample_buffer_mem = new float[sample_buffer_size_audio];
-        SDL_FPoint* waveform_sample_buffer_mem = new SDL_FPoint[sample_buffer_size_waveform];
-
         sample_buffer = Array<float>(sample_buffer_mem, sample_buffer_size_audio);
-		waveform_sample_buffer = Array<SDL_FPoint>(waveform_sample_buffer_mem, sample_buffer_size_waveform);
+
+		const int sample_buffer_size_waveform = 512;
+        SDL_FPoint* waveform_sample_buffer_mem = new SDL_FPoint[sample_buffer_size_waveform * 2];
+        waveform_sample_buffer_left = Array<SDL_FPoint>(waveform_sample_buffer_mem, sample_buffer_size_waveform);
+        waveform_sample_buffer_right = Array<SDL_FPoint>(waveform_sample_buffer_mem + sample_buffer_size_waveform, sample_buffer_size_waveform);
+
+        // set it active to start 
+        set_event_active(EVENT_RECALCULATE_WAVEFORM_SAMPLES, 0.4);
     }
 
     if (!m_expr_audio.initialize(sample_buffer, initial_sample_rate, 1, sampler_audio_left, sampler_audio_right)) {
@@ -579,9 +583,9 @@ void Application::timeout()
     }
 }
 
-void Application::set_event_active(int event_index, double timeout_time)
+void Application::set_event_active(int event_index, double timeout_seconds)
 {
-    s64 timeout = (s64)(timeout_time * NS_PER_SECONDS);
+    s64 timeout = (s64)(timeout_seconds * NS_PER_SECONDS);
     m_events[event_index].active = true;
     m_events[event_index].event = m_time + timeout;
 }
@@ -653,12 +657,27 @@ void Application::draw_sound_mode_ui()
 		SDL_RenderFillRect(m_window.renderer, &area_left);
 		SDL_RenderFillRect(m_window.renderer, &area_right);
 
-        render_waveform(sampler_waveform_left,
-					    vec2(area_left.x + area_left.w / 2, area_left.y + area_left.h / 2), vec2(area_left.w, area_left.h),
-						Color(0xBB, 0x44, 0x32, 0xff));
-        render_waveform(sampler_waveform_right,
-					    vec2(area_right.x + area_right.w / 2, area_right.y + area_right.h / 2), vec2(area_right.w, area_right.h),
-						Color(0xBB, 0x44, 0x32, 0xff));
+        int waveform_sample_count = waveform_sample_buffer_left.size / 2;
+
+        if (m_events[EVENT_RECALCULATE_WAVEFORM_SAMPLES].active == false)
+        {
+            render_waveform(sampler_waveform_left, waveform_sample_buffer_left,
+                            vec2(area_left.x + area_left.w / 2, area_left.y + area_left.h / 2), vec2(area_left.w, area_left.h));
+            render_waveform(sampler_waveform_right, waveform_sample_buffer_right,
+                            vec2(area_right.x + area_right.w / 2, area_right.y + area_right.h / 2), vec2(area_right.w, area_right.h));
+
+            // recalculate regularly
+            set_event_active(EVENT_RECALCULATE_WAVEFORM_SAMPLES, 0.5);
+        }
+
+        const Color waveform_color = Color(0xBB, 0x44, 0x32, 0xff);
+
+        // @todo if we are going to only recalculate samples a couple of times a second
+        // maybe do some interpolation or something so that it looks better?
+
+        SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(waveform_color));
+        SDL_RenderLines(m_window.renderer, waveform_sample_buffer_left.data, waveform_sample_count);
+        SDL_RenderLines(m_window.renderer, waveform_sample_buffer_right.data, waveform_sample_count);
 	}
 
 
@@ -1063,7 +1082,7 @@ bool Application::set_eval_string(String eval_string)
 
     ASSERT(sampler_waveform_left && sampler_waveform_right);
 
-    const int waveform_sample_rate = 100;
+    const int waveform_sample_rate = 128;
     st_sampler_set_sample_rate(sampler_waveform_left, waveform_sample_rate);
     st_sampler_set_sample_rate(sampler_waveform_right, waveform_sample_rate);
 
@@ -1071,6 +1090,7 @@ bool Application::set_eval_string(String eval_string)
 }
 
 // @todo we can do cooler things with rendering waveforms or audio data
+// @todo do this rendering once, not every frame
 
 void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color color) {
 	if (!(m_audio_data.samples && m_audio_data.is_in_desired_spec())) {
@@ -1135,26 +1155,23 @@ void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color col
     }
 }
 
-void Application::render_waveform(St_Sampler* sampler, vec2 area_center, vec2 area_scale, Color waveform_color) {
-	SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(waveform_color));
+void Application::render_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale) {
+    int sample_count = sample_buffer.size / 2;
 
-	const SDL_FRect area = SDL_FRect{ area_center.x - area_scale.x / 2, area_center.y - area_scale.y / 2, area_scale.x, area_scale.y };
+    st_fill_strided(sampler, &sample_buffer.data[0].y, sample_count);
 
-	int sample_count = waveform_sample_buffer.size / 2;
-	float half_h = area.h / 2;
-	float middle_y = area.y + half_h;
+    const SDL_FRect area = SDL_FRect{ area_center.x - area_scale.x / 2, area_center.y - area_scale.y / 2, area_scale.x, area_scale.y };
 
-	st_fill_strided(sampler, &waveform_sample_buffer.data[0].y, sample_count);
+    float half_h = area.h / 2;
+    float middle_y = area.y + half_h;
 
     float step_size = (area.w / (float)sample_count);
-	float start_x = area.x + step_size / 2;
-	for (int i = 0; i < sample_count; i++) {
-		waveform_sample_buffer[i].x = start_x + i * step_size;
-		float sample = waveform_sample_buffer[i].y;  // copy
-		waveform_sample_buffer[i].y = middle_y - (sample * half_h);
-	}
-
-	SDL_RenderLines(m_window.renderer, waveform_sample_buffer.data, sample_count);
+    float start_x = area.x + step_size / 2;
+    for (int i = 0; i < sample_count; i++) {
+        sample_buffer[i].x = start_x + i * step_size;
+        float sample = sample_buffer[i].y;
+        sample_buffer[i].y = middle_y - (sample * half_h);
+    }
 }
 
 

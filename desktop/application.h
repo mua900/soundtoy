@@ -44,6 +44,7 @@ struct Event_Timeout {
 enum Events {
     EVENT_INVALID_EXPRESSION,
 	EVENT_INVALID_SAMPLE_RATE,
+    EVENT_RECALCULATE_WAVEFORM_SAMPLES,
     EVENT_COUNT,
 };
 
@@ -68,7 +69,10 @@ public:
 
     // audio sample buffer populated by the audio callback with a reference passed to ExpressionAudio
 	Array<float> sample_buffer = {};
-	Array<SDL_FPoint> waveform_sample_buffer = {};
+
+    // recalculated regularly
+	Array<SDL_FPoint> waveform_sample_buffer_left = {};
+	Array<SDL_FPoint> waveform_sample_buffer_right = {};
 
 	St_Sampler* sampler_audio_left      = nullptr;
 	St_Sampler* sampler_audio_right     = nullptr;
@@ -141,7 +145,7 @@ private:
     void render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color);
 
     void render_slider(Rectangle area, vec2 knob_scale, float value, Color slider_color, Color knob_color, const Text& text);
-    void render_waveform(St_Sampler* sampler, vec2 area_center, vec2 area_scale, Color waveform_color);
+    void render_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale);
     void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
 };
 

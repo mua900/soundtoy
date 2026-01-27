@@ -30,8 +30,8 @@ extern "C" {
     int st_sampler_get_variable_count(const St_Sampler* sampler);
     void st_set_input_stream(St_Sampler* sampler, float* input_stream, int input_stream_size, int stride);
     void st_clear_input_stream(St_Sampler* sampler);
-    void st_fill(St_Sampler* sampler, float* buffer, int length);
+    void st_fill(St_Sampler* sampler, float* buffer, int sample_count);
 	void st_fill_strided(St_Sampler* sampler, float* buffer, int sample_count);
-    void st_fill_interleaved(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count);
-    void st_fill_planar(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count);
+    void st_fill_interleaved(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int frame_count);
+    void st_fill_planar(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int frame_count);
 }
