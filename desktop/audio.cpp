@@ -5,8 +5,8 @@
 
 SDL_AudioStream* create_audio_stream(SDL_AudioDeviceID device, SDL_AudioSpec spec, int freq, int channels, double volume);
 
-static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
-static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
+static void SDLCALL expression_audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
+static void SDLCALL expression_audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
 
 void ExpressionAudio::pause()
 {
@@ -38,10 +38,10 @@ void ExpressionAudio::set_volume(float volume)
 
 bool ExpressionAudio::set_channel_count(SDL_AudioStream* stream, int channel_count) {
     if (channel_count == 1) {
-        SDL_SetAudioStreamGetCallback(stream, audio_callback_mono, this);
+        SDL_SetAudioStreamGetCallback(stream, expression_audio_callback_mono, this);
     }
     else if (channel_count == 2) {
-        SDL_SetAudioStreamGetCallback(stream, audio_callback_stereo, this);
+        SDL_SetAudioStreamGetCallback(stream, expression_audio_callback_stereo, this);
     }
     else {
         fprintf(stderr, "Invalid argument for channel count %d\n", channel_count);
@@ -173,11 +173,9 @@ bool ExpressionAudio::set_playback_device(SDL_AudioDeviceID p_device) {
 	return true;
 }
 
-
-
 // @todo use SDL_PutAudioStreamDataNoCopy instead
 
-static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+static void SDLCALL expression_audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
 {
     total_amount /= sizeof(float);
 
@@ -200,7 +198,7 @@ static void SDLCALL audio_callback_mono(void* userdata, SDL_AudioStream* stream,
     }
 }
 
-static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
+static void SDLCALL expression_audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
 {
     total_amount /= sizeof(float) * 2;
 
@@ -221,6 +219,42 @@ static void SDLCALL audio_callback_stereo(void* userdata, SDL_AudioStream* strea
 }
 
 
+
+#define QUEUE_SAMPLE_SIZE 44100
+#define QUEUE_FRAME_SIZE QUEUE_SAMPLE_SIZE * DESIRED_AUDIO_CHANNEL_COUNT
+
+void AudioPlayer::put_audio_data()
+{
+	if (!this->audio_data.samples)
+		return;
+
+	if (paused)
+		return;
+	
+	int queued = SDL_GetAudioStreamQueued(stream);
+
+	// @todo variable names
+	
+	// dependent on desired format
+	float* audio_samples = (float*) this->audio_data.samples;
+	int queued_samples = queued / sizeof(float);
+	int queued_frames = queued_samples / DESIRED_AUDIO_CHANNEL_COUNT;
+
+	if (queued_frames < QUEUE_FRAME_SIZE)
+	{
+		int put_amount = MIN(QUEUE_FRAME_SIZE, audio_data.frame_count - playback_position);
+		SDL_PutAudioStreamData(stream, audio_samples + playback_position, QUEUE_FRAME_SIZE * sizeof(float));
+		playback_position += put_amount;
+
+		if (playback_position >= audio_data.frame_count)
+		{
+			// we are done playing the track
+			playback_position = 0;
+
+			// @todo pause
+		}
+	}
+}
 	
 bool AudioPlayer::initialize(int freq, int channels, double vol)
 {
@@ -246,6 +280,7 @@ bool AudioPlayer::initialize(int freq, int channels, double vol)
 		return false;
 	}
 
+	this->playback_position = 0;
 	this->device = device_id;
 	this->stream = astream;
 	this->volume = vol;
@@ -261,6 +296,12 @@ void AudioPlayer::destroy()
 
 bool AudioPlayer::set_audio_data(AudioData data)
 {
+	if (!data.is_in_desired_spec())
+	{
+		fprintf(stderr, "Unexpected audio data format\n");
+		return false;
+	}
+	
 	SDL_PauseAudioDevice(device);
 	SDL_FlushAudioStream(stream);
 

@@ -115,6 +115,8 @@ private:
     void draw_imgui();
 
     bool mouse_input_ui();
+	bool mouse_input_graph_mode();
+	bool mouse_input_sound_mode();
 
     bool gen_static_text(Color color);
 

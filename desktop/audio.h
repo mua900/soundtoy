@@ -85,6 +85,7 @@ struct AudioPlayer
 	AudioData audio_data = {};
 	SDL_AudioDeviceID device = {};
 	SDL_AudioStream* stream = {};
+	int playback_position = 0;
 
 	double volume = 0.0;
     double pan = 0.0;
@@ -94,6 +95,8 @@ struct AudioPlayer
 	void destroy();
 
 	bool set_audio_data(AudioData data);
+
+	void put_audio_data();
 
 	void pause();
 	void resume();

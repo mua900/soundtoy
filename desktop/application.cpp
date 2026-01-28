@@ -200,6 +200,8 @@ bool Application::gen_static_text(Color color)
 {
     Text paused = create_text(make_string("Paused"), color);
     Text playing = create_text(make_string("Playing"), color);
+	Text pause = create_text(make_string("pause"), color);
+	Text resume = create_text(make_string("resume"), color);
     Text invalid_expression = create_text(make_string("Invalid Expression"), color);
 	Text invalid_sample_rate = create_text(make_string("Invalid Sample Rate"), color);
     Text valid_expression = create_text(make_string("Valid Expression"), color);
@@ -210,6 +212,8 @@ bool Application::gen_static_text(Color color)
     if (!
 		(paused.texture &&
 		 playing.texture &&
+		 pause.texture &&
+		 resume.texture &&
 		 invalid_expression.texture &&
 		 invalid_expression.texture &&
 		 valid_expression.texture &&
@@ -222,6 +226,8 @@ bool Application::gen_static_text(Color color)
 
     m_rendered_text.data[TEXT_PAUSED] = paused;
     m_rendered_text.data[TEXT_PLAYING] = playing;
+	m_rendered_text.data[TEXT_PAUSE] = pause;
+	m_rendered_text.data[TEXT_RESUME] = resume;
     m_rendered_text.data[TEXT_SAMPLE_RATE] = sample_rate;
     m_rendered_text.data[TEXT_INVALID_EXPRESSION] = invalid_expression;
     m_rendered_text.data[TEXT_INVALID_SAMPLE_RATE] = invalid_sample_rate;
@@ -567,6 +573,11 @@ void Application::update()
     m_time_seconds = time_sec;
 
     timeout();
+
+	if (mode == AppModeGraph)
+	{
+		m_audio_player.put_audio_data();
+	}
 }
 
 void Application::timeout()
@@ -749,8 +760,21 @@ void Application::draw_graph_mode_ui()
     SDL_GetWindowSize(m_window.window, &window_x, &window_y);
 
 	vec2 window_size = vec2((float) window_x, (float) window_y);
-    
-    render_audio_data(vec2(window_size.x/2, window_size.y/2), vec2(window_size.x * (7.0 / 8.0), window_size.y * (7.0 / 8.0)), Color(0x44, 0x22, 0x77, 0xff));
+
+    Text_Id text = m_audio_player.paused ? TEXT_RESUME : TEXT_PAUSE;
+	render_textured_rectangle(Rectangle(0,0,100,100), m_rendered_text.get(text).texture, Color(0x22,0x55,0x33,0xff));
+	
+	if (m_audio_data.samples)
+	{
+		vec2 audio_data_scale = vec2(window_size.x * (7.0 / 8.0), window_size.y * (7.0 / 8.0));
+		vec2 audio_data_position = vec2(window_size.x/2, window_size.y/2);
+		render_audio_data(audio_data_position, vec2(audio_data_scale.x, audio_data_scale.y), Color(0x44, 0x22, 0x77, 0xff));
+
+		// playback position
+		float playback_position = m_audio_player.playback_position / m_audio_player.audio_data.frame_count;
+		float audio_data_start = audio_data_position.x - audio_data_scale.x / 2;
+		draw_arrowhead(m_window.renderer, vec2(audio_data_start + audio_data_scale.x * playback_position, audio_data_position.y - audio_data_scale.y / 2), vec2(0, 1), 100, ColorF(0.4, 0.2, 0.7, 1.0));
+	}
 }
 
 void Application::draw_common_ui() {
@@ -825,6 +849,32 @@ void Application::render_dropdown(const Drop_Down_List& list, Color title_color,
 }
 
 bool Application::mouse_input_ui()
+{
+	if (mode == AppModeSound)
+	{
+		return mouse_input_sound_mode();
+	}
+	else if (mode == AppModeGraph)
+	{
+		return mouse_input_graph_mode();
+	}
+
+	ASSERT(false); // bug case
+	return false;
+}
+
+bool Application::mouse_input_graph_mode()
+{
+	if (m_ui.playback_pause.contains(m_mouse.pos))
+	{
+		m_audio_player.toggle_pause();
+		return true;
+	}
+
+	return false;
+}
+
+bool Application::mouse_input_sound_mode()
 {
     if (m_ui.volume_slider.contains(m_mouse.pos))
     {
@@ -945,15 +995,11 @@ void Application::switch_modes() {
         mode = ApplicationMode::AppModeGraph;
 
         m_expr_audio.pause();
-
-        st_sampler_set_expression(sampler_audio_left, DEFAULT_EXPRESSION, string_length(DEFAULT_EXPRESSION));
-        st_sampler_set_expression(sampler_audio_right, DEFAULT_EXPRESSION, string_length(DEFAULT_EXPRESSION));
-
-        st_sampler_set_expression(sampler_waveform_left, DEFAULT_EXPRESSION, string_length(DEFAULT_EXPRESSION));
-        st_sampler_set_expression(sampler_waveform_right, DEFAULT_EXPRESSION, string_length(DEFAULT_EXPRESSION));
     }
     else if (mode == ApplicationMode::AppModeGraph) {
         mode = ApplicationMode::AppModeSound;
+
+		m_audio_player.pause();
     }
 }
 
@@ -1221,6 +1267,9 @@ bool Application::load_audio_file(String path) {
 
     ASSERT(m_audio_data.is_in_desired_spec());
 
+	// ---
+	m_audio_player.set_audio_data(m_audio_data);
+	
     return true;
 }
 

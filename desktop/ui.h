@@ -23,6 +23,8 @@ enum Text_Id : int {
     // static text
     TEXT_PAUSED = 0,
     TEXT_PLAYING,
+    TEXT_PAUSE,
+    TEXT_RESUME,
     TEXT_SAMPLE_RATE,
     TEXT_INVALID_EXPRESSION,
     TEXT_VALID_EXPRESSION,
@@ -162,6 +164,8 @@ struct Drop_Down_List {
 };
 
 struct Ui_State {
+	Rectangle playback_pause = {0,0,100,100};
+	
     Rectangle volume_slider = { 100, 100, 100, 10 };
     Rectangle pan_slider = {
         INIT_WINDOW_WIDTH * (1.0 / 2.0) - INIT_WINDOW_WIDTH * (5.0 / 16.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0) - INIT_WINDOW_HEIGHT * (1.0 / 32.0),
