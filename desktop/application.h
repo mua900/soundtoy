@@ -114,7 +114,8 @@ private:
     void draw_graph_mode_ui();
     void draw_imgui();
 
-    bool mouse_input_ui();
+    bool mouse_input();
+	bool mouse_input_common();
 	bool mouse_input_graph_mode();
 	bool mouse_input_sound_mode();
 

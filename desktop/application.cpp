@@ -457,7 +457,7 @@ void Application::handle_events()
             case SDL_EVENT_MOUSE_BUTTON_DOWN:
             {
                 SDL_MouseButtonEvent mouse = e.button;
-                if (mouse_input_ui())
+                if (mouse_input())
                 {
                     break;
                 }
@@ -848,8 +848,13 @@ void Application::render_dropdown(const Drop_Down_List& list, Color title_color,
     }
 }
 
-bool Application::mouse_input_ui()
+bool Application::mouse_input()
 {
+	if (mouse_input_common())
+	{
+		return true;
+	}
+	
 	if (mode == AppModeSound)
 	{
 		return mouse_input_sound_mode();
@@ -858,8 +863,21 @@ bool Application::mouse_input_ui()
 	{
 		return mouse_input_graph_mode();
 	}
+	else
+	{
+		ASSERT(false); // bug case
+		return false;
+	}
+}
 
-	ASSERT(false); // bug case
+bool Application::mouse_input_common()
+{
+    if (m_ui.graphs_button.contains(m_mouse.pos))
+    {
+        switch_modes();
+		return true;
+    }
+
 	return false;
 }
 
@@ -898,11 +916,6 @@ bool Application::mouse_input_sound_mode()
         m_expr_audio.toggle_pause();
 
         return true;
-    }
-
-    if (m_ui.graphs_button.contains(m_mouse.pos))
-    {
-        switch_modes();
     }
 
     {
