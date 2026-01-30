@@ -33,7 +33,7 @@ void ExpressionAudio::toggle_pause()
 void ExpressionAudio::set_volume(float volume)
 {
     m_volume = volume;
-    SDL_SetAudioStreamGain(m_audio_stream, volume);
+    // SDL_SetAudioStreamGain(m_audio_stream, volume);
 }
 
 bool ExpressionAudio::set_channel_count(SDL_AudioStream* stream, int channel_count) {
@@ -188,6 +188,11 @@ static void SDLCALL expression_audio_callback_mono(void* userdata, SDL_AudioStre
     {
         st_fill(sampler, sample_buffer.data, sample_buffer.size);
 
+		for (int i = 0; i < sample_buffer.size; i++)
+		{
+			sample_buffer.data[i] *= audio->m_volume;
+		}
+
         SDL_PutAudioStreamData(stream, sample_buffer.data, sample_buffer.size);
     }
 
@@ -209,6 +214,17 @@ static void SDLCALL expression_audio_callback_stereo(void* userdata, SDL_AudioSt
     for (int turn = 0; turn < total_amount / sample_buffer.size; turn++)
     {
         st_fill_interleaved(audio->sampler_left, audio->sampler_right, sample_buffer.data, sample_buffer.size / 2);
+
+		for (int i = 0; i < sample_buffer.size; i++)
+		{
+			// left
+			sample_buffer.data[i+0] *= audio->m_volume;
+			sample_buffer.data[i+0] *= (1.0 - audio->m_pan);
+
+			// right
+			sample_buffer.data[i+1] *= audio->m_volume;
+			sample_buffer.data[i+1] *= audio->m_pan;
+		}
 
         SDL_PutAudioStreamData(stream, sample_buffer.data, sample_buffer.size);
     }

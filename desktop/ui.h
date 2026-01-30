@@ -34,6 +34,7 @@ enum Text_Id : int {
 
     // dynamic text
     TEXT_VOLUME_VALUE,
+    TEXT_PAN_VALUE,
 
     TEXT_COUNT,
 };

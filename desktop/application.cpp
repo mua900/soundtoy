@@ -4,14 +4,16 @@
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
-
+/*
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
+*/
 
 static const char* org_name = "flying-carpet";
 static const char* soundtoy_identifier = "flying-carpet.soundtoy";
 static const char* soundtoy_name = "soundtoy";
+// @todo versioning
 static const char* soundtoy_version = "0.1.0";
 
 #define DEFAULT_EXPRESSION "sin(t*tau)"
@@ -40,6 +42,7 @@ bool Application::initialize()
         m_window = { window, renderer };
 
         // setup imgui
+		/*
         {
             IMGUI_CHECKVERSION();
             ImGui::CreateContext();
@@ -61,6 +64,7 @@ bool Application::initialize()
             ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
             ImGui_ImplSDLRenderer3_Init(renderer);
         }
+		*/
     }
 
     {
@@ -120,13 +124,14 @@ bool Application::initialize()
         float* sample_buffer_mem = new float[sample_buffer_size_audio];
         sample_buffer = Array<float>(sample_buffer_mem, sample_buffer_size_audio);
 
-		const int sample_buffer_size_waveform = 512;
-        SDL_FPoint* waveform_sample_buffer_mem = new SDL_FPoint[sample_buffer_size_waveform * 2];
-        waveform_sample_buffer_left = Array<SDL_FPoint>(waveform_sample_buffer_mem, sample_buffer_size_waveform);
-        waveform_sample_buffer_right = Array<SDL_FPoint>(waveform_sample_buffer_mem + sample_buffer_size_waveform, sample_buffer_size_waveform);
+		const int sample_buffer_size_waveform = 128;
+        SDL_FPoint* waveform_sample_buffer_left_mem = new SDL_FPoint[sample_buffer_size_waveform];
+		SDL_FPoint* waveform_sample_buffer_right_mem = new SDL_FPoint[sample_buffer_size_waveform];
+        waveform_sample_buffer_left = Array<SDL_FPoint>(waveform_sample_buffer_left_mem, sample_buffer_size_waveform);
+        waveform_sample_buffer_right = Array<SDL_FPoint>(waveform_sample_buffer_right_mem, sample_buffer_size_waveform);
 
         // set it active to start 
-        set_event_active(EVENT_RECALCULATE_WAVEFORM_SAMPLES, 0.4);
+        set_event_active(EVENT_RECALCULATE_WAVEFORM_SAMPLES, 1.0);
     }
 
     if (!m_expr_audio.initialize(sample_buffer, initial_sample_rate, 1, sampler_audio_left, sampler_audio_right)) {
@@ -243,6 +248,7 @@ void Application::draw_imgui() {
     SDL_GetWindowSize(m_window.window, &window_x, &window_y);
     vec2 window_size = vec2(window_x, window_y);
 
+	/*
     // volume slider
     {
         ImGui::SliderFloat("Volume", &m_volume, 0.0, 1.0);
@@ -257,6 +263,7 @@ void Application::draw_imgui() {
             m_expr_audio.toggle_pause();
         }
     }
+	*/
 }
 
 bool Application::update_channel_count(int channels)
@@ -336,14 +343,16 @@ bool Application::st_load_assets(String_Builder& sb) {
     // font
     {
         const String font_folder = make_string("font");
-
+		const String font_name = make_string("Roboto");
+		const String font_file = make_string("Roboto-VariableFont.ttf");
+		
         sb.append(font_folder);
         sb.append(path_seperator);
 
-        sb.append(make_string("Roboto"));
+        sb.append(font_name);
         sb.append(path_seperator);
 
-        sb.append(make_string("Roboto-VariableFont.ttf"));
+        sb.append(font_file);
 
         {
             TTF_Font* font = TTF_OpenFont(sb.c_string(), FONT_SIZE);
@@ -355,6 +364,8 @@ bool Application::st_load_assets(String_Builder& sb) {
 
             m_assets.font = { font, FONT_SIZE };
         }
+
+		sb.remove(font_folder.size + 1 + font_name.size + 1 + font_file.size);
     }
 
     return true;
@@ -365,7 +376,7 @@ void Application::handle_events()
     SDL_Event e = {};
     while (SDL_PollEvent(&e))
     {
-        ImGui_ImplSDL3_ProcessEvent(&e);
+        // ImGui_ImplSDL3_ProcessEvent(&e);
 
         switch (e.type)
         {
@@ -614,10 +625,12 @@ void Application::cleanup()
 	st_sampler_destroy(sampler_waveform_right);
     m_expr_audio.cleanup();
 
+	/*
     ImGui_ImplSDLRenderer3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
-
+	*/
+	
     SDL_Quit();
 }
 
@@ -629,10 +642,6 @@ void Application::draw()
         // don't draw anything if the window is minimized
         return;
     }
-
-    ImGui_ImplSDLRenderer3_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
 
     SDL_SetRenderDrawColor(renderer, COLOR_ARG(m_background_color));
     SDL_RenderClear(renderer);
@@ -646,9 +655,16 @@ void Application::draw()
         draw_graph_mode_ui();
     }
 
+	// if we need imgui
+	/*
+    ImGui_ImplSDLRenderer3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
     ImGui::Render();
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-
+	*/
+	
     SDL_RenderPresent(renderer);
 }
 
@@ -656,6 +672,8 @@ void Application::draw_sound_mode_ui()
 {
     int window_x, window_y;
     SDL_GetWindowSize(m_window.window, &window_x, &window_y);
+        int waveform_sample_count = waveform_sample_buffer_left.size / 2;
+
 
 	vec2 window_size = vec2((float) window_x, (float) window_y);
 
@@ -668,8 +686,6 @@ void Application::draw_sound_mode_ui()
 		SDL_RenderFillRect(m_window.renderer, &area_left);
 		SDL_RenderFillRect(m_window.renderer, &area_right);
 
-        int waveform_sample_count = waveform_sample_buffer_left.size / 2;
-
         if (m_events[EVENT_RECALCULATE_WAVEFORM_SAMPLES].active == false)
         {
             render_waveform(sampler_waveform_left, waveform_sample_buffer_left,
@@ -678,17 +694,18 @@ void Application::draw_sound_mode_ui()
                             vec2(area_right.x + area_right.w / 2, area_right.y + area_right.h / 2), vec2(area_right.w, area_right.h));
 
             // recalculate regularly
-            set_event_active(EVENT_RECALCULATE_WAVEFORM_SAMPLES, 0.5);
+            set_event_active(EVENT_RECALCULATE_WAVEFORM_SAMPLES, 1.0);
         }
 
-        const Color waveform_color = Color(0xBB, 0x44, 0x32, 0xff);
+        const Color waveform_color = Color(0xBB, 0x44, 0x77, 0xff);
 
         // @todo if we are going to only recalculate samples a couple of times a second
         // maybe do some interpolation or something so that it looks better?
 
         SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(waveform_color));
-        SDL_RenderLines(m_window.renderer, waveform_sample_buffer_left.data, waveform_sample_count);
-        SDL_RenderLines(m_window.renderer, waveform_sample_buffer_right.data, waveform_sample_count);
+		
+		SDL_RenderLines(m_window.renderer, waveform_sample_buffer_left.data, waveform_sample_buffer_left.size);
+ 		SDL_RenderLines(m_window.renderer, waveform_sample_buffer_right.data, waveform_sample_buffer_right.size);
 	}
 
 
@@ -707,7 +724,7 @@ void Application::draw_sound_mode_ui()
         Color slider_color = Color(0x55, 0x44, 0x22, 0xff);
         Color knob_color = Color(0x88, 0xBB, 0xAA, 0xff);
 
-        render_slider(m_ui.pan_slider, knob_scale, m_expr_audio.get_volume(), slider_color, knob_color, m_rendered_text.data[TEXT_VOLUME_VALUE]);
+        render_slider(m_ui.pan_slider, knob_scale, m_expr_audio.get_pan(), slider_color, knob_color, m_rendered_text.data[TEXT_PAN_VALUE]);
     }
 
     // pause/resume button
@@ -766,14 +783,14 @@ void Application::draw_graph_mode_ui()
 	
 	if (m_audio_data.samples)
 	{
-		vec2 audio_data_scale = vec2(window_size.x * (7.0 / 8.0), window_size.y * (7.0 / 8.0));
-		vec2 audio_data_position = vec2(window_size.x/2, window_size.y/2);
+		vec2 audio_data_scale = vec2(window_size.x * (5.0 / 8.0), window_size.y * (5.0 / 8.0));
+		vec2 audio_data_position = vec2(window_size.x/2, window_size.y/2 + window_size.y/3);
 		render_audio_data(audio_data_position, vec2(audio_data_scale.x, audio_data_scale.y), Color(0x44, 0x22, 0x77, 0xff));
 
 		// playback position
 		float playback_position = m_audio_player.playback_position / m_audio_player.audio_data.frame_count;
 		float audio_data_start = audio_data_position.x - audio_data_scale.x / 2;
-		draw_arrowhead(m_window.renderer, vec2(audio_data_start + audio_data_scale.x * playback_position, audio_data_position.y - audio_data_scale.y / 2), vec2(0, 1), 100, ColorF(0.4, 0.2, 0.7, 1.0));
+		draw_arrowhead(m_window.renderer, vec2(audio_data_start + audio_data_scale.x * playback_position, audio_data_position.y - audio_data_scale.y / 2), vec2(0, 1), 80, ColorF(0.4, 0.2, 0.7, 1.0));
 	}
 }
 
@@ -899,7 +916,7 @@ bool Application::mouse_input_sound_mode()
         float diff = m_mouse.pos.x - m_ui.volume_slider.x;
         float volume = diff / m_ui.volume_slider.w;
 
-        volume = snap_value(volume, 0.0, 1.0, 0.09);
+        volume = snap_value(volume, 0.0, 1.0, 0.06);
 
         m_expr_audio.set_volume(volume);
 
@@ -911,6 +928,23 @@ bool Application::mouse_input_sound_mode()
         return true;
     }
 
+	if (m_ui.pan_slider.contains(m_mouse.pos))
+	{
+		float diff = m_mouse.pos.x - m_ui.pan_slider.x;
+		float pan = diff / m_ui.pan_slider.w;
+
+		pan = snap_value(pan, 0.0, 1.0, 0.04);
+
+		m_expr_audio.set_pan(pan);
+
+		char buffer[64];
+		snprintf(buffer, sizeof(buffer), "%.3f", pan);
+		m_rendered_text.data[TEXT_PAN_VALUE] = create_text(make_string(buffer), Color(0x55, 0x22, 0x88, 0xff));
+
+		printf("%s\n", buffer);
+		return true;
+	}
+	
     if (m_ui.pause_button.contains(m_mouse.pos))
     {
         m_expr_audio.toggle_pause();
@@ -1188,7 +1222,7 @@ void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color col
 
         for (int ch = 0; ch < DESIRED_AUDIO_CHANNEL_COUNT; ch++)
         {
-            SDL_RenderLines(m_window.renderer, points[ch], BLOCK_SIZE);
+            SDL_RenderPoints(m_window.renderer, points[ch], BLOCK_SIZE);
         }
 	}
 
@@ -1210,12 +1244,12 @@ void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color col
 
     for (int ch = 0; ch < DESIRED_AUDIO_CHANNEL_COUNT; ch++)
     {
-        SDL_RenderLines(m_window.renderer, points[ch], remaining);
+        SDL_RenderPoints(m_window.renderer, points[ch], remaining);
     }
 }
 
 void Application::render_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale) {
-    int sample_count = sample_buffer.size / 2;
+    int sample_count = sample_buffer.size;
 
     st_fill_strided(sampler, &sample_buffer.data[0].y, sample_count);
 
@@ -1253,7 +1287,7 @@ bool Application::load_audio_file(String path) {
         u8* buffer = nullptr;
         u32 audio_length = 0;
         if (!SDL_LoadWAV(path_c_str, &spec, &buffer, &audio_length)) {
-            fprintf(stderr, "Couldn't load audio file %s: %s\n", SDL_GetError());
+            fprintf(stderr, "Couldn't load audio file %s: %s\n", path_c_str, SDL_GetError());
             return false;
         }
 
