@@ -5,6 +5,7 @@
 #include "audio.h"
 #include "api.h"
 #include "ui.h"
+#include "spectogram.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
@@ -78,6 +79,8 @@ public:
 	St_Sampler* sampler_audio_right     = nullptr;
 	St_Sampler* sampler_waveform_left   = nullptr;
 	St_Sampler* sampler_waveform_right  = nullptr;
+
+	Spectogram spectogram = {};
 	
     Ui_State m_ui = {};
     Color m_background_color = DEFAULT_BACKGROUND_COLOR;

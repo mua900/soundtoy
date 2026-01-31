@@ -38,12 +38,15 @@ struct Function {
 };
 
 // results should be an array of length of func.signature.return_types.size
-// if the function doesn't return anything it can be NULL
 void call_function(Function func, Value* parameters, Value* results);
 
 // --- Builtin functions
 
-// @todo rewrite how to add new functions
+// to add a new function:
+// Add an enum entry here.
+// Go to get_builtin_function_id function and add the name of your function to be matched and return your enum entry on a match.
+// Implement a function with the signature (name is convention, replace the func_name part) st_func_name(Value* inputs, Value* outputs).
+// Go to get_default_builtin_functions function and add the implementation of your function to the list. It needs a signature with typed input and outputs. You will get the idea if you look at the function.
 enum Builtin_Func_Type {
     BUILTIN_FUNC_EXP,
     BUILTIN_FUNC_ABS,

@@ -792,6 +792,11 @@ void Application::draw_graph_mode_ui()
 		float audio_data_start = audio_data_position.x - audio_data_scale.x / 2;
 		draw_arrowhead(m_window.renderer, vec2(audio_data_start + audio_data_scale.x * playback_position, audio_data_position.y - audio_data_scale.y / 2), vec2(0, 1), 80, ColorF(0.4, 0.2, 0.7, 1.0));
 	}
+
+	// @todo spectogram
+	{
+
+	}
 }
 
 void Application::draw_common_ui() {
@@ -1175,7 +1180,7 @@ bool Application::set_eval_string(String eval_string)
 
     ASSERT(sampler_waveform_left && sampler_waveform_right);
 
-    const int waveform_sample_rate = 128;
+    const int waveform_sample_rate = 64;
     st_sampler_set_sample_rate(sampler_waveform_left, waveform_sample_rate);
     st_sampler_set_sample_rate(sampler_waveform_right, waveform_sample_rate);
 
