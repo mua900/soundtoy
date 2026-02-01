@@ -4,7 +4,7 @@ This is a small demo project about generating audio from mathematical expression
 The user provides an expression that will be evaluated repeatedly to produce audio samples.
 
 The expression parsing and sample generation code is written in C++ and it is under the st/ folder.
-There is a desktop demo under the desktop/ folder and a web demo under the web/ folder.
+There is a desktop demo under the desktop/ folder and an unfinished web demo under the web/ folder.
 
 Desktop version uses SDL alongside with the companion libraries of SDL_ttf and SDL_image.
 They are included as git submodules under the vendor/ folder.
@@ -20,6 +20,6 @@ cmake ..
 ```
 You also want to make sure you have at least one audio backend for your platform is included in the build of SDL.
 
-There is also the problem that the application is searching for assets in the folder the executable is located in.
+The application will search for assets in the folder the executable is located in.
 So you might have to copy the asset/ folder at the top level of the repository to where the executable is located in to get it working.
 By default the executable will go into build/bin/.
