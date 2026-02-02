@@ -1,10 +1,7 @@
 #pragma once
 
+#include "common.h"
 #include "expr.h"
-
-#define CONSTANT_PI  3.14159265359
-#define CONSTANT_E   2.71828182846
-#define CONSTANT_TAU CONSTANT_PI * 2.0
 
 typedef void (*GenericFunctionPointer)(void);
 typedef void (*StFunction)(Value* parameters, Value* return_values);

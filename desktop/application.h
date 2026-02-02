@@ -106,6 +106,7 @@ public:
     void cleanup();
 private:
     void timeout();
+	void update_ui_state(vec2 window_size);
     void set_event_active(int event_index, double timeout_seconds);
     void set_event_deactive(int event_index);
 
@@ -152,6 +153,7 @@ private:
 
     void render_slider(Rectangle area, vec2 knob_scale, float value, Color slider_color, Color knob_color, const Text& text);
     void render_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale);
+	void render_text_field(const Text_Field& text_field);
     void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
 };
 

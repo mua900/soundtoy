@@ -1,9 +1,10 @@
 #include "fft.h"
 #include "common.h"
 
+#include <complex.h>
 #include <cmath>
 
-void dft(Complex* input, Complex* output, int count)
+void dft(float* input, Complex* output, int count)
 {
 	for (int f = 0; f < count; f++)
 	{
@@ -11,9 +12,11 @@ void dft(Complex* input, Complex* output, int count)
 		
 		for (int j = 0; j < count; j++)
 		{
-			float k = - (float)j / count;
-			accum.real += cosf(2.0*MATH_PI*f*k);
-			accum.imaginary += sinf(2.0*MATH_PI*f*k);
+			float k = (float)j / count;
+			float r = - 2.0*M_PI*f*k;
+
+			accum.real      += input[j] * cosf(r);
+			accum.imaginary += input[j] * sinf(r);
 		}
 
 		output[f] = accum;
@@ -21,7 +24,7 @@ void dft(Complex* input, Complex* output, int count)
 }
 
 
-void _fft(float* input, float* output, int count, int stride)
+void _fft(float* input, Complex* output, int count, int stride)
 {
 	if (count <= 1)
 		return;
@@ -34,19 +37,19 @@ void _fft(float* input, float* output, int count, int stride)
 	for (int k = 0; k < count/2; k++)
 	{
 		float t = (float) k / count;
-		float r = -2.0*MATH_PI*t;
+		float r = -2.0*M_PI*t;
 
-		float even = output[k];
-		float odd = output[k + count/2];
+		Complex even = output[k];
+		Complex odd = output[k + count/2];
 		
-		float v = sinf(odd*r);
+		Complex v = Complex(cosf(r) * (odd.real + odd.imaginary), sinf(r) * (odd.real + odd.imaginary));
 
 		output[k]           = even + v;
 		output[k + count/2] = even - v;
 	}
 }
 
-void fft(float* input, float* output, int count)
+void fft(float* input, Complex* output, int count)
 {
 	_fft(input, output, count, 1);
 }

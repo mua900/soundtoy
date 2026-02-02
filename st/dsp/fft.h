@@ -1,4 +1,6 @@
 #pragma once
 
-void dft(float* input, float* output, int count);
-void fft(float* input, float* output, int count);
+#include "common.h"
+
+void dft(float* input, Complex* output, int count);
+void fft(float* input, Complex* output, int count);

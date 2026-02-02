@@ -331,6 +331,6 @@ inline Complex operator*(const Complex lhs, const Complex rhs)
 	return Complex(lhs.real * rhs.real - lhs.imaginary * rhs.imaginary, lhs.real * rhs.imaginary + lhs.imaginary * rhs.real);
 }
 
-#define MATH_PI  3.14159265359
-#define MATH_E   2.71828182846
-#define MATH_TAU CONSTANT_PI * 2.0
+#define CONSTANT_PI  3.14159265359
+#define CONSTANT_E   2.71828182846
+#define CONSTANT_TAU CONSTANT_PI * 2.0

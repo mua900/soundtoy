@@ -45,7 +45,9 @@ struct Font {
 };
 
 enum Text_Input_Target : u8 {
-    TEXT_INPUT_TEXT_FIELD,
+	NO_TARGET,
+    EXPRESSION_INPUT_LEFT,
+    EXPRESSION_INPUT_RIGHT,
 };
 
 struct Text_Field
@@ -174,13 +176,13 @@ struct Ui_State {
 
     Rectangle pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
     Rectangle graphs_button = { INIT_WINDOW_WIDTH * (4.0 / 5.0), 0, INIT_WINDOW_WIDTH * (1.0 / 5.0), 100 };
-    Text_Field input_text_field = { { INIT_WINDOW_WIDTH / 2 - 500, INIT_WINDOW_HEIGHT * (4.0 / 5.0) - 100, 1000, 200 } };
+
+    Text_Input_Target text_input_target = NO_TARGET;
+	Text_Field expression_input_left = {};
+	Text_Field expression_input_right = {};
 
     Drop_Down_List channel_count = {};
     Drop_Down_List playback_device = {};
 
-    Text_Input_Target text_input_target = TEXT_INPUT_TEXT_FIELD;
-
-    void update(vec2 window_size);
     Text_Field* get_selected_text_field();
 };
