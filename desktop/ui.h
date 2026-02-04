@@ -17,6 +17,15 @@ struct Text {
 
     Text() {}
     Text(SDL_Texture* p_texture, String p_string) : texture(p_texture), string(p_string) {}
+
+    void clear()
+    {
+        if (texture)
+        {
+            SDL_DestroyTexture(texture);
+            texture = nullptr;
+        }
+    }
 };
 
 enum Text_Id : int {
@@ -107,7 +116,7 @@ struct Drop_Down_List {
 		Entry(Text p_label, void* p_data) : label(p_label), data(p_data) {}
 		Entry(Text p_label, int p_data) : label(p_label), index(p_data) {}
 	};
-	
+
     vec2 pos = {};
     vec2 scale = {};
     int selected = DROP_DOWN_LIST_SELECTED_SENTINEL;
@@ -154,8 +163,9 @@ struct Drop_Down_List {
 	int get_option_data_index(int index) const {
 		return options.get(index).index;
 	}
-	
+
     void remove_option(int index) {
+        options.get_ref(index).label.clear();
         options.remove_shift(index);
     }
 
@@ -168,7 +178,7 @@ struct Drop_Down_List {
 
 struct Ui_State {
 	Rectangle playback_pause = {0,0,100,100};
-	
+
     Rectangle volume_slider = { 100, 100, 100, 10 };
     Rectangle pan_slider = {
         INIT_WINDOW_WIDTH * (1.0 / 2.0) - INIT_WINDOW_WIDTH * (5.0 / 16.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0) - INIT_WINDOW_HEIGHT * (1.0 / 32.0),

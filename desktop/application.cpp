@@ -16,6 +16,7 @@ static const char* soundtoy_name = "soundtoy";
 // @todo versioning
 static const char* soundtoy_version = "0.1.0";
 
+#define WAVEFORM_SAMPLE_RATE 64
 #define DEFAULT_EXPRESSION "sin(t*tau)"
 
 bool Application::initialize()
@@ -86,7 +87,7 @@ bool Application::initialize()
         return false;
     }
 
-    const int initial_sample_rate = 48000;
+    const int initial_sample_rate = DESIRED_AUDIO_SAMPLE_RATE;
 
     {
         if (!st_initialize()) {
@@ -94,7 +95,7 @@ bool Application::initialize()
             return false;
         }
 
-		const int waveform_sample_rate = 64;
+		const int waveform_sample_rate = WAVEFORM_SAMPLE_RATE;
 
         St_Sampler* audio_left = st_sampler_create(initial_sample_rate);
         St_Sampler* audio_right = st_sampler_create(initial_sample_rate);
@@ -119,7 +120,6 @@ bool Application::initialize()
 		sampler_waveform_left = waveform_left;
 		sampler_waveform_right = waveform_right;
 
-
         const int sample_buffer_size_audio = 512;
         float* sample_buffer_mem = new float[sample_buffer_size_audio];
         sample_buffer = Array<float>(sample_buffer_mem, sample_buffer_size_audio);
@@ -130,7 +130,7 @@ bool Application::initialize()
         waveform_sample_buffer_left = Array<SDL_FPoint>(waveform_sample_buffer_left_mem, sample_buffer_size_waveform);
         waveform_sample_buffer_right = Array<SDL_FPoint>(waveform_sample_buffer_right_mem, sample_buffer_size_waveform);
 
-        // set it active to start 
+        // set it active to start
         set_event_active(EVENT_RECALCULATE_WAVEFORM_SAMPLES, 1.0);
     }
 
@@ -156,6 +156,7 @@ bool Application::initialize()
 
         update_ui_state(vec2(ws.x, ws.y));
 
+        // @todo show what is selected in the ui
         Text mono = create_text(make_string("mono"), Color(0x44, 0x22, 0x55, 0xff));
         Text stereo = create_text(make_string("stereo"), Color(0x44, 0x22, 0x55, 0xff));
         m_ui.channel_count.set_title(create_text(make_string("Channel Count"), Color(0x44, 0x22, 0x55, 0xff)));
@@ -247,28 +248,15 @@ void Application::draw_imgui() {
     int window_x, window_y;
     SDL_GetWindowSize(m_window.window, &window_x, &window_y);
     vec2 window_size = vec2(window_x, window_y);
-
-	/*
-    // volume slider
-    {
-        ImGui::SliderFloat("Volume", &m_volume, 0.0, 1.0);
-
-        m_expr_audio.set_volume(m_volume);
-    }
-
-    // pause/resume button
-    {
-        bool toggle = ImGui::Button(m_expr_audio.paused ? "Resume" : "Pause", ImVec2(window_size.x * (1.0 / 10.0), window_size.y * (1.0 / 10.0)));
-        if (toggle) {
-            m_expr_audio.toggle_pause();
-        }
-    }
-	*/
 }
 
 bool Application::update_channel_count(int channels)
 {
     bool success = m_expr_audio.reinitialize(m_expr_audio.get_sample_rate(), channels);
+
+    int w_x, w_y;
+    SDL_GetWindowSize(m_window.window, &w_x, &w_y);
+    update_ui_state(vec2(w_x, w_y));
     return success;
 }
 
@@ -345,7 +333,7 @@ bool Application::st_load_assets(String_Builder& sb) {
         const String font_folder = make_string("font");
 		const String font_name = make_string("Roboto");
 		const String font_file = make_string("Roboto-VariableFont.ttf");
-		
+
         sb.append(font_folder);
         sb.append(path_seperator);
 
@@ -401,15 +389,36 @@ void Application::handle_events()
 
                         if (text_field)
                         {
-                            bool set = set_eval_string(text_field->get_string());
+                            bool set = false;
+
+                            if (m_expr_audio.get_channel_count() == 1)
+                            {
+                                set = set_eval_string(text_field->get_string());
+                            }
+                            else if (m_expr_audio.get_channel_count() == 2)
+                            {
+                                if (m_ui.text_input_target == EXPRESSION_INPUT_LEFT)
+                                {
+                                    set = set_eval_string_left(text_field->get_string());
+                                }
+                                else if (m_ui.text_input_target == EXPRESSION_INPUT_RIGHT)
+                                {
+                                    set = set_eval_string_right(text_field->get_string());
+                                }
+                            }
+
                             if (!set)
                             {
-                                set_event_active(EVENT_INVALID_EXPRESSION, 3.0);
+                                set_event_active(EVENT_INVALID_EXPRESSION, 10.0);
+                            }
+                            else
+                            {
+                                set_event_deactive(EVENT_INVALID_EXPRESSION);
                             }
 
                             text_input_stop();
                         }
-                        
+
                         break;
                     }
                     case SDL_SCANCODE_BACKSPACE:
@@ -542,7 +551,7 @@ void Application::handle_events()
 
                 if (drop.data) {
                     m_audio_data.reset();
-				
+
                     if (!load_audio_file(String(drop.data))) {
                         fprintf(stderr, "Could not load file %s\n", drop.data);
                     }
@@ -630,7 +639,7 @@ void Application::cleanup()
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
 	*/
-	
+
     SDL_Quit();
 }
 
@@ -655,16 +664,6 @@ void Application::draw()
         draw_graph_mode_ui();
     }
 
-	// if we need imgui
-	/*
-    ImGui_ImplSDLRenderer3_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-
-    ImGui::Render();
-    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-	*/
-	
     SDL_RenderPresent(renderer);
 }
 
@@ -703,7 +702,7 @@ void Application::draw_sound_mode_ui()
         // maybe do some interpolation or something so that it looks better?
 
         SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(waveform_color));
-		
+
 		SDL_RenderLines(m_window.renderer, waveform_sample_buffer_left.data, waveform_sample_buffer_left.size);
  		SDL_RenderLines(m_window.renderer, waveform_sample_buffer_right.data, waveform_sample_buffer_right.size);
 	}
@@ -774,7 +773,7 @@ void Application::draw_graph_mode_ui()
 
     Text_Id text = m_audio_player.paused ? TEXT_RESUME : TEXT_PAUSE;
 	render_textured_rectangle(Rectangle(0,0,100,100), m_rendered_text.get(text).texture, Color(0x22,0x55,0x33,0xff));
-	
+
 	if (m_audio_data.samples)
 	{
 		vec2 audio_data_scale = vec2(window_size.x * (5.0 / 8.0), window_size.y * (5.0 / 8.0));
@@ -889,7 +888,7 @@ bool Application::mouse_input()
 	{
 		return true;
 	}
-	
+
 	if (mode == AppModeSound)
 	{
 		return mouse_input_sound_mode();
@@ -940,6 +939,7 @@ bool Application::mouse_input_sound_mode()
 
         char buffer[64];
         snprintf(buffer, sizeof(buffer), "%.3f", volume);
+        m_rendered_text.data[TEXT_VOLUME_VALUE].clear();
         m_rendered_text.data[TEXT_VOLUME_VALUE] = create_text(make_string(buffer), Color(0x54, 0x22, 0x77, 0xff));
 
         printf("%f\n", m_expr_audio.get_volume());
@@ -957,12 +957,13 @@ bool Application::mouse_input_sound_mode()
 
 		char buffer[64];
 		snprintf(buffer, sizeof(buffer), "%.3f", pan);
+		m_rendered_text.data[TEXT_PAN_VALUE].clear();
 		m_rendered_text.data[TEXT_PAN_VALUE] = create_text(make_string(buffer), Color(0x55, 0x22, 0x88, 0xff));
 
 		printf("%s\n", buffer);
 		return true;
 	}
-	
+
     if (m_ui.pause_button.contains(m_mouse.pos))
     {
         m_expr_audio.toggle_pause();
@@ -1028,7 +1029,7 @@ bool Application::mouse_input_sound_mode()
 
                 if (area.contains(m_mouse.pos)) {
 					m_expr_audio.set_playback_device(m_ui.playback_device.get_option_data_index(i));
-					
+
                     got_clikcked = true;
                 }
             }
@@ -1051,6 +1052,7 @@ bool Application::mouse_input_sound_mode()
 
         return true;
     }
+
 
 	if (m_expr_audio.get_channel_count() == 2)
 	{
@@ -1133,15 +1135,15 @@ void Application::update_ui_state(vec2 window_size)
 	}
 	else if (m_expr_audio.get_channel_count() == 2)
 	{
-		m_ui.expression_input_left.m_area.w = window_size.x * (1.0 / 3.0);
+		m_ui.expression_input_left.m_area.w = window_size.x * (1.0 / 4.0);
 		m_ui.expression_input_left.m_area.h = window_size.y * (1.0 / 5.0);
-		m_ui.expression_input_left.m_area.x = window_size.x * (1.0 / 3.0);
+		m_ui.expression_input_left.m_area.x = window_size.x * (1.0 / 8.0);
 		m_ui.expression_input_left.m_area.y = window_size.y / 2 + m_ui.expression_input_left.m_area.h;
 
-		m_ui.expression_input_right.m_area.w = window_size.x * (1.0 / 3.0);
+		m_ui.expression_input_right.m_area.w = window_size.x * (1.0 / 4.0);
 		m_ui.expression_input_right.m_area.h = window_size.y * (1.0 / 5.0);
-		m_ui.expression_input_right.m_area.x = window_size.x * (1.0 / 3.0);
-		m_ui.expression_input_right.m_area.y = window_size.y / 2 + m_ui.expression_input_left.m_area.h;
+		m_ui.expression_input_right.m_area.x = window_size.x * (5.0 / 8.0);
+		m_ui.expression_input_right.m_area.y = window_size.y / 2 + m_ui.expression_input_right.m_area.h;
 	}
 
     m_ui.channel_count.set_area(vec2(window_size.x / 2,
@@ -1190,7 +1192,7 @@ bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, String s, Fon
 
     const SDL_Color text_color = { 0x11, 0x22, 0x11, 0xff };
     SDL_Surface* text_surface;
-    
+
     if (wrapped) {
         text_surface = TTF_RenderText_Solid_Wrapped(font.font, get_string().data, get_string().size, text_color, area.w);
         m_line_count = (int)(area.h / font.size);
@@ -1223,6 +1225,7 @@ bool Application::update_input_string()
 								   (m_ui.text_input_target == EXPRESSION_INPUT_LEFT) || (m_ui.text_input_target == EXPRESSION_INPUT_RIGHT));
 }
 
+
 bool Application::set_eval_string(String eval_string)
 {
     bool left =  st_sampler_set_expression(sampler_audio_left,  eval_string.data, eval_string.size);
@@ -1238,9 +1241,38 @@ bool Application::set_eval_string(String eval_string)
 
     ASSERT(sampler_waveform_left && sampler_waveform_right);
 
-    const int waveform_sample_rate = 64;
-    st_sampler_set_sample_rate(sampler_waveform_left, waveform_sample_rate);
-    st_sampler_set_sample_rate(sampler_waveform_right, waveform_sample_rate);
+    st_sampler_set_sample_rate(sampler_waveform_left, WAVEFORM_SAMPLE_RATE);
+    st_sampler_set_sample_rate(sampler_waveform_right, WAVEFORM_SAMPLE_RATE);
+
+    return success;
+}
+
+bool Application::set_eval_string_left(String eval_string)
+{
+    bool success = st_sampler_set_expression(sampler_audio_left, eval_string.data, eval_string.size);
+    if (!success)
+    {
+        fprintf(stderr, "Failed to set left sample expression\n");
+    }
+
+    sampler_waveform_left = st_sampler_copy(sampler_audio_left);
+    ASSERT(sampler_waveform_left);
+    st_sampler_set_sample_rate(sampler_waveform_left, WAVEFORM_SAMPLE_RATE);
+
+    return success;
+}
+
+bool Application::set_eval_string_right(String eval_string)
+{
+    bool success = st_sampler_set_expression(sampler_audio_right, eval_string.data, eval_string.size);
+    if (!success)
+    {
+        fprintf(stderr, "Failed to set right sample expression\n");
+    }
+
+    sampler_waveform_right = st_sampler_copy(sampler_audio_right);
+    ASSERT(sampler_waveform_right);
+    st_sampler_set_sample_rate(sampler_waveform_right, WAVEFORM_SAMPLE_RATE);
 
     return success;
 }
@@ -1379,7 +1411,7 @@ bool Application::load_audio_file(String path) {
 
 	// ---
 	m_audio_player.set_audio_data(m_audio_data);
-	
+
     return true;
 }
 
@@ -1390,7 +1422,8 @@ bool Application::save_app_state(String filepath) {
 
 	save.volume = m_expr_audio.get_volume();
 	save.sample_rate = m_expr_audio.get_sample_rate();
-	save.expression = m_ui.expression_input_left.get_string();
+	save.expression_left = m_ui.expression_input_left.get_string();
+    save.expression_right = m_ui.expression_input_right.get_string();
 	save.playback_device = m_ui.playback_device.get_selected_option_name();
 
 
@@ -1400,12 +1433,16 @@ bool Application::save_app_state(String filepath) {
 	fprintf(file.handle, "volume:%f\n", save.volume);
 	fprintf(file.handle, "sample_rate:%f\n", save.sample_rate);
 
-	memcpy(buffer, save.expression.data, save.expression.size);
-	buffer[save.expression.size] = '\0';	
-	fprintf(file.handle, "expression:%s\n", buffer);
-	
+	memcpy(buffer, save.expression_left.data, save.expression_left.size);
+	buffer[save.expression_left.size] = '\0';
+	fprintf(file.handle, "expression_left:%s\n", buffer);
+
+	memcpy(buffer, save.expression_right.data, save.expression_right.size);
+	buffer[save.expression_right.size] = '\0';
+	fprintf(file.handle, "expression_left:%s\n", buffer);
+
 	memcpy(buffer, save.playback_device.data, save.playback_device.size);
-	buffer[save.expression.size] = '\0';	
+	buffer[save.playback_device.size] = '\0';
 	fprintf(file.handle, "playback_device:%s\n", buffer);
 
 	return true;
@@ -1428,9 +1465,10 @@ bool Application::load_app_state(String filepath) {
 
 	float volume = 0;
 	float sample_rate = 0;
-	String expr = {};
+	String expr_left = {};
+	String expr_right = {};
 	String playback = {};
-	
+
 	for (int i = 0; i < 4; i++) {
 		auto line = string_cut_from_character(file_content, '\n');
         String option = line.at(0);
@@ -1442,15 +1480,18 @@ bool Application::load_app_state(String filepath) {
 
 		name.trim();
         value.trim();
-		
+
 		if (string_compare(name, String("volume"))) {
 			volume = string_to_real(value);
 		}
 		else if (string_compare(name, String("sample_rate"))) {
 			sample_rate = string_to_real(value);
 		}
-		else if (string_compare(name, String("expression"))) {
-            expr = value;
+		else if (string_compare(name, String("expression_left"))) {
+            expr_left = value;
+        }
+        else if (string_compare(name, String("expression_right"))) {
+        	expr_right = value;
         }
 		else if (string_compare(name, String("playback_device"))) {
 			playback = value;
@@ -1459,13 +1500,14 @@ bool Application::load_app_state(String filepath) {
 			return false;
 		}
 	}
-	
+
 	save.volume = volume;
 	save.sample_rate = sample_rate;
-	save.expression = expr;
+	save.expression_left = expr_left;
+	save.expression_right = expr_right;
 	save.playback_device = playback;
 
-	return true;	
+	return true;
 }
 
 void Application::render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color) {

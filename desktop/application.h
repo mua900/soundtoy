@@ -52,7 +52,8 @@ enum Events {
 struct Save_State {
 	float volume = 0.0;
 	float sample_rate = 0.0;
-	String expression = {};
+	String expression_left = {};
+	String expression_right = {};
 	String playback_device = {};
 };
 
@@ -81,7 +82,7 @@ public:
 	St_Sampler* sampler_waveform_right  = nullptr;
 
 	Spectogram spectogram = {};
-	
+
     Ui_State m_ui = {};
     Color m_background_color = DEFAULT_BACKGROUND_COLOR;
 
@@ -145,10 +146,12 @@ private:
     Text create_text(String text, Color color);
 
     bool set_eval_string(String s);
+    bool set_eval_string_left(String s);
+    bool set_eval_string_right(String s);
     bool select_playback_device(SDL_AudioDeviceID device);
 
 	void render_audio_data(vec2 area_center, vec2 area_scale, Color color);
-	
+
     void render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color);
 
     void render_slider(Rectangle area, vec2 knob_scale, float value, Color slider_color, Color knob_color, const Text& text);

@@ -60,7 +60,7 @@ void ExpressionAudio::cleanup()
 
 	sampler_left = nullptr;
 	sampler_right = nullptr;
-	
+
     m_audio_stream = NULL;
 }
 
@@ -86,11 +86,11 @@ bool ExpressionAudio::initialize(Array<float> p_sample_buffer, int freq, int cha
 		fprintf(stderr, "Could not create audio stream %s\n", SDL_GetError());
 		return false;
 	}
-	
+
     if (!set_channel_count(stream, channels)) {
         return false;
     }
-	
+
 	m_playback = device;
 
     sampler_left = left;
@@ -117,7 +117,7 @@ bool ExpressionAudio::initialize(Array<float> p_sample_buffer, int freq, int cha
 
 bool ExpressionAudio::reinitialize(int freq, int channels) {
 	pause();
-	
+
     SDL_DestroyAudioStream(m_audio_stream);
 	m_audio_stream = NULL;
 
@@ -136,11 +136,9 @@ bool ExpressionAudio::reinitialize(int freq, int channels) {
 	{
 		return false;
 	}
-	
+
 	m_audio_stream = stream;
 
-	unpause();
-	
 	return true;
 }
 
@@ -149,7 +147,7 @@ bool ExpressionAudio::set_playback_device(SDL_AudioDeviceID p_device) {
 		SDL_CloseAudioDevice(m_playback);
 		m_playback = 0;
 	}
-	
+
     SDL_AudioSpec spec = {};
     spec.freq = m_sample_rate;
     spec.channels = m_channel_count;
@@ -161,7 +159,7 @@ bool ExpressionAudio::set_playback_device(SDL_AudioDeviceID p_device) {
 		fprintf(stderr, "Could not open audio device. %s\n", SDL_GetError());
         return false;
     }
-	
+
     SDL_PauseAudioDevice(m_playback);
 
     m_playback = device;
@@ -180,7 +178,7 @@ static void SDLCALL expression_audio_callback_mono(void* userdata, SDL_AudioStre
     total_amount /= sizeof(float);
 
 	ExpressionAudio* audio = (ExpressionAudio*) userdata;
-	
+
     St_Sampler* sampler = audio->sampler_left;
 	auto sample_buffer = audio->sample_buffer;
 
@@ -230,11 +228,11 @@ void AudioPlayer::put_audio_data()
 
 	if (paused)
 		return;
-	
+
 	int queued = SDL_GetAudioStreamQueued(stream);
 
 	// @todo variable names
-	
+
 	// dependent on desired format
 	float* audio_samples = (float*) this->audio_data.samples;
 	int queued_samples = queued / sizeof(float);
@@ -255,14 +253,14 @@ void AudioPlayer::put_audio_data()
 		}
 	}
 }
-	
+
 bool AudioPlayer::initialize(int freq, int channels, double vol)
 {
 	SDL_AudioSpec spec;
 	spec.format = SDL_AUDIO_F32;
 	spec.freq = freq;
 	spec.channels = channels;
-	
+
 	SDL_AudioDeviceID device_id = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec);
 
     if (!device_id)
@@ -301,7 +299,7 @@ bool AudioPlayer::set_audio_data(AudioData data)
 		fprintf(stderr, "Unexpected audio data format\n");
 		return false;
 	}
-	
+
 	SDL_PauseAudioDevice(device);
 	SDL_FlushAudioStream(stream);
 
