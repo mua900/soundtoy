@@ -2,6 +2,8 @@
 
 #include <cmath>
 #include <array>
+#include <complex>
+
 
 unsigned int pop_count(u64 x)
 {
@@ -107,7 +109,7 @@ std::array<String, 2> string_cut_from_character(String s, char c) {
 
     String first;
     String second;
-    
+
     first = String(s.data, cursor);
     if (cursor == s.size) {
         second = String(s.data + cursor, s.size - cursor);  // point at the en
@@ -181,14 +183,14 @@ long get_file_size(FILE* file) {
 
 bool load_file(const char* filepath, BinaryData& data) {
 	FILE* handle = fopen(filepath, "r");
-	
+
 	auto filesize = get_file_size(handle);
 
 	u8* mem = (u8*) malloc(filesize);
 	if (!mem) {
 		panic("malloc fail");
 	}
-	
+
 	size_t written = fread(mem, sizeof(u8), filesize, handle);
 	if (filesize != written) {
 		free(mem);
@@ -199,7 +201,7 @@ bool load_file(const char* filepath, BinaryData& data) {
 
 	data.data = mem;
 	data.size = filesize;
-	
+
 	return true;
 }
 
@@ -214,7 +216,7 @@ bool load_file_text(const char* filepath, String& s)
 
 	return true;
 }
-	
+
 void File::write_string(String s) {
 	fwrite(&s.size, sizeof(s.size), 1, handle);
 	fwrite(s.data, sizeof(s.data[0]), s.size, handle);
@@ -233,7 +235,7 @@ String File::read_string() {
 	fread(&size, sizeof(size), 1, handle);
 
 	char* data = (char*) malloc(size + 1);
-	
+
 	fread(data, sizeof(data[0]), size, handle);
 	data[size] = '\0';
 
@@ -426,4 +428,16 @@ void String::print(bool newline) const
 bool String::operator==(const String& other) const
 {
     return string_compare(*this, other);
+}
+
+
+float Complex::magnitude()
+{
+    return sqrtf(real*real+imaginary*imaginary);
+}
+
+float Complex::winding()
+{
+    std::complex<float> c = std::complex(real, imaginary);
+    return arg(c);
 }

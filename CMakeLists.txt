@@ -63,8 +63,8 @@ add_library(soundtoy_lib STATIC
     st/evaluation/api.cpp
 
     # dsp
-    st/dsp/fft.h
-    st/dsp/fft.cpp
+    st/dsp/fourier.h
+    st/dsp/fourier.cpp
 )
 
 target_include_directories(soundtoy_lib PRIVATE st/common)

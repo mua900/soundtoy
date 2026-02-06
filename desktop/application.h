@@ -82,6 +82,7 @@ public:
 	St_Sampler* sampler_waveform_right  = nullptr;
 
 	Spectogram spectogram = {};
+    Signal m_signal = {};
 
     Ui_State m_ui = {};
     Color m_background_color = DEFAULT_BACKGROUND_COLOR;
@@ -151,6 +152,7 @@ private:
     bool select_playback_device(SDL_AudioDeviceID device);
 
 	void render_audio_data(vec2 area_center, vec2 area_scale, Color color);
+    void render_signal(vec2 area_center, vec2 area_scale, Signal signal, Color color);
 
     void render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color);
 
@@ -164,3 +166,6 @@ void render_text_size(SDL_Renderer* renderer, Font font, Text text, vec2 where, 
 void render_text_scale(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale_factor = vec2(0,0));
 
 void draw_arrowhead(SDL_Renderer* renderer, vec2 position, vec2 direction, float scale, ColorF color);
+
+// create a signal from the given sampler
+Signal create_signal(St_Sampler* sampler, float time_start, int sample_count, int sample_rate);

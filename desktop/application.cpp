@@ -68,10 +68,8 @@ bool Application::initialize()
 		*/
     }
 
-    {
-        // accept drop events
-        SDL_SetEventEnabled(SDL_EVENT_DROP_FILE, true);
-    }
+    // accept drop events
+    SDL_SetEventEnabled(SDL_EVENT_DROP_FILE, true);
 
     // ttf
     {
@@ -223,7 +221,9 @@ bool Application::gen_static_text(Color color)
 		 invalid_expression.texture &&
 		 invalid_expression.texture &&
 		 valid_expression.texture &&
-		 sample_rate.texture
+		 sample_rate.texture &&
+         text_sound_mode.texture &&
+         text_graph_mode.texture
          )
         )
     {
@@ -232,8 +232,8 @@ bool Application::gen_static_text(Color color)
 
     m_rendered_text.data[TEXT_PAUSED] = paused;
     m_rendered_text.data[TEXT_PLAYING] = playing;
-	m_rendered_text.data[TEXT_PAUSE] = pause;
-	m_rendered_text.data[TEXT_RESUME] = resume;
+    m_rendered_text.data[TEXT_PAUSE] = pause;
+    m_rendered_text.data[TEXT_RESUME] = resume;
     m_rendered_text.data[TEXT_SAMPLE_RATE] = sample_rate;
     m_rendered_text.data[TEXT_INVALID_EXPRESSION] = invalid_expression;
     m_rendered_text.data[TEXT_INVALID_SAMPLE_RATE] = invalid_sample_rate;
@@ -442,7 +442,38 @@ void Application::handle_events()
                         }
                         break;
                     }
-                    case SDL_SCANCODE_S: {
+                    case SDL_SCANCODE_R:
+                    {
+                        // @todo assign this to ui buttons instead
+
+                        if (keyboard.mod & SDL_KMOD_LCTRL)
+                        {
+                            int sample_rate = st_sampler_get_sample_rate(sampler_waveform_left);
+                            // a second worth of samples
+                            Signal signal = create_signal(sampler_waveform_left, 0.0, sample_rate, sample_rate);
+                            if (signal.samples.data)
+                            {
+                                printf("Saved signal\n");
+
+                                m_signal = signal;
+
+                                printf("\n");
+                            }
+                        }
+
+                        break;
+                    }
+                    case SDL_SCANCODE_T:
+                    {
+                        if (m_audio_data.samples)
+                        {
+                            
+                        }
+
+                        break;
+                    }
+                    case SDL_SCANCODE_S:
+                    {
                         // ctrl + s to save
                         if (keyboard.mod & SDL_KMOD_LCTRL) {
                             const char* save_file = "save.st";
@@ -454,7 +485,8 @@ void Application::handle_events()
 
                         break;
                     }
-                    case SDL_SCANCODE_L: {
+                    case SDL_SCANCODE_L:
+                    {
                         // ctrl + l to load
                         if (keyboard.mod & SDL_KMOD_CTRL) {
                             const char* save_file = "save.st";
@@ -783,13 +815,13 @@ void Application::draw_graph_mode_ui()
 		// playback position
 		float playback_position = m_audio_player.playback_position / m_audio_player.audio_data.frame_count;
 		float audio_data_start = audio_data_position.x - audio_data_scale.x / 2;
-		draw_arrowhead(m_window.renderer, vec2(audio_data_start + audio_data_scale.x * playback_position, audio_data_position.y - audio_data_scale.y / 2), vec2(0, 1), 80, ColorF(0.4, 0.2, 0.7, 1.0));
+		draw_arrowhead(m_window.renderer, vec2(audio_data_start + audio_data_scale.x * playback_position, audio_data_position.y - audio_data_scale.y / 2), vec2(0, 1), 50, ColorF(0.4, 0.2, 0.7, 1.0));
 	}
 
-	// @todo spectogram
-	{
-
-	}
+    if (m_signal.samples.data)
+    {
+        render_signal(vec2(window_size.x / 2, window_size.y / 2), vec2(window_size.x * (2.0 / 3.0), window_size.y * (1.0 / 4.0)), m_signal, Color(0x55, 0x99, 0x55, 0xff));
+    }
 }
 
 void Application::draw_common_ui() {
@@ -1281,6 +1313,8 @@ bool Application::set_eval_string_right(String eval_string)
 // @todo do this rendering once, not every frame
 
 void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color color) {
+    // @todo simplify
+
 	if (!(m_audio_data.samples && m_audio_data.is_in_desired_spec())) {
 		return;
 	}
@@ -1341,6 +1375,44 @@ void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color col
     {
         SDL_RenderPoints(m_window.renderer, points[ch], remaining);
     }
+}
+
+void Application::render_signal(vec2 area_center, vec2 area_scale, Signal signal, Color color) {
+    SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
+
+    #define BLOCK_SIZE 100
+    static SDL_FPoint points[BLOCK_SIZE];
+
+	float step = (area_scale.x / float(signal.samples.size));
+	float base_height = area_center.y;
+	int sample_count = signal.samples.size;
+
+    int iter_count = sample_count / BLOCK_SIZE;
+
+    for (int block = 0; block < iter_count; block++)
+	{
+        int block_start = block * BLOCK_SIZE;
+
+        for (int index = 0; index < BLOCK_SIZE; index+=1)
+        {
+            points[index].x = area_center.x - (area_scale.x / 2) + (step * index);
+            points[index].y = base_height + signal.samples.data[index] * (area_scale.y / 2.0);
+        }
+
+        SDL_RenderLines(m_window.renderer, points, BLOCK_SIZE);
+	}
+
+    int remaining = signal.samples.size - (iter_count * BLOCK_SIZE);
+
+    ASSERT(remaining < BLOCK_SIZE);
+
+    for (int index = 0; index < remaining; index+=1)
+    {
+        points[index].x = area_center.x - (area_scale.x / 2) + (step * index);
+        points[index].y = base_height + signal.samples.data[index] * (area_scale.y / 2.0);
+    }
+
+    SDL_RenderLines(m_window.renderer, points, remaining);
 }
 
 void Application::render_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale) {
@@ -1578,4 +1650,19 @@ void draw_arrowhead(SDL_Renderer* renderer, vec2 position, vec2 direction, float
     int indices[3] = {0, 1, 2};
 
     SDL_RenderGeometry(renderer, NULL, vertices, 3, indices, 3);
+}
+
+// @todo maybe we can use a separate thread to do this.
+Signal create_signal(St_Sampler* sampler, float time_start, int sample_count, int sample_rate)
+{
+    Signal signal;
+    float* buffer = (float*) malloc(sizeof(float) * sample_count);
+
+    st_sampler_set_sample_time(sampler, time_start);
+    st_sampler_set_sample_rate(sampler, sample_rate);
+    st_fill(sampler, buffer, sample_count);
+
+    signal.samples = Array<float>(buffer, sample_count);
+
+    return signal;
 }

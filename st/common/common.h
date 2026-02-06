@@ -83,7 +83,7 @@ struct BinaryData {
     ~BinaryData() {
         if (data) {
             free(data);
-            
+
             data = nullptr;
             size = 0;
         }
@@ -202,7 +202,7 @@ struct File {
 	~File() {
 		fclose(handle);
 	}
-	
+
 	void write_string(String s);
 	void write_number(double n);
 	void write_integer(u64 n);
@@ -312,6 +312,9 @@ struct Complex {
 
 	Complex() {}
     Complex(float r, float i) : real(r), imaginary(i) {}
+
+    float magnitude();
+    float winding();
 };
 
 // overloads for complex

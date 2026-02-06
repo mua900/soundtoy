@@ -3,8 +3,14 @@
 #include "template.h"
 #include "common.h"
 
-struct Spectogram {
-	Array<Array<float>> spectogram;
-
-	void calculate_spectogram();
+struct Signal {
+	Array<float> samples;
 };
+
+struct Spectogram {
+	Array<float> spectogram;
+	int dim_x;
+	int dim_y;
+};
+
+Spectogram calculate_spectogram(Signal signal);
