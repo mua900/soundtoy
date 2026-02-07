@@ -23,19 +23,21 @@ add_executable(soundtoy
     desktop/audio.cpp
     desktop/ui.h
     desktop/spectogram.h
+    desktop/spectogram.cpp
 
-    vendor/imgui/imgui.cpp
-    vendor/imgui/imgui.h
-    vendor/imgui/imgui_draw.cpp
-    vendor/imgui/imgui_tables.cpp
-    vendor/imgui/imgui_widgets.cpp
-    vendor/imgui/imgui_demo.cpp
-
-    # the backends we use
-    vendor/imgui/backends/imgui_impl_sdl3.cpp
-    vendor/imgui/backends/imgui_impl_sdlrenderer3.cpp
-    vendor/imgui/backends/imgui_impl_sdl3.h
-    vendor/imgui/backends/imgui_impl_sdlrenderer3.h
+# we don't use imgui right now
+#     vendor/imgui/imgui.cpp
+#     vendor/imgui/imgui.h
+#     vendor/imgui/imgui_draw.cpp
+#     vendor/imgui/imgui_tables.cpp
+#     vendor/imgui/imgui_widgets.cpp
+#     vendor/imgui/imgui_demo.cpp
+# 
+#     # the backends we use
+#     vendor/imgui/backends/imgui_impl_sdl3.cpp
+#     vendor/imgui/backends/imgui_impl_sdlrenderer3.cpp
+#     vendor/imgui/backends/imgui_impl_sdl3.h
+#     vendor/imgui/backends/imgui_impl_sdlrenderer3.h
 )
 
 target_include_directories(soundtoy PRIVATE vendor/imgui)

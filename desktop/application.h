@@ -69,15 +69,17 @@ public:
     AudioPlayer m_audio_player = {};
     AudioData m_audio_data = {};
 
-    // audio sample buffer populated by the audio callback with a reference passed to ExpressionAudio
+    // audio sample buffer used by the audio callback with a reference passed to ExpressionAudio
 	Array<float> sample_buffer = {};
 
     // recalculated regularly
 	Array<SDL_FPoint> waveform_sample_buffer_left = {};
 	Array<SDL_FPoint> waveform_sample_buffer_right = {};
 
+    // owned by application referenced by ExpressionAudio
 	St_Sampler* sampler_audio_left      = nullptr;
 	St_Sampler* sampler_audio_right     = nullptr;
+
 	St_Sampler* sampler_waveform_left   = nullptr;
 	St_Sampler* sampler_waveform_right  = nullptr;
 

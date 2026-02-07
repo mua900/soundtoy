@@ -467,7 +467,10 @@ void Application::handle_events()
                     {
                         if (m_audio_data.samples)
                         {
-                            
+                            Signal audio = m_audio_data.as_signal();
+                            if (audio.samples.data) {
+                                DArray<Complex> fourier_result = calculate_fourier(audio);
+                            }
                         }
 
                         break;

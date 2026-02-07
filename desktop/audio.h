@@ -1,6 +1,8 @@
 #pragma once
 
 #include <SDL3/SDL.h>
+
+#include "spectogram.h"
 #include "common.h"
 #include "template.h"
 #include "api.h"
@@ -15,9 +17,9 @@ struct ExpressionAudio {
 	// Non owning pointers
 	St_Sampler* sampler_left = nullptr;
 	St_Sampler* sampler_right = nullptr;
-	
+
 	Array<float> sample_buffer;
-	
+
     float m_volume = 0.0;
     float m_pan = 0.0;
 
@@ -45,7 +47,7 @@ struct ExpressionAudio {
     float get_pan() const { return m_pan; }
     void set_pan(float pan) { m_pan = pan; }
 private:
-    bool set_channel_count(SDL_AudioStream* stream, int channel_count);	
+    bool set_channel_count(SDL_AudioStream* stream, int channel_count);
 };
 
 
@@ -77,6 +79,18 @@ struct AudioData {
     {
         return (samples != nullptr) && (format == DESIRED_AUDIO_FORMAT) && (channel_count == 2) && (frequency == DESIRED_AUDIO_SAMPLE_RATE);
     }
+
+    Signal as_signal()
+    {
+        if (format != SDL_AUDIO_F32)
+        {
+            // we want floats so fail
+            return Signal();
+        }
+
+        // @todo do this properly with respecting channels
+        return Signal((float*)samples, frame_count * channel_count);
+    }
 };
 
 
@@ -90,7 +104,7 @@ struct AudioPlayer
 	double volume = 0.0;
     double pan = 0.0;
 	bool paused = true;
-	
+
 	bool initialize(int freq, int channels, double vol);
 	void destroy();
 

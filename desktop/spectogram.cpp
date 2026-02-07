@@ -10,13 +10,11 @@ Spectogram calculate_spectogram(Signal signal)
     return spectogram;
 }
 
-Complex* calculate_fourier(Signal signal)
+DArray<Complex> calculate_fourier(Signal signal)
 {
-    // short time fourier transform
-    Complex* frequencies = new Complex[signal.samples.size];
+    DArray<Complex> frequencies = DArray<Complex>(signal.samples.size);
 
-    dft(signal.samples.data, frequencies, signal.samples.size);
+    dft(signal.samples.data, frequencies.data(), signal.samples.size);
 
     return frequencies;
 }
-
