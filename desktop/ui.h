@@ -115,8 +115,8 @@ struct Drop_Down_List {
         };
 
         Entry() : label(), data(nullptr) {}
-        Entry(String label_text, Color text_color, void* p_data) : label(create_text(label_text), text_color), data(p_data) {}
-        Entry(String label_text, Color text_color, void* p_index) : label(create_text(label_text), text_color), index(p_index) {}
+        Entry(Text text, void* p_data) : label(text), data(p_data) {}
+        Entry(Text text, int p_index) : label(text), index(p_index) {}
         ~Entry() {
             label.clear();
         }

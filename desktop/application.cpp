@@ -1211,21 +1211,21 @@ void Application::update_ui_state(vec2 window_size)
 
     if (m_audio.expr_audio.get_channel_count() == 1)
     {
-        m_ui.expression_input_left.m_area.w = window_size.x * (1.0 / 3.0);
+        m_ui.expression_input_left.m_area.w = window_size.x * (1.0 / 2.0);
         m_ui.expression_input_left.m_area.h = window_size.y * (1.0 / 5.0);
         m_ui.expression_input_left.m_area.x = window_size.x / 2 - m_ui.expression_input_left.m_area.w / 2;
         m_ui.expression_input_left.m_area.y = window_size.y / 2 + m_ui.expression_input_left.m_area.h;
     }
     else if (m_audio.expr_audio.get_channel_count() == 2)
     {
-        m_ui.expression_input_left.m_area.w = window_size.x * (1.0 / 4.0);
+        m_ui.expression_input_left.m_area.w = window_size.x * (1.0 / 3.0);
         m_ui.expression_input_left.m_area.h = window_size.y * (1.0 / 5.0);
-        m_ui.expression_input_left.m_area.x = window_size.x * (1.0 / 8.0);
+        m_ui.expression_input_left.m_area.x = window_size.x * (1.0 / 9.0);
         m_ui.expression_input_left.m_area.y = window_size.y / 2 + m_ui.expression_input_left.m_area.h;
 
-        m_ui.expression_input_right.m_area.w = window_size.x * (1.0 / 4.0);
+        m_ui.expression_input_right.m_area.w = window_size.x * (1.0 / 3.0);
         m_ui.expression_input_right.m_area.h = window_size.y * (1.0 / 5.0);
-        m_ui.expression_input_right.m_area.x = window_size.x * (5.0 / 8.0);
+        m_ui.expression_input_right.m_area.x = window_size.x * (5.0 / 9.0);
         m_ui.expression_input_right.m_area.y = window_size.y / 2 + m_ui.expression_input_right.m_area.h;
     }
 
