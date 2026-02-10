@@ -123,7 +123,7 @@ struct String {
 
 #define STRING_EMPTY ((String){.data=NULL,.size=0})
 #define CSTRING_LENGTH(s) (sizeof(s)-1)
-#define MAKE_STRING(s) (String){.data=s,.size=CSTRING_LENGTH(s)}
+#define MAKE_STRING(s) (String){.data=s,.size=CSTRING_LENGTH(s)}  // not used
 
 #define SCOPE_STRING_EXP(p_s, p_name, p_size)				\
 	char p_name[p_size];  \
@@ -142,12 +142,6 @@ String string_copy(String s);
 
 int string_to_integer(String s, bool* success);
 double string_to_real(String s);
-
-#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
-
-#define MIN(x,y) (((x) > (y)) ? (y) : (x))
-#define MAX(x,y) (((x) > (y)) ? (x) : (y))
-#define CLAMP(x, lower, upper) (MIN(upper, MAX(x, lower)))
 
 struct String_Builder {
     char* buffer = NULL;
@@ -184,6 +178,12 @@ private:
     void resize();
     int grow_to_size(int size);
 };
+
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
+
+#define MIN(x,y) (((x) > (y)) ? (y) : (x))
+#define MAX(x,y) (((x) > (y)) ? (x) : (y))
+#define CLAMP(x, lower, upper) (MIN(upper, MAX(x, lower)))
 
 bool load_file(const char* filepath, BinaryData& bdata);
 bool load_file_text(const char* filepath, String& s);

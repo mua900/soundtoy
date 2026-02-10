@@ -28,7 +28,7 @@ void get_default_builtin_functions(Function* list)
     static Variable_Type single_value[1] = { Var_Type_Real };
     static Variable_Type two_values[2] = { Var_Type_Real, Var_Type_Real };
     static Variable_Type three_values[3] = { Var_Type_Real, Var_Type_Real, Var_Type_Real };
-    
+
     list[BUILTIN_FUNC_ABS] = Function(
         st_fabs,
         FunctionSignature(String("abs"), make_array(single_value), make_array(single_value))
@@ -107,7 +107,7 @@ double clamp(double x, double lower, double upper) {
 // wrappers
 
 void st_fabs(Value* parameters, Value* results) { results[0] = Value(fabs(parameters[0].real)); }
-void st_get_sign(Value* parameters, Value* results) { results[0] = Value(fabs(parameters[0].real)); }
+void st_get_sign(Value* parameters, Value* results) { results[0] = Value(get_sign(parameters[0].real)); }
 void st_ceil(Value* parameters, Value* results) { results[0] = Value(ceil(parameters[0].real)); }
 void st_floor(Value* parameters, Value* results) { results[0] = Value(floor(parameters[0].real)); }
 void st_sin(Value* parameters, Value* results) { results[0] = Value(sin(parameters[0].real)); }

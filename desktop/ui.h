@@ -37,7 +37,7 @@ enum Text_Id : int {
     TEXT_SAMPLE_RATE,
     TEXT_INVALID_EXPRESSION,
     TEXT_VALID_EXPRESSION,
-	TEXT_INVALID_SAMPLE_RATE,
+    TEXT_INVALID_SAMPLE_RATE,
     TEXT_SOUND_MODE,
     TEXT_GRAPH_MODE,
 
@@ -54,7 +54,7 @@ struct Font {
 };
 
 enum Text_Input_Target : u8 {
-	NO_TARGET,
+    NO_TARGET,
     EXPRESSION_INPUT_LEFT,
     EXPRESSION_INPUT_RIGHT,
 };
@@ -104,18 +104,23 @@ private:
 
 #define DROP_DOWN_LIST_SELECTED_SENTINEL -1
 
-struct Drop_Down_List {
-	struct Entry {
-		Text label = {};
-		union {
-			void* data;
-			int index;
-		};
+// @todo fix possible memory leaks
 
-		Entry() : label(), data(nullptr) {}
-		Entry(Text p_label, void* p_data) : label(p_label), data(p_data) {}
-		Entry(Text p_label, int p_data) : label(p_label), index(p_data) {}
-	};
+struct Drop_Down_List {
+    struct Entry {
+        Text label = {};
+        union {
+            void* data;
+            int index;
+        };
+
+        Entry() : label(), data(nullptr) {}
+        Entry(String label_text, Color text_color, void* p_data) : label(create_text(label_text), text_color), data(p_data) {}
+        Entry(String label_text, Color text_color, void* p_index) : label(create_text(label_text), text_color), index(p_index) {}
+        ~Entry() {
+            label.clear();
+        }
+    };
 
     vec2 pos = {};
     vec2 scale = {};
@@ -140,31 +145,40 @@ struct Drop_Down_List {
         options.add(Entry(text, data));
     }
 
-	void add_option(Text text, int index) {
-		options.add(Entry(text, index));
-	}
+    void add_option(Text text, int index) {
+        options.add(Entry(text, index));
+    }
 
-	Text get_option_label(int index) const {
-		return options.get(index).label;
-	}
+    Text get_option_label(int index) const {
+        return options.get(index).label;
+    }
 
-	String get_option_name(int index) const {
-		return options.get(index).label.string;
-	}
+    String get_option_name(int index) const {
+        return options.get(index).label.string;
+    }
 
-	String get_selected_option_name() const {
-		return get_option_name(selected);
-	}
+    String get_selected_option_name() const {
+        if (selected == DROP_DOWN_LIST_SELECTED_SENTINEL)
+        {
+            return String();
+        }
 
-	void* get_option_data(int index) const {
-		return options.get(index).data;
-	}
+        return get_option_name(selected);
+    }
 
-	int get_option_data_index(int index) const {
-		return options.get(index).index;
-	}
+    void* get_option_data(int index) const {
+        return options.get(index).data;
+    }
+
+    int get_option_data_index(int index) const {
+        return options.get(index).index;
+    }
 
     void remove_option(int index) {
+        if (index == selected)
+        {
+            selected = DROP_DOWN_LIST_SELECTED_SENTINEL;
+        }
         options.get_ref(index).label.clear();
         options.remove_shift(index);
     }
@@ -177,8 +191,12 @@ struct Drop_Down_List {
 };
 
 struct Ui_State {
-	Rectangle playback_pause = {0,0,100,100};
+    // graph mode ui
+    Rectangle playback_pause = {0,0,100,100};
 
+    Drop_Down_List graph_to_show = {};
+
+    // sound mode ui
     Rectangle volume_slider = { 100, 100, 100, 10 };
     Rectangle pan_slider = {
         INIT_WINDOW_WIDTH * (1.0 / 2.0) - INIT_WINDOW_WIDTH * (5.0 / 16.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0) - INIT_WINDOW_HEIGHT * (1.0 / 32.0),
@@ -188,8 +206,8 @@ struct Ui_State {
     Rectangle graphs_button = { INIT_WINDOW_WIDTH * (4.0 / 5.0), 0, INIT_WINDOW_WIDTH * (1.0 / 5.0), 100 };
 
     Text_Input_Target text_input_target = NO_TARGET;
-	Text_Field expression_input_left = {};
-	Text_Field expression_input_right = {};
+    Text_Field expression_input_left = {};
+    Text_Field expression_input_right = {};
 
     Drop_Down_List channel_count = {};
     Drop_Down_List playback_device = {};

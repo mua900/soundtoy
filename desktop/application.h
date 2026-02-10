@@ -44,17 +44,41 @@ struct Event_Timeout {
 
 enum Events {
     EVENT_INVALID_EXPRESSION,
-	EVENT_INVALID_SAMPLE_RATE,
+    EVENT_INVALID_SAMPLE_RATE,
     EVENT_RECALCULATE_WAVEFORM_SAMPLES,
     EVENT_COUNT,
 };
 
 struct Save_State {
-	float volume = 0.0;
-	float sample_rate = 0.0;
-	String expression_left = {};
-	String expression_right = {};
-	String playback_device = {};
+    float volume = 0.0;
+    float sample_rate = 0.0;
+    String expression_left = {};
+    String expression_right = {};
+    String playback_device = {};
+};
+
+struct AudioContext {
+    ExpressionAudio expr_audio = {};
+    AudioPlayer audio_player = {};
+    AudioData audio_data = {};
+};
+
+struct Buffers {
+    // audio sample buffer used by the audio callback with a reference passed to ExpressionAudio
+    Array<float> audio_samples = {};
+
+    // recalculated regularly
+    Array<SDL_FPoint> waveform_samples_left = {};
+    Array<SDL_FPoint> waveform_samples_right = {};
+};
+
+struct Samplers {
+    // owned by application referenced by ExpressionAudio
+    St_Sampler* audio_left      = nullptr;
+    St_Sampler* audio_right     = nullptr;
+
+    St_Sampler* waveform_left   = nullptr;
+    St_Sampler* waveform_right  = nullptr;
 };
 
 class Application {
@@ -65,25 +89,13 @@ public:
     Mouse_State m_mouse = {};
 
     Assets m_assets = {};
-    ExpressionAudio m_expr_audio = {};
-    AudioPlayer m_audio_player = {};
-    AudioData m_audio_data = {};
+    AudioContext m_audio;
 
-    // audio sample buffer used by the audio callback with a reference passed to ExpressionAudio
-	Array<float> sample_buffer = {};
+    Buffers m_buffers;
 
-    // recalculated regularly
-	Array<SDL_FPoint> waveform_sample_buffer_left = {};
-	Array<SDL_FPoint> waveform_sample_buffer_right = {};
+    Samplers m_samplers;
 
-    // owned by application referenced by ExpressionAudio
-	St_Sampler* sampler_audio_left      = nullptr;
-	St_Sampler* sampler_audio_right     = nullptr;
-
-	St_Sampler* sampler_waveform_left   = nullptr;
-	St_Sampler* sampler_waveform_right  = nullptr;
-
-	Spectogram spectogram = {};
+    Spectogram spectogram = {};
     Signal m_signal = {};
 
     Ui_State m_ui = {};
@@ -95,8 +107,6 @@ public:
     Event_Timeout m_events[EVENT_COUNT] = {};
 
     Array<Text> m_rendered_text = {};
-
-    float m_volume = 0.0;
 
     bool quit = false;
     bool doing_text_input = false;
@@ -110,7 +120,7 @@ public:
     void cleanup();
 private:
     void timeout();
-	void update_ui_state(vec2 window_size);
+    void update_ui_state(vec2 window_size);
     void set_event_active(int event_index, double timeout_seconds);
     void set_event_deactive(int event_index);
 
@@ -123,19 +133,23 @@ private:
     void draw_imgui();
 
     bool mouse_input();
-	bool mouse_input_common();
-	bool mouse_input_graph_mode();
-	bool mouse_input_sound_mode();
+    bool mouse_input_common();
+    bool mouse_input_graph_mode();
+    bool mouse_input_sound_mode();
+
+    bool keyboard_input_common(SDL_KeyboardEvent keyboard);
+    bool keyboard_input_sound_mode(SDL_KeyboardEvent keyboard);
+    bool keyboard_input_graph_mode(SDL_KeyboardEvent keyboard);
 
     bool gen_static_text(Color color);
 
-	bool save_app_state(String filepath);
-	bool load_app_state(String filepath);
+    bool save_app_state(String filepath);
+    bool load_app_state(String filepath);
 
     bool load_audio_file(String path);
 
-	bool save_ui_layout(String filepath);
-	bool load_ui_layout(String filepath);
+    bool save_ui_layout(String filepath);
+    bool load_ui_layout(String filepath);
 
     bool update_channel_count(int count);
 
@@ -153,19 +167,19 @@ private:
     bool set_eval_string_right(String s);
     bool select_playback_device(SDL_AudioDeviceID device);
 
-	void render_audio_data(vec2 area_center, vec2 area_scale, Color color);
+    void render_audio_data(vec2 area_center, vec2 area_scale, Color color);
     void render_signal(vec2 area_center, vec2 area_scale, Signal signal, Color color);
 
     void render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color);
 
     void render_slider(Rectangle area, vec2 knob_scale, float value, Color slider_color, Color knob_color, const Text& text);
     void render_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale);
-	void render_text_field(const Text_Field& text_field);
+    void render_text_field(const Text_Field& text_field);
     void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
 };
 
-void render_text_size(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 absolute_scale = vec2(0, 0));
-void render_text_scale(SDL_Renderer* renderer, Font font, Text text, vec2 where, vec2 scale_factor = vec2(0,0));
+void render_text_size(SDL_Renderer* renderer, Text text, vec2 where, vec2 absolute_scale = vec2(0, 0));
+void render_text_scale(SDL_Renderer* renderer, Text text, vec2 where, vec2 scale_factor = vec2(0,0));
 
 void draw_arrowhead(SDL_Renderer* renderer, vec2 position, vec2 direction, float scale, ColorF color);
 

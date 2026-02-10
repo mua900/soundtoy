@@ -14,11 +14,11 @@ struct ExpressionAudio {
     SDL_AudioStream* m_audio_stream = nullptr;
     SDL_AudioFormat m_format = SDL_AUDIO_F32;
 
-	// Non owning pointers
-	St_Sampler* sampler_left = nullptr;
-	St_Sampler* sampler_right = nullptr;
+    // Non owning pointers
+    St_Sampler* sampler_left = nullptr;
+    St_Sampler* sampler_right = nullptr;
 
-	Array<float> sample_buffer;
+    Array<float> sample_buffer;
 
     float m_volume = 0.0;
     float m_pan = 0.0;
@@ -36,7 +36,7 @@ struct ExpressionAudio {
         sampler_left = left;
         sampler_right = right;
     }
-	bool set_playback_device(SDL_AudioDeviceID device);
+    bool set_playback_device(SDL_AudioDeviceID device);
     int get_channel_count() const { return m_channel_count; }
     int get_sample_rate() const { return m_sample_rate; }
     void pause();
@@ -96,27 +96,27 @@ struct AudioData {
 
 struct AudioPlayer
 {
-	AudioData audio_data = {};
-	SDL_AudioDeviceID device = {};
-	SDL_AudioStream* stream = {};
-	int playback_position = 0;
+    AudioData audio_data = {};
+    SDL_AudioDeviceID device = {};
+    SDL_AudioStream* stream = {};
+    int playback_position = 0;
 
-	double volume = 0.0;
+    double volume = 0.0;
     double pan = 0.0;
-	bool paused = true;
+    bool paused = true;
 
-	bool initialize(int freq, int channels, double vol);
-	void destroy();
+    bool initialize(int freq, int channels, double vol);
+    void destroy();
 
-	bool set_audio_data(AudioData data);
+    bool set_audio_data(AudioData data);
 
-	void put_audio_data();
+    void put_audio_data();
 
-	void pause();
-	void resume();
-	void toggle_pause();
-	void set_volume(double volume);
-	double get_volume() const;
+    void pause();
+    void resume();
+    void toggle_pause();
+    void set_volume(double volume);
+    double get_volume() const;
     double get_pan() const { return pan; }
     void set_pan(float p) { pan = p; }
 };

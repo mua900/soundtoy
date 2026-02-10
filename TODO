@@ -1,2 +1,3 @@
 - allow the user to load an existing sound and expose the samples from the sound as a variable to the expression language.
 	the user can then write expressions that modify or extend the existing track.
+- lissajous curve
