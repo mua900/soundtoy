@@ -1547,7 +1547,6 @@ bool Application::save_app_state(String filepath) {
     save.sample_rate = m_audio.expr_audio.get_sample_rate();
     save.expression_left = m_ui.expression_input_left.get_string();
     save.expression_right = m_ui.expression_input_right.get_string();
-    save.playback_device = m_ui.playback_device.get_selected_option_name();
 
 
 #define BUFFER_SIZE 1024
@@ -1563,10 +1562,6 @@ bool Application::save_app_state(String filepath) {
     memcpy(buffer, save.expression_right.data, save.expression_right.size);
     buffer[save.expression_right.size] = '\0';
     fprintf(file.handle, "expression_left:%s\n", buffer);
-
-    memcpy(buffer, save.playback_device.data, save.playback_device.size);
-    buffer[save.playback_device.size] = '\0';
-    fprintf(file.handle, "playback_device:%s\n", buffer);
 
     return true;
 }
@@ -1590,7 +1585,6 @@ bool Application::load_app_state(String filepath) {
     float sample_rate = 0;
     String expr_left = {};
     String expr_right = {};
-    String playback = {};
 
     for (int i = 0; i < 4; i++) {
         auto line = string_cut_from_character(file_content, '\n');
@@ -1616,9 +1610,6 @@ bool Application::load_app_state(String filepath) {
         else if (string_compare(name, String("expression_right"))) {
             expr_right = value;
         }
-        else if (string_compare(name, String("playback_device"))) {
-            playback = value;
-        }
         else {
             return false;
         }
@@ -1628,7 +1619,6 @@ bool Application::load_app_state(String filepath) {
     save.sample_rate = sample_rate;
     save.expression_left = expr_left;
     save.expression_right = expr_right;
-    save.playback_device = playback;
 
     return true;
 }

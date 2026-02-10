@@ -52,9 +52,10 @@ enum Events {
 struct Save_State {
     float volume = 0.0;
     float sample_rate = 0.0;
+    float pan = 0.0;
     String expression_left = {};
     String expression_right = {};
-    String playback_device = {};
+
 };
 
 struct AudioContext {

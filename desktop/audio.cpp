@@ -3,6 +3,8 @@
 
 #include <math.h>
 
+// @todo pan
+
 SDL_AudioStream* create_audio_stream(SDL_AudioDeviceID device, SDL_AudioSpec spec, int freq, int channels, double volume);
 
 static void SDLCALL expression_audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);

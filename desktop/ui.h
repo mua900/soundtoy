@@ -12,7 +12,7 @@
 #define DEFAULT_BACKGROUND_COLOR Color{ 0x88, 0x33, 0x66, 0xff }
 
 struct Text {
-    SDL_Texture* texture = NULL;
+    SDL_Texture* texture = NULL;  // @todo make ownership of this more clear
     String string = {};
 
     Text() {}
@@ -117,9 +117,6 @@ struct Drop_Down_List {
         Entry() : label(), data(nullptr) {}
         Entry(Text text, void* p_data) : label(text), data(p_data) {}
         Entry(Text text, int p_index) : label(text), index(p_index) {}
-        ~Entry() {
-            label.clear();
-        }
     };
 
     vec2 pos = {};
