@@ -133,7 +133,12 @@ bool Application::initialize()
     }
 
     if (!m_audio.expr_audio.initialize(m_buffers.audio_samples, initial_sample_rate, 1, m_samplers.audio_left, m_samplers.audio_right)) {
-        std::cerr << "Failed to initialize audio\n";
+        std::cerr << "Failed to initialize expression audio\n";
+        return false;
+    }
+
+    if (!m_audio.audio_player.initialize(DESIRED_AUDIO_SAMPLE_RATE, 2, 0.5)) {
+        std::cerr << "Failed to initialize audio player: " << SDL_GetError() << "\n";
         return false;
     }
 
@@ -914,6 +919,10 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
                 {
                     printf("Saved signal\n");
 
+                    if (m_signal.samples.data)
+                    {
+                        m_signal.samples.free_data();
+                    }
                     m_signal = signal;
 
                     printf("\n");
@@ -1547,7 +1556,6 @@ bool Application::save_app_state(String filepath) {
     save.sample_rate = m_audio.expr_audio.get_sample_rate();
     save.expression_left = m_ui.expression_input_left.get_string();
     save.expression_right = m_ui.expression_input_right.get_string();
-
 
 #define BUFFER_SIZE 1024
     char buffer[BUFFER_SIZE];

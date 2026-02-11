@@ -196,7 +196,7 @@ struct Array {
 	T& operator[](int index) {
 		return data[index];
 	}
-	
+
 	T get(int index) const {
 		if (index >= size) panic("Out of bounds array access");
 		return data[index];
@@ -231,6 +231,12 @@ struct Array {
 		}
 
 		return true;
+	}
+
+	void free_data()
+	{
+		delete[] data;
+		size = 0;
 	}
 
 	T* begin() {

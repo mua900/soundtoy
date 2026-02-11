@@ -220,8 +220,8 @@ static void SDLCALL expression_audio_callback_stereo(void* userdata, SDL_AudioSt
 
 
 
-#define QUEUE_SAMPLE_SIZE 44100
-#define QUEUE_FRAME_SIZE QUEUE_SAMPLE_SIZE * DESIRED_AUDIO_CHANNEL_COUNT
+#define QUEUE_SAMPLE_SIZE DESIRED_AUDIO_SAMPLE_RATE
+#define QUEUE_FRAME_SIZE QUEUE_SAMPLE_SIZE / DESIRED_AUDIO_CHANNEL_COUNT
 
 void AudioPlayer::put_audio_data()
 {
@@ -231,28 +231,32 @@ void AudioPlayer::put_audio_data()
     if (paused)
         return;
 
-    int queued = SDL_GetAudioStreamQueued(stream);
+    int queued_bytes = SDL_GetAudioStreamQueued(stream);
 
-    // @todo variable names
-
-    // dependent on desired format
     float* audio_samples = (float*) this->audio_data.samples;
-    int queued_samples = queued / sizeof(float);
+    int queued_samples = queued_bytes / sizeof(float);
     int queued_frames = queued_samples / DESIRED_AUDIO_CHANNEL_COUNT;
 
-    if (queued_frames < QUEUE_FRAME_SIZE)
+    if (queued_frames >= QUEUE_FRAME_SIZE)
     {
-        int put_amount = MIN(QUEUE_FRAME_SIZE, audio_data.frame_count - playback_position);
-        SDL_PutAudioStreamData(stream, audio_samples + playback_position, QUEUE_FRAME_SIZE * sizeof(float));
-        playback_position += put_amount;
+        return;
+    }
 
-        if (playback_position >= audio_data.frame_count)
-        {
-            // we are done playing the track
-            playback_position = 0;
+    int put_amount = MIN(
+        QUEUE_FRAME_SIZE - queued_frames,
+        audio_data.frame_count - playback_position
+    );
 
-            // @todo pause
-        }
+    if (put_amount <= 0)
+        return;
+
+    SDL_PutAudioStreamData(stream, audio_samples + playback_position * this->audio_data.channel_count, put_amount * this->audio_data.channel_count * sizeof(float));
+    playback_position += put_amount;
+
+    if (playback_position >= audio_data.frame_count)
+    {
+        // we are done playing the track
+        playback_position = 0;
     }
 }
 
@@ -274,7 +278,7 @@ bool AudioPlayer::initialize(int freq, int channels, double vol)
     SDL_PauseAudioDevice(device_id);
     SDL_SetAudioDeviceGain(device_id, 1.0);
 
-    SDL_AudioStream* astream = create_audio_stream(device, spec, freq, channels, vol);
+    SDL_AudioStream* astream = create_audio_stream(device_id, spec, freq, channels, vol);
     if (!astream)
     {
         return false;
@@ -290,8 +294,8 @@ bool AudioPlayer::initialize(int freq, int channels, double vol)
 
 void AudioPlayer::destroy()
 {
-    SDL_CloseAudioDevice(device);
     SDL_DestroyAudioStream(stream);
+    SDL_CloseAudioDevice(device);
 }
 
 bool AudioPlayer::set_audio_data(AudioData data)
@@ -302,8 +306,14 @@ bool AudioPlayer::set_audio_data(AudioData data)
         return false;
     }
 
-    SDL_PauseAudioDevice(device);
-    SDL_FlushAudioStream(stream);
+    if (device)
+    {
+        SDL_PauseAudioDevice(device);
+    }
+    if (stream)
+    {
+        SDL_FlushAudioStream(stream);
+    }
 
     audio_data = data;
 
@@ -355,12 +365,12 @@ SDL_AudioStream* create_audio_stream(SDL_AudioDeviceID device, SDL_AudioSpec spe
     }
 
     SDL_AudioStream* stream = SDL_CreateAudioStream(&spec, &device_spec);
-    SDL_SetAudioStreamGain(stream, volume);
-
     if (!stream)
     {
         return nullptr;
     }
+
+    SDL_SetAudioStreamGain(stream, volume);
 
     if (!SDL_BindAudioStream(device, stream))
     {
