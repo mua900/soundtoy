@@ -220,7 +220,8 @@ static void SDLCALL expression_audio_callback_stereo(void* userdata, SDL_AudioSt
 
 
 
-#define QUEUE_SAMPLE_SIZE DESIRED_AUDIO_SAMPLE_RATE
+// adjust for latency
+#define QUEUE_SAMPLE_SIZE DESIRED_AUDIO_SAMPLE_RATE / 16
 #define QUEUE_FRAME_SIZE QUEUE_SAMPLE_SIZE / DESIRED_AUDIO_CHANNEL_COUNT
 
 void AudioPlayer::put_audio_data()

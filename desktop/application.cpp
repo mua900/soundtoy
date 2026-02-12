@@ -707,7 +707,7 @@ void Application::draw_graph_mode_ui()
         render_audio_data(audio_data_position, vec2(audio_data_scale.x, audio_data_scale.y), Color(0x44, 0x22, 0x77, 0xff));
 
         // playback position
-        float playback_position = m_audio.audio_player.playback_position / m_audio.audio_player.audio_data.frame_count;
+        float playback_position = (float) m_audio.audio_player.playback_position / m_audio.audio_player.audio_data.frame_count;
         float audio_data_start = audio_data_position.x - audio_data_scale.x / 2;
         draw_arrowhead(m_window.renderer, vec2(audio_data_start + audio_data_scale.x * playback_position, audio_data_position.y - audio_data_scale.y / 2), vec2(0, 1), 50, ColorF(0.4, 0.2, 0.7, 1.0));
     }

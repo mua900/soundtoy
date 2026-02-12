@@ -77,7 +77,7 @@ struct AudioData {
 
     bool is_in_desired_spec()
     {
-        return (samples != nullptr) && (format == DESIRED_AUDIO_FORMAT) && (channel_count == 2) && (frequency == DESIRED_AUDIO_SAMPLE_RATE);
+        return (samples != nullptr) && (format == DESIRED_AUDIO_FORMAT) && (channel_count == DESIRED_AUDIO_CHANNEL_COUNT) && (frequency == DESIRED_AUDIO_SAMPLE_RATE);
     }
 
     Signal as_signal()
