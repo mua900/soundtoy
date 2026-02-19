@@ -264,7 +264,7 @@ bool Application::update_channel_count(int channels)
 
     int w_x, w_y;
     SDL_GetWindowSize(m_window.window, &w_x, &w_y);
-    update_ui_state(vec2(w_x, w_y));
+    update_ui_state(vec2(w_x, w_y));  // so that we get 2 expression inputs and their positions calculated properly
     return success;
 }
 

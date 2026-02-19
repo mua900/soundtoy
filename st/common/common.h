@@ -313,8 +313,8 @@ struct Complex {
 	Complex() {}
     Complex(float r, float i) : real(r), imaginary(i) {}
 
-    float magnitude();
-    float winding();
+    float magnitude() const;
+    float winding() const;
 };
 
 // overloads for complex
@@ -336,4 +336,4 @@ inline Complex operator*(const Complex lhs, const Complex rhs)
 
 #define CONSTANT_PI  3.14159265359
 #define CONSTANT_E   2.71828182846
-#define CONSTANT_TAU CONSTANT_PI * 2.0
+#define CONSTANT_TAU (CONSTANT_PI * 2.0)

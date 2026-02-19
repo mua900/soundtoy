@@ -81,12 +81,12 @@ void get_default_builtin_functions(Function* list)
 
 bool is_builtin_function(const Expr_Call* call)
 {
-    return call->fn_id <= BUILTIN_FUNC_COUNT;
+    return call->fn_id < BUILTIN_FUNC_COUNT;
 }
 
 bool is_builtin_variable(const Expr_Variable* var)
 {
-    return var->var_id <= BUILTIN_VARIABLE_COUNT;
+    return var->var_id < BUILTIN_VARIABLE_COUNT;
 }
 
 double get_sign(double x)

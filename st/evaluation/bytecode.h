@@ -37,8 +37,8 @@ enum Bytecode_Opcode : u32
 
 	INSTR_MOV,			// mov  reg, reg
 	INSTR_MOVF,			// mov  freg, freg
-	INSTR_MOV_I_TO_F,	// mov  freg, reg		   -- bitwise copy of the value
-	INSTR_MOV_F_TO_I,	// mov  reg, freg		   -- bitwise copy of the value
+	INSTR_MOV_I_TO_F,	// mov  freg, reg
+	INSTR_MOV_F_TO_I,	// mov  reg, freg
 
 	INSTR_ADD,			// add reg1, reg2
 	INSTR_SUB,			// sub reg1, reg2

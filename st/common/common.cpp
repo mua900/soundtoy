@@ -438,6 +438,5 @@ float Complex::magnitude()
 
 float Complex::winding()
 {
-    std::complex<float> c = std::complex(real, imaginary);
-    return arg(c);
+	return atan2f(imaginary, real);
 }
