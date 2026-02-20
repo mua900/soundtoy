@@ -8,16 +8,27 @@ test_programs : List[str] = [
 ]
 
 dependecies : List[str] = [
-    "../st/evaluator.cpp",
-    "../st/common.cpp",
-    "../st/builtin.cpp",
-    "../st/expr.cpp",
+    "../st/common/common.cpp",
+    "../st/evaluation/evaluator.cpp",
+    "../st/evaluation/builtin.cpp",
+    "../st/evaluation/expr.cpp",
+    "../st/evaluation/bytecode.cpp",
+    "../st/evaluation/api.cpp",
 ]
 
 def compile_tests():
     cmd = ["g++"]
+
+    cmd.append("-std=c++20")
+    
     for dep in dependecies:
         cmd.append(dep)
+
+    cmd.append("-I")
+    cmd.append("../st/common")
+
+    cmd.append("-I")
+    cmd.append("../st/evaluation")
 
     for test in test_programs:
         command_line = cmd.copy()
@@ -38,8 +49,7 @@ def compile_tests():
 
 def run_tests():
     for test in test_programs:
-        result = subprocess.run(str("./" + test), capture_output=True, check=True)
-        result.stdout  # TODO
+        result = subprocess.run(str("./" + test), capture_output=True)
 
 compile_tests()
 run_tests()

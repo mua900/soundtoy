@@ -1,8 +1,8 @@
 #include <cstring>
-#include "../st/api.h"
+#include "api.h"
 
 int main() {
-	St_Sampler* sampler = st_sampler_create(Evaluator_Type::BYTECODE_INTERP, 60);
+	St_Sampler* sampler = st_sampler_create(60);
 
 	const char* input = "sin(t)";
 	if (!st_sampler_set_expression(sampler, input, strlen(input))) {
