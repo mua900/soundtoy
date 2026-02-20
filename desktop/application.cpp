@@ -1701,7 +1701,6 @@ void draw_arrowhead(SDL_Renderer* renderer, vec2 position, vec2 direction, float
     SDL_RenderGeometry(renderer, NULL, vertices, 3, indices, 3);
 }
 
-// @todo maybe we can use a separate thread to do this.
 Signal create_signal(St_Sampler* sampler, float time_start, int sample_count, int sample_rate)
 {
     Signal signal;

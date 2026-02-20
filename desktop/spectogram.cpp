@@ -5,9 +5,12 @@
 
 Spectogram calculate_spectogram(Signal signal)
 {
-    Spectogram spectogram;
+    DArray<float> samples;
+    int time_window;
+    int freq_count;
 
-    return spectogram;
+
+    return Spectogram(Array<float> (samples.data(), samples.size()));
 }
 
 DArray<Complex> calculate_fourier(Signal signal)

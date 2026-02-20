@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_executable(soundtoy
     desktop/main.cpp
-    
+
     desktop/application.h
     desktop/application.cpp
     desktop/audio.h
@@ -32,7 +32,7 @@ add_executable(soundtoy
 #     vendor/imgui/imgui_tables.cpp
 #     vendor/imgui/imgui_widgets.cpp
 #     vendor/imgui/imgui_demo.cpp
-# 
+#
 #     # the backends we use
 #     vendor/imgui/backends/imgui_impl_sdl3.cpp
 #     vendor/imgui/backends/imgui_impl_sdlrenderer3.cpp
@@ -84,10 +84,26 @@ add_subdirectory(vendor/SDL EXCLUDE_FROM_ALL)
 # SDL_image
 set(SDLIMAGE_VENDORED ON)
 # turn off unused formats
+set(SDLIMAGE_ANI  OFF)
 set(SDLIMAGE_AVIF OFF)
-set(SDLIMAGE_BMP OFF)
-set(SDLIMAGE_JPEG OFF)
+set(SDLIMAGE_BMP  OFF)
+set(SDLIMAGE_GIF  OFF)
+set(SDLIMAGE_JPG  OFF)
+set(SDLIMAGE_JXL  OFF)
+set(SDLIMAGE_LBM  OFF)
+set(SDLIMAGE_PCX  OFF)
+set(SDLIMAGE_PNM  OFF)
+set(SDLIMAGE_QOI  OFF)
+set(SDLIMAGE_SVG  OFF)
+set(SDLIMAGE_TGA  OFF)
+set(SDLIMAGE_TIF  OFF)
 set(SDLIMAGE_WEBP OFF)
+set(SDLIMAGE_XCF  OFF)
+set(SDLIMAGE_XPM  OFF)
+set(SDLIMAGE_XV   OFF)
+# png
+set(SDLIMAGE_PNG ON)
+
 add_subdirectory(vendor/SDL_image EXCLUDE_FROM_ALL)
 
 # SDL_ttf

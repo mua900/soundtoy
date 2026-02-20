@@ -431,12 +431,12 @@ bool String::operator==(const String& other) const
 }
 
 
-float Complex::magnitude()
+float Complex::magnitude() const
 {
     return sqrtf(real*real+imaginary*imaginary);
 }
 
-float Complex::winding()
+float Complex::winding() const
 {
 	return atan2f(imaginary, real);
 }

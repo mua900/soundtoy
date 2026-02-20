@@ -3,6 +3,7 @@
 #include "template.h"
 #include "common.h"
 
+
 struct Signal {
     Array<float> samples;
 
