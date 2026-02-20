@@ -226,7 +226,7 @@ static void SDLCALL expression_audio_callback_stereo(void* userdata, SDL_AudioSt
 
 void AudioPlayer::put_audio_data()
 {
-    if (!this->audio_data.samples)
+    if (!this->audio_data)
         return;
 
     if (paused)
@@ -234,7 +234,7 @@ void AudioPlayer::put_audio_data()
 
     int queued_bytes = SDL_GetAudioStreamQueued(stream);
 
-    float* audio_samples = (float*) this->audio_data.samples;
+    float* audio_samples = (float*) this->audio_data->samples;
     int queued_samples = queued_bytes / sizeof(float);
     int queued_frames = queued_samples / DESIRED_AUDIO_CHANNEL_COUNT;
 
@@ -245,16 +245,16 @@ void AudioPlayer::put_audio_data()
 
     int put_amount = MIN(
         QUEUE_FRAME_SIZE - queued_frames,
-        audio_data.frame_count - playback_position
+        this->audio_data->frame_count - playback_position
     );
 
     if (put_amount <= 0)
         return;
 
-    SDL_PutAudioStreamData(stream, audio_samples + playback_position * this->audio_data.channel_count, put_amount * this->audio_data.channel_count * sizeof(float));
+    SDL_PutAudioStreamData(stream, audio_samples + playback_position * this->audio_data->channel_count, put_amount * this->audio_data->channel_count * sizeof(float));
     playback_position += put_amount;
 
-    if (playback_position >= audio_data.frame_count)
+    if (playback_position >= this->audio_data->frame_count)
     {
         // we are done playing the track
         playback_position = 0;
@@ -299,9 +299,9 @@ void AudioPlayer::destroy()
     SDL_CloseAudioDevice(device);
 }
 
-bool AudioPlayer::set_audio_data(AudioData data)
+bool AudioPlayer::set_audio_data(AudioData* data)
 {
-    if (!data.is_in_desired_spec())
+    if (!data->is_in_desired_spec())
     {
         fprintf(stderr, "Unexpected audio data format\n");
         return false;
@@ -321,6 +321,13 @@ bool AudioPlayer::set_audio_data(AudioData data)
     // automatically resume with the new data?
 
     return true;
+}
+
+void AudioPlayer::reset_audio_data()
+{
+    audio_data = nullptr;
+    playback_position = 0;
+    pause();
 }
 
 void AudioPlayer::pause()

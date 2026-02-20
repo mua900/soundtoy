@@ -63,6 +63,7 @@ struct Text_Field
 {
     Rectangle m_area = {};
     String_Builder m_text = {};
+    float m_font_size = 0.0;
     int m_cursor_character = 0;
     int m_cursor_pixel = 0;
     int m_line_count = 0;
@@ -84,7 +85,8 @@ struct Text_Field
 
     bool update_text(SDL_Renderer* renderer, Font font, bool wrapped)
     {
-        return render_text_field_texture(renderer, get_string(), font, wrapped);
+        m_font_size = font.size;
+        return render_text_field_texture(renderer, font, Color { 0x11, 0x22, 0x11, 0xff }, wrapped);
     }
 
     void delete_text()
@@ -98,14 +100,13 @@ struct Text_Field
     }
 
 private:
-    bool render_text_field_texture(SDL_Renderer* renderer, String s, Font font, bool wrapped);
+    bool render_text_field_texture(SDL_Renderer* renderer, Font font, Color color, bool wrapped);
 };
 
 
 #define DROP_DOWN_LIST_SELECTED_SENTINEL -1
 
-// @todo fix possible memory leaks
-
+// owns the text object inside it
 struct Drop_Down_List {
     struct Entry {
         Text label = {};
@@ -183,6 +184,11 @@ struct Drop_Down_List {
     Drop_Down_List() {}
     Drop_Down_List(vec2 p_pos, vec2 p_scale) : pos(p_pos), scale(p_scale) {}
     ~Drop_Down_List() {
+        title.clear();
+        for (auto entry : options)
+        {
+            entry.label.clear();
+        }
         options.reset();
     }
 };

@@ -148,8 +148,9 @@ bool Application::initialize()
         m_rendered_text = Array<Text>(texts, TEXT_COUNT);
 
         gen_static_text(Color{0x44, 0x22, 0x33, 0xff});
+
         // dynamic text
-        m_rendered_text.data[TEXT_VOLUME_VALUE] = create_text(make_string("0.0"), Color(0x54, 0x22, 0x77, 0xff));
+        m_rendered_text.data[TEXT_VOLUME_VALUE] = create_text(make_string("0.0"), m_assets.font_large, Color(0x54, 0x22, 0x77, 0xff));
     }
 
     // ui
@@ -160,13 +161,13 @@ bool Application::initialize()
         update_ui_state(vec2(ws.x, ws.y));
 
         // @todo show what is selected in the ui
-        Text mono = create_text(make_string("mono"), Color(0x44, 0x22, 0x55, 0xff));
-        Text stereo = create_text(make_string("stereo"), Color(0x44, 0x22, 0x55, 0xff));
-        m_ui.channel_count.set_title(create_text(make_string("Channel Count"), Color(0x44, 0x22, 0x55, 0xff)));
+        Text mono = create_text(make_string("mono"), m_assets.font_large, Color(0x44, 0x77, 0x22, 0xff));
+        Text stereo = create_text(make_string("stereo"), m_assets.font_large, Color(0x44, 0x77, 0x22, 0xff));
+        m_ui.channel_count.set_title(create_text(make_string("Channel Count"), m_assets.font_large, Color(0x44, 0x77, 0x22, 0xff)));
         m_ui.channel_count.add_option(mono, nullptr);
         m_ui.channel_count.add_option(stereo, nullptr);
 
-        m_ui.playback_device.set_title(create_text(make_string("Audio Device"), Color(0x44, 0x22, 0x55, 0xff)));
+        m_ui.playback_device.set_title(create_text(make_string("Audio Device"), m_assets.font_large, Color(0x44, 0x88, 0x22, 0xff)));
 
         int count = 0;
         SDL_AudioDeviceID* devices = SDL_GetAudioPlaybackDevices(&count);
@@ -181,7 +182,7 @@ bool Application::initialize()
         }
 
 
-        m_ui.graph_to_show.set_title(create_text(make_string("Hi there"), Color(0x66, 0x33, 0x55, 0xff)));
+        m_ui.graph_to_show.set_title(create_text(make_string("Hi there"), m_assets.font_large, Color(0x66, 0x33, 0x55, 0xff)));
     }
 
     quit = false;
@@ -189,10 +190,10 @@ bool Application::initialize()
     return true;
 }
 
-Text Application::create_text(String text, Color color)
+Text Application::create_text(String text, Font font, Color color)
 {
     SDL_Color sdl_color = { color.r, color.g, color.b, color.a };
-    SDL_Surface* surface = TTF_RenderText_Solid(m_assets.font.font, text.data, text.size, sdl_color);
+    SDL_Surface* surface = TTF_RenderText_Solid(font.font, text.data, text.size, sdl_color);
 
     if (!surface)
         return Text();
@@ -210,16 +211,16 @@ Text Application::create_text(String text, Color color)
 
 bool Application::gen_static_text(Color color)
 {
-    Text paused = create_text(make_string("Paused"), color);
-    Text playing = create_text(make_string("Playing"), color);
-    Text pause = create_text(make_string("pause"), color);
-    Text resume = create_text(make_string("resume"), color);
-    Text invalid_expression = create_text(make_string("Invalid Expression"), color);
-    Text invalid_sample_rate = create_text(make_string("Invalid Sample Rate"), color);
-    Text valid_expression = create_text(make_string("Valid Expression"), color);
-    Text sample_rate = create_text(make_string("sample rate"), color);
-    Text text_sound_mode = create_text(make_string("sound mode"), color);
-    Text text_graph_mode = create_text(make_string("graph mode"), color);
+    Text paused = create_text(make_string("Paused"), m_assets.font_large, color);
+    Text playing = create_text(make_string("Playing"), m_assets.font_large, color);
+    Text pause = create_text(make_string("pause"), m_assets.font_medium, color);
+    Text resume = create_text(make_string("resume"), m_assets.font_medium, color);
+    Text invalid_expression = create_text(make_string("Invalid Expression"), m_assets.font_large, color);
+    Text invalid_sample_rate = create_text(make_string("Invalid Sample Rate"), m_assets.font_large, color);
+    Text valid_expression = create_text(make_string("Valid Expression"), m_assets.font_large, color);
+    Text sample_rate = create_text(make_string("Sample Rate"), m_assets.font_large, color);
+    Text text_sound_mode = create_text(make_string("sound mode"), m_assets.font_large, color);
+    Text text_graph_mode = create_text(make_string("graph mode"), m_assets.font_large, color);
 
     if (!
         (paused.texture &&
@@ -268,7 +269,9 @@ bool Application::update_channel_count(int channels)
     return success;
 }
 
-#define FONT_SIZE 100.0
+#define FONT_SIZE_SMALL   18.0
+#define FONT_SIZE_MEDIUM  32.0
+#define FONT_SIZE_LARGE   72.0
 
 bool Application::load_assets()
 {
@@ -351,14 +354,18 @@ bool Application::st_load_assets(String_Builder& sb) {
         sb.append(font_file);
 
         {
-            TTF_Font* font = TTF_OpenFont(sb.c_string(), FONT_SIZE);
-            if (!font) {
-                std::cerr << "Could not load font " << sb.c_string() << "\n";
-                std::cerr << SDL_GetError() << "\n";
+            TTF_Font* font_small = TTF_OpenFont(sb.c_string(), FONT_SIZE_SMALL);
+            TTF_Font* font_medium = TTF_OpenFont(sb.c_string(), FONT_SIZE_MEDIUM);
+            TTF_Font* font_large = TTF_OpenFont(sb.c_string(), FONT_SIZE_LARGE);
+            if (!(font_small && font_medium && font_large)) {
+                fprintf(stderr, "Could not load font %s\n", sb.c_string());
+                fprintf(stderr, "%s\n", SDL_GetError());
                 return false;
             }
 
-            m_assets.font = { font, FONT_SIZE };
+            m_assets.font_small = { font_small, FONT_SIZE_SMALL };
+            m_assets.font_medium = { font_medium, FONT_SIZE_MEDIUM };
+            m_assets.font_large = { font_large, FONT_SIZE_LARGE };
         }
 
         sb.remove(font_folder.size + 1 + font_name.size + 1 + font_file.size);
@@ -445,7 +452,7 @@ void Application::handle_events()
 
                 SDL_AudioDeviceID device = device_event.which;
 
-                m_ui.playback_device.add_option(create_text(make_string(SDL_GetAudioDeviceName(device)), Color(0x88, 0x33, 0x11, 0xff)),
+                m_ui.playback_device.add_option(create_text(make_string(SDL_GetAudioDeviceName(device)), m_assets.font_medium, Color(0x44, 0x77, 0x22, 0xff)),
                                                 device);
                 break;
             }
@@ -468,12 +475,13 @@ void Application::handle_events()
                 }
                 break;
             }
-            case SDL_EVENT_AUDIO_DEVICE_FORMAT_CHANGED: { break; }
+            case SDL_EVENT_AUDIO_DEVICE_FORMAT_CHANGED: {
+                // @todo maybe we need to reinitialize mixers?
+                break;
+            }
 
             case SDL_EVENT_DROP_FILE: {
                 SDL_DropEvent drop = e.drop;
-
-                printf("Received drop event\n");
 
                 if (drop.data) {
                     m_audio.audio_data.reset();
@@ -481,21 +489,24 @@ void Application::handle_events()
                     if (!load_audio_file(String(drop.data))) {
                         fprintf(stderr, "Could not load file %s\n", drop.data);
                     }
-                }
 
-                if (m_audio.audio_data.is_in_desired_spec())
-                {
-                    m_audio.expr_audio.pause();
+                    m_audio.audio_player.set_audio_data(&m_audio.audio_data);
 
-                    st_set_input_stream(m_samplers.audio_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, 2);
-                    st_set_input_stream(m_samplers.audio_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, 2);
+                    // load should convert the input file to the desired spec
+                    if (m_audio.audio_data.is_in_desired_spec())
+                    {
+                        m_audio.expr_audio.pause();
 
-                    st_set_input_stream(m_samplers.waveform_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, 2);
-                    st_set_input_stream(m_samplers.waveform_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, 2);
-                }
-                else
-                {
-                    fprintf(stderr, "Audio data is not in the desired format\n");
+                        st_set_input_stream(m_samplers.audio_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, 2);
+                        st_set_input_stream(m_samplers.audio_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, 2);
+
+                        st_set_input_stream(m_samplers.waveform_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, 2);
+                        st_set_input_stream(m_samplers.waveform_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, 2);
+                    }
+                    else
+                    {
+                        fprintf(stderr, "Audio data is not in the desired format\n");
+                    }
                 }
 
                 break;
@@ -613,9 +624,9 @@ void Application::draw_sound_mode_ui()
 
         if (m_events[EVENT_RECALCULATE_WAVEFORM_SAMPLES].active == false)
         {
-            render_waveform(m_samplers.waveform_left, m_buffers.waveform_samples_left,
+            update_waveform(m_samplers.waveform_left, m_buffers.waveform_samples_left,
                             vec2(area_left.x + area_left.w / 2, area_left.y + area_left.h / 2), vec2(area_left.w, area_left.h));
-            render_waveform(m_samplers.waveform_right, m_buffers.waveform_samples_right,
+            update_waveform(m_samplers.waveform_right, m_buffers.waveform_samples_right,
                             vec2(area_right.x + area_right.w / 2, area_right.y + area_right.h / 2), vec2(area_right.w, area_right.h));
 
             // recalculate regularly
@@ -664,7 +675,7 @@ void Application::draw_sound_mode_ui()
     {
         Rectangle pause_button = m_ui.pause_button;
         const int margin = 5;
-        Font font = m_assets.font;
+        Font font = m_assets.font_large;
         render_text_size(m_window.renderer,
             m_rendered_text.data[(m_audio.expr_audio.paused) ? TEXT_PAUSED : TEXT_PLAYING],
             vec2(pause_button.x, pause_button.y + pause_button.h + font.size/2));
@@ -707,9 +718,9 @@ void Application::draw_graph_mode_ui()
         render_audio_data(audio_data_position, vec2(audio_data_scale.x, audio_data_scale.y), Color(0x44, 0x22, 0x77, 0xff));
 
         // playback position
-        float playback_position = (float) m_audio.audio_player.playback_position / m_audio.audio_player.audio_data.frame_count;
+        float playback_position = (float) m_audio.audio_player.playback_position / m_audio.audio_player.audio_data->frame_count;
         float audio_data_start = audio_data_position.x - audio_data_scale.x / 2;
-        draw_arrowhead(m_window.renderer, vec2(audio_data_start + audio_data_scale.x * playback_position, audio_data_position.y - audio_data_scale.y / 2), vec2(0, 1), 50, ColorF(0.4, 0.2, 0.7, 1.0));
+        draw_arrowhead(m_window.renderer, vec2(audio_data_start + audio_data_scale.x * playback_position, audio_data_position.y - audio_data_scale.y), vec2(0, 1), 50, ColorF(0.4, 0.2, 0.7, 1.0));
     }
 
     if (m_signal.samples.data)
@@ -768,18 +779,21 @@ void Application::render_slider(Rectangle area, vec2 knob_scale, float value, Co
 
 void Application::render_text_field(const Text_Field& text_field)
 {
-    Rectangle text_field_area = text_field.m_area;
-    SDL_FRect tf_area = { text_field_area.x, text_field_area.y, text_field_area.w, text_field_area.h };
+    SDL_FRect tf_area = { text_field.m_area.x, text_field.m_area.y, text_field.m_area.w, text_field.m_area.h };
     SDL_RenderFillRect(m_window.renderer, &tf_area);
 
     SDL_Texture* text_texture = text_field.m_texture;
+    float texture_width;
+    float texture_height;
+    SDL_GetTextureSize(text_texture, &texture_width, &texture_height);
+
     if (text_texture)
     {
         int line_count = text_field.m_line_count;
-        float font_size = m_assets.font.size;
+        float font_size = text_field.m_font_size;
 
-        SDL_FRect string_area = { tf_area.x, tf_area.y, tf_area.w, line_count * font_size };
-        SDL_FRect texture_area = { 0, 0, string_area.w, string_area.h };
+        SDL_FRect string_area = { tf_area.x, tf_area.y, tf_area.w, tf_area.h };
+        SDL_FRect texture_area = { 0, 0, texture_width, texture_height };
         SDL_RenderTexture(m_window.renderer, text_texture, &texture_area, &string_area);
     }
 }
@@ -884,7 +898,7 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
                 if (text_field)
                 {
                     text_field->delete_last();
-                    text_field->update_text(m_window.renderer, m_assets.font, false);
+                    text_field->update_text(m_window.renderer, m_assets.font_medium, false);
                 }
             }
             return true;
@@ -1029,7 +1043,7 @@ bool Application::mouse_input_sound_mode()
         char buffer[64];
         snprintf(buffer, sizeof(buffer), "%.3f", volume);
         m_rendered_text.data[TEXT_VOLUME_VALUE].clear();
-        m_rendered_text.data[TEXT_VOLUME_VALUE] = create_text(make_string(buffer), Color(0x54, 0x22, 0x77, 0xff));
+        m_rendered_text.data[TEXT_VOLUME_VALUE] = create_text(make_string(buffer), m_assets.font_large, Color(0x54, 0x22, 0x77, 0xff));
 
         printf("%f\n", m_audio.expr_audio.get_volume());
         return true;
@@ -1047,7 +1061,7 @@ bool Application::mouse_input_sound_mode()
         char buffer[64];
         snprintf(buffer, sizeof(buffer), "%.3f", pan);
         m_rendered_text.data[TEXT_PAN_VALUE].clear();
-        m_rendered_text.data[TEXT_PAN_VALUE] = create_text(make_string(buffer), Color(0x55, 0x22, 0x88, 0xff));
+        m_rendered_text.data[TEXT_PAN_VALUE] = create_text(make_string(buffer), m_assets.font_large, Color(0x55, 0x22, 0x88, 0xff));
 
         printf("%s\n", buffer);
         return true;
@@ -1267,9 +1281,10 @@ Text_Field* Ui_State::get_selected_text_field()
     }
 }
 
-bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, String s, Font font, bool wrapped)
+bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, Font font, Color color, bool wrapped)
 {
-    if (s.size == 0)
+    String str = get_string();
+    if (str.size == 0)
     {
         SDL_DestroyTexture(m_texture);
         m_texture = NULL;
@@ -1280,30 +1295,44 @@ bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, String s, Fon
 
     int measure_pixels = 0;
     size_t measure_characters = 0;
-    TTF_MeasureString(font.font, get_string().data, get_string().size, area.w, &measure_pixels, &measure_characters);
+    TTF_MeasureString(font.font, str.data, str.size, area.w, &measure_pixels, &measure_characters);
 
-    const SDL_Color text_color = { 0x11, 0x22, 0x11, 0xff };
+    int line_count = 0;
+
+    const SDL_Color text_color = {color.r, color.g, color.b, color.a};
     SDL_Surface* text_surface;
 
     if (wrapped) {
-        text_surface = TTF_RenderText_Solid_Wrapped(font.font, get_string().data, get_string().size, text_color, area.w);
-        m_line_count = (int)(area.h / font.size);
+        text_surface = TTF_RenderText_Solid_Wrapped(font.font, str.data, str.size, text_color, area.w);
     } else {
-        text_surface = TTF_RenderText_Solid(font.font, get_string().data, get_string().size, text_color);
-        m_line_count = 1;  // unwrapped text
+        text_surface = TTF_RenderText_Solid(font.font, str.data, str.size, text_color);
     }
 
-    SDL_Texture* text = SDL_CreateTextureFromSurface(renderer, text_surface);
+    if (!text_surface)
+    {
+        return false;
+    }
+
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, text_surface);
     SDL_DestroySurface(text_surface);
 
-    if (text)
+    if (!texture)
     {
-        SDL_DestroyTexture(m_texture);
-
-        m_texture = text;
+        return false;
     }
 
-    return (text) ? true : false;
+    float texture_width;
+    float texture_height;
+    SDL_GetTextureSize(texture, &texture_width, &texture_height);
+
+    line_count = (wrapped) ? MAX(1, (int)(texture_height / font.size)) : (1);
+
+    SDL_DestroyTexture(m_texture);  // old texture
+
+    m_texture = texture;
+    m_line_count = line_count;
+
+    return true;
 }
 
 bool Application::update_input_string()
@@ -1313,7 +1342,7 @@ bool Application::update_input_string()
     {
         return false;
     }
-    return text_field->update_text(m_window.renderer, m_assets.font,
+    return text_field->update_text(m_window.renderer, m_assets.font_medium,
                                    (m_ui.text_input_target == EXPRESSION_INPUT_LEFT) || (m_ui.text_input_target == EXPRESSION_INPUT_RIGHT));
 }
 
@@ -1370,7 +1399,6 @@ bool Application::set_eval_string_right(String eval_string)
 }
 
 // @todo we can do cooler things with rendering waveforms or audio data
-// @todo do this rendering once, not every frame
 
 void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color color) {
     // @todo simplify
@@ -1383,7 +1411,7 @@ void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color col
 
     float* samples = (float*) m_audio.audio_data.samples;
 
-    #define BLOCK_SIZE 100
+    #define BLOCK_SIZE 256
     static SDL_FPoint points[DESIRED_AUDIO_CHANNEL_COUNT][BLOCK_SIZE];
 
     float vertical_step = area_scale.y / DESIRED_AUDIO_CHANNEL_COUNT;
@@ -1427,7 +1455,7 @@ void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color col
         for (int ch = 0; ch < DESIRED_AUDIO_CHANNEL_COUNT; ch++)
         {
             points[ch][i].x = area_center.x - (area_scale.x / 2) + (step * frame_index);
-            points[ch][i].y = base_height + samples[sample_index + ch] * (area_scale.y / 2.0) + (ch * vertical_step);
+            points[ch][i].y = base_height + samples[sample_index + ch] * (area_scale.y / 2.0) / DESIRED_AUDIO_CHANNEL_COUNT + (ch * vertical_step);
         }
     }
 
@@ -1435,12 +1463,14 @@ void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color col
     {
         SDL_RenderPoints(m_window.renderer, points[ch], remaining);
     }
+
+    #undef BLOCK_SIZE
 }
 
 void Application::render_signal(vec2 area_center, vec2 area_scale, Signal signal, Color color) {
     SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
 
-    #define BLOCK_SIZE 100
+    #define BLOCK_SIZE 256
     static SDL_FPoint points[BLOCK_SIZE];
 
     float step = (area_scale.x / float(signal.samples.size));
@@ -1473,9 +1503,11 @@ void Application::render_signal(vec2 area_center, vec2 area_scale, Signal signal
     }
 
     SDL_RenderLines(m_window.renderer, points, remaining);
+
+    #undef BLOCK_SIZE
 }
 
-void Application::render_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale) {
+void Application::update_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale) {
     int sample_count = sample_buffer.size;
 
     st_fill_strided(sampler, &sample_buffer.data[0].y, sample_count);
@@ -1532,7 +1564,6 @@ bool Application::load_audio_file(String path) {
         }
     }
 
-    // @update
     m_audio.audio_data.samples = output_buffer;
     m_audio.audio_data.channel_count = desired_spec.channels;
     m_audio.audio_data.format = desired_spec.format;
@@ -1540,9 +1571,6 @@ bool Application::load_audio_file(String path) {
     m_audio.audio_data.frame_count = output_length / (SDL_AUDIO_BYTESIZE(desired_spec.format) * desired_spec.channels);
 
     ASSERT(m_audio.audio_data.is_in_desired_spec());
-
-    // ---
-    m_audio.audio_player.set_audio_data(m_audio.audio_data);
 
     return true;
 }

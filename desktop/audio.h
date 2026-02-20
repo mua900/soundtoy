@@ -96,7 +96,7 @@ struct AudioData {
 
 struct AudioPlayer
 {
-    AudioData audio_data = {};
+    AudioData* audio_data = {};  // reference
     SDL_AudioDeviceID device = {};
     SDL_AudioStream* stream = {};
     int playback_position = 0;
@@ -108,7 +108,8 @@ struct AudioPlayer
     bool initialize(int freq, int channels, double vol);
     void destroy();
 
-    bool set_audio_data(AudioData data);
+    bool set_audio_data(AudioData* data);
+    void reset_audio_data();
 
     void put_audio_data();
 

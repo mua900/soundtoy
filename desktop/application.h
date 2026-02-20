@@ -21,8 +21,9 @@ struct Window {
 };
 
 struct Assets {
-    // @todo multiple font sizes so that we can choose between them
-    Font font = {};
+    Font font_small = {};
+    Font font_medium = {};
+    Font font_large = {};
 
     SDL_Texture* pause_texture = NULL;
     SDL_Texture* resume_texture = NULL;
@@ -158,10 +159,11 @@ private:
     void text_input_stop();
     void toggle_text_input();
     bool update_input_string();
+    void update_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale);
 
     void switch_modes();
 
-    Text create_text(String text, Color color);
+    Text create_text(String text, Font font, Color color);
 
     bool set_eval_string(String s);
     bool set_eval_string_left(String s);
@@ -174,7 +176,6 @@ private:
     void render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color);
 
     void render_slider(Rectangle area, vec2 knob_scale, float value, Color slider_color, Color knob_color, const Text& text);
-    void render_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale);
     void render_text_field(const Text_Field& text_field);
     void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
 };
