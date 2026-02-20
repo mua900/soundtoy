@@ -73,10 +73,10 @@ enum Bytecode_Opcode : u32
 	// jump if the condition bit is true (1)
 	INSTR_JMP_COND,		// cjmp address16 (little endian)
 
-	// calls the builtin function identified by func_id and place the result in freg
-	// all builtin functions take a single floating point number as argument and return a single floating point number
-	// the calling convention is that the register carrying the arguments gets passed in the instruction
-	// and that register is overwriten with the result of the call to return the value
+	// Call the builtin function identified by func_id and place the result in freg.
+	// Most builtin functions take a single floating point number as argument and return a single floating point number.
+	// The calling convention is that the register carrying the arguments gets passed in the instruction
+	// and that register is overwriten with the result of the call to return the value.
 	INSTR_CALL_BUILTIN,	// call_builtin func_id freg
 
 	// @todo support multiple return values

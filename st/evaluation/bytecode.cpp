@@ -16,10 +16,16 @@ bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
     if (location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
         u16 freg = program.allocate_fp_register();
         program.emit_bytecode_instruction(INSTR_LOADF, freg, location.const_id.constant_index);
+
+        location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+        location.floating_point_register = freg;
     }
     else if (location.location_type == Value_Location_Type::INTEGER_REGISTER) {
         u16 freg = program.allocate_fp_register();
         program.emit_bytecode_instruction(INSTR_MOV_I_TO_F, freg, location.integer_register);
+
+        location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+        location.floating_point_register = freg;
     }
     program.emit_bytecode_instruction(INSTR_RET, location.floating_point_register, 0);
 
@@ -59,7 +65,7 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
                 location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
                 location.floating_point_register = freg;
 
-                program.emit_bytecode_instruction(INSTR_LOAD_VAR, variable->var_id, freg);
+                program.emit_bytecode_instruction(INSTR_LOAD_VAR, freg, variable->var_id);
 
                 return location;
             }
@@ -225,17 +231,19 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 			{
 				// @hack
 				Bytecode_Program dumy;
-				
+
+                bytecode_compile_expression(dumy, ternary->condition);
+
 				then_length = dumy.code.size();
 
 			    dumy.reset();
-				
+
 				else_length = dumy.code.size();
 				dumy.reset();
 			}
-			
+
 			Value_Location_Info cond_result = compile_expr(ternary->condition, program);
-			
+
 			if (cond_result.location_type == Value_Location_Type::INTEGER_REGISTER) {
 				program.emit_bytecode_instruction(INSTR_TEST, cond_result.integer_register, 0);
 			}
@@ -257,14 +265,13 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 			u32 then_branch = program.code.index() + 1 + else_length + 2;
 			u32 else_branch = program.code.index() + 1;
 			u32 expr_end = program.code.index() + 1 + else_length + 2 + then_length;
-			
-			program.emit_bytecode_instruction(INSTR_JMP_COND, then_branch, 0);
 
+			program.emit_bytecode_instruction(INSTR_JMP_COND, then_branch, 0);
 
 			Value_Location_Info else_loc = compile_expr(ternary->else_, program);
 			program.emit_bytecode_instruction(INSTR_JMP, expr_end, 0);
 			program.copy_value_to_fp_register(else_loc, result_register);  // single instruction
-			
+
 			Value_Location_Info then_loc = compile_expr(ternary->then_, program);
 			program.copy_value_to_fp_register(then_loc, result_register);
 
@@ -839,7 +846,7 @@ double bytecode_run(Bytecode_Program& program)
 			else {
 				processor.result_flags &= ~CONDITION_RESULT;
 			}
-			
+
 			break;
 		}
 		case INSTR_TEST_F: {
@@ -851,7 +858,7 @@ double bytecode_run(Bytecode_Program& program)
 			else {
 				processor.result_flags &= ~CONDITION_RESULT;
 			}
-			
+
 			break;
 		}
 
