@@ -13,15 +13,8 @@ bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
     program.reset();
 
     Value_Location_Info location = compile_expr(root, program);
-    if (location.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-        u16 freg = program.allocate_fp_register();
-        program.emit_bytecode_instruction(INSTR_LOADF, freg, location.const_id.constant_index);
-
-        location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
-        location.floating_point_register = freg;
-    }
-    else if (location.location_type == Value_Location_Type::INTEGER_REGISTER) {
-        u16 freg = program.allocate_fp_register();
+    if (location.location_type == Value_Location_Type::INTEGER_REGISTER) {
+        u16 freg = program.allocate_float_register();
         program.emit_bytecode_instruction(INSTR_MOV_I_TO_F, freg, location.integer_register);
 
         location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
@@ -39,17 +32,22 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
         case Expr_Type::Literal: {
             auto literal = static_cast<Expr_Literal*>(expr);
 
-            Value_Location_Info location;
-            location.location_type = Value_Location_Type::CONSTANT_BLOCK;
-            location.const_id = program.constant_block.add_constant(literal->value);
+            Constant_Id const_id = program.constant_block.add_constant(literal->value);
 
-            return program.emit_load_constant(location.const_id);
+            u16 freg = program.allocate_float_register();
+            program.emit_bytecode_instruction(INSTR_LOADF, freg, const_id.constant_index);
+
+            Value_Location_Info location;
+            location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
+            location.floating_point_register = freg;
+
+            return location;
         }
         case Expr_Type::Variable: {
             auto variable = static_cast<Expr_Variable*>(expr);
 
             if (is_builtin_variable(variable)) {
-                u16 freg = program.allocate_fp_register();
+                u16 freg = program.allocate_float_register();
                 program.emit_bytecode_instruction(INSTR_LOAD_BUILTIN, freg, variable->var_id);
 
                 Value_Location_Info builtin_location_info;
@@ -59,7 +57,7 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
                 return builtin_location_info;
             }
             else {
-                auto freg = program.allocate_fp_register();
+                auto freg = program.allocate_float_register();
 
                 Value_Location_Info location;
                 location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
@@ -104,14 +102,14 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 
             if (right_location.location_type != left_location.location_type) {
                 if (left_location.location_type == Value_Location_Type::INTEGER_REGISTER) {
-                    auto freg = program.allocate_fp_register();
+                    auto freg = program.allocate_float_register();
                     program.emit_bytecode_instruction(INSTR_MOV_I_TO_F, freg, left_location.integer_register);
 
                     left_location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
                     left_location.floating_point_register = freg;
                 }
                 if (right_location.location_type == Value_Location_Type::INTEGER_REGISTER) {
-                    auto freg = program.allocate_fp_register();
+                    auto freg = program.allocate_float_register();
                     program.emit_bytecode_instruction(INSTR_MOV_I_TO_F, freg, right_location.integer_register);
 
                     right_location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
@@ -188,7 +186,7 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
                     Expr* argument = call->arguments.get(0);
                     Value_Location_Info arg_location = compile_expr(argument, program);
 
-                    u16 freg = program.get_value_to_fp_register(arg_location);
+                    u16 freg = program.get_value_to_float_register(arg_location);
 
                     program.emit_bytecode_instruction(INSTR_CALL_BUILTIN, call->fn_id, freg);
 
@@ -200,13 +198,13 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 
                     program.processor.stack.ensure_size(arg_count);
 
-                    u16 ret_register = program.allocate_fp_register();
+                    u16 ret_register = program.allocate_float_register();
 
-                    for (int i = 0; i < arg_count; i++) {
+                    for (int i = 0; i < arg_count; i += 1) {
                         Expr* argument = call->arguments.get(i);
 
                         Value_Location_Info loc = compile_expr(argument, program);
-                        u16 freg = program.get_value_to_fp_register(loc);
+                        u16 freg = program.get_value_to_float_register(loc);
                         program.emit_bytecode_instruction(INSTR_PUSH, freg, 0);
                     }
 
@@ -250,14 +248,10 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 			else if (cond_result.location_type == Value_Location_Type::FLOATING_POINT_REGISTER) {
 				program.emit_bytecode_instruction(INSTR_TEST_F, cond_result.floating_point_register, 0);
 			}
-			else if (cond_result.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-				u16 reg = program.get_value_to_gp_register(cond_result);
-				program.emit_bytecode_instruction(INSTR_TEST, reg, 0);
-			}
 
 			// both paths will write their results to a common register
 			// emulating returning
-			u32 result_register = program.allocate_fp_register();
+			u32 result_register = program.allocate_float_register();
 
 			// there is no jump if not instruction so else block goes first and then block goes second
 			// + 1 is for the jump instruction at the beginning
@@ -270,10 +264,10 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 
 			Value_Location_Info else_loc = compile_expr(ternary->else_, program);
 			program.emit_bytecode_instruction(INSTR_JMP, expr_end, 0);
-			program.copy_value_to_fp_register(else_loc, result_register);  // single instruction
+			program.copy_value_to_float_register(else_loc, result_register);  // single instruction
 
 			Value_Location_Info then_loc = compile_expr(ternary->then_, program);
-			program.copy_value_to_fp_register(then_loc, result_register);
+			program.copy_value_to_float_register(then_loc, result_register);
 
 			Value_Location_Info result_loc;
 			result_loc.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
@@ -319,48 +313,32 @@ Constant_Id Constant_Block::add_constant(Value value)
 	return const_id;
 }
 
-u16 Bytecode_Program::allocate_gp_register() {
+u16 Bytecode_Program::allocate_integer_register() {
 	return processor.regs.add(0);
 }
 
-u16 Bytecode_Program::allocate_fp_register() {
+u16 Bytecode_Program::allocate_float_register() {
 	return processor.fregs.add(0.0);
 }
 
 // guaranteed to output a single instruction
-void Bytecode_Program::copy_value_to_fp_register(Value_Location_Info val_loc, u16 dest_reg) {
+void Bytecode_Program::copy_value_to_float_register(Value_Location_Info val_loc, u16 dest_reg) {
     if (val_loc.location_type == Value_Location_Type::FLOATING_POINT_REGISTER) {
 		emit_bytecode_instruction(INSTR_MOVF, dest_reg, val_loc.floating_point_register);
     }
-    else {
-        if (val_loc.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-			if (val_loc.const_id.constant_type == CONSTANT_TYPE_REAL) {
-				emit_bytecode_instruction(INSTR_LOADF, dest_reg, val_loc.const_id.constant_index);
-			}
-			else if (val_loc.const_id.constant_type == CONSTANT_TYPE_BUILTIN) {
-				emit_bytecode_instruction(INSTR_LOAD_BUILTIN, dest_reg, val_loc.const_id.constant_index);
-			}
-			else if (val_loc.const_id.constant_type == CONSTANT_TYPE_INTEGER) {
-				emit_bytecode_instruction(INSTR_LOAD_I_TO_F, dest_reg, val_loc.const_id.constant_index);
-			}
-        }
-        else if (val_loc.location_type == Value_Location_Type::INTEGER_REGISTER) {
-            emit_bytecode_instruction(INSTR_MOV_I_TO_F, dest_reg, val_loc.integer_register);
-        }
+    else if (val_loc.location_type == Value_Location_Type::INTEGER_REGISTER) {
+        emit_bytecode_instruction(INSTR_MOV_I_TO_F, dest_reg, val_loc.integer_register);
     }
 }
 
-u16 Bytecode_Program::get_value_to_fp_register(Value_Location_Info val_info)
+u16 Bytecode_Program::get_value_to_float_register(Value_Location_Info val_info)
 {
     if (val_info.location_type == Value_Location_Type::FLOATING_POINT_REGISTER) {
         return val_info.floating_point_register;
     }
     else {
-        u16 freg = allocate_fp_register();
-        if (val_info.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-			emit_bytecode_instruction(INSTR_LOAD_I_TO_F, freg, val_info.const_id.constant_index);
-        }
-        else if (val_info.location_type == Value_Location_Type::INTEGER_REGISTER) {
+        u16 freg = allocate_float_register();
+        if (val_info.location_type == Value_Location_Type::INTEGER_REGISTER) {
             emit_bytecode_instruction(INSTR_MOV_I_TO_F, freg, val_info.integer_register);
         }
 
@@ -368,17 +346,14 @@ u16 Bytecode_Program::get_value_to_fp_register(Value_Location_Info val_info)
     }
 }
 
-u16 Bytecode_Program::get_value_to_gp_register(Value_Location_Info val_info)
+u16 Bytecode_Program::get_value_to_integer_register(Value_Location_Info val_info)
 {
     if (val_info.location_type == Value_Location_Type::INTEGER_REGISTER) {
         return val_info.integer_register;
     }
     else {
-        u16 reg = allocate_gp_register();
-        if (val_info.location_type == Value_Location_Type::CONSTANT_BLOCK) {
-			emit_bytecode_instruction(INSTR_LOAD_F_TO_I, reg, val_info.const_id.constant_index);
-        }
-        else if (val_info.location_type == Value_Location_Type::FLOATING_POINT_REGISTER) {
+        u16 reg = allocate_integer_register();
+        if (val_info.location_type == Value_Location_Type::FLOATING_POINT_REGISTER) {
             emit_bytecode_instruction(INSTR_MOV_I_TO_F, reg, val_info.floating_point_register);
         }
 
@@ -396,21 +371,21 @@ Value_Location_Info Bytecode_Program::emit_load_constant(Constant_Id const_id)
 
     switch (const_id.constant_type) {
         case CONSTANT_TYPE_INTEGER: {
-                u32 reg = allocate_gp_register();
+                u32 reg = allocate_integer_register();
                 emit_bytecode_instruction(INSTR_LOAD, reg, const_id.constant_index);
                 location.location_type = Value_Location_Type::INTEGER_REGISTER;
                 location.floating_point_register = reg;
                 break;
             }
         case CONSTANT_TYPE_REAL: {
-                u32 freg = allocate_fp_register();
+                u32 freg = allocate_float_register();
                 emit_bytecode_instruction(INSTR_LOADF, freg, const_id.constant_index);
                 location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
                 location.floating_point_register = freg;
                 break;
             }
         case CONSTANT_TYPE_BUILTIN: {
-            u32 freg = allocate_fp_register();
+            u32 freg = allocate_float_register();
             emit_bytecode_instruction(INSTR_LOAD_BUILTIN, freg, const_id.constant_index);
             location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
             location.floating_point_register = freg;

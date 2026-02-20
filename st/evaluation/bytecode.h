@@ -113,7 +113,6 @@ using Func_Id = u16;
 enum Value_Location_Type {
 	INTEGER_REGISTER,
 	FLOATING_POINT_REGISTER,
-	CONSTANT_BLOCK,
 };
 
 struct Value_Location_Info {
@@ -148,7 +147,7 @@ struct Constant_Block {
 	DArray<s64> integer = {};
 	double builtin_variable[BUILTIN_VARIABLE_COUNT] = {};
 	Builtin_Function_List builtin_function = {};
-	
+
 	Constant_Id add_constant(Value value);
 };
 
@@ -212,12 +211,12 @@ struct Bytecode_Program {
 
 	void reset();
 
-	u16 allocate_gp_register();
-	u16 allocate_fp_register();
+	u16 allocate_integer_register();
+	u16 allocate_float_register();
 
-	void copy_value_to_fp_register(Value_Location_Info val_loc, u16 dest_reg);
-	u16 get_value_to_fp_register(Value_Location_Info val_info);
-	u16 get_value_to_gp_register(Value_Location_Info val_info);
+	void copy_value_to_float_register(Value_Location_Info val_loc, u16 dest_reg);
+	u16 get_value_to_float_register(Value_Location_Info val_info);
+	u16 get_value_to_integer_register(Value_Location_Info val_info);
 
 	void emit_bytecode_instruction(Bytecode_Opcode opcode, u16 arg0, u16 arg1);
 
@@ -237,7 +236,7 @@ struct Bytecode_Program {
 	void set_sample_rate(double sample_rate);
 	double get_sample_rate() const;
 	double get_sample_time() const;
-	
+
 	void print_program() const;
 };
 

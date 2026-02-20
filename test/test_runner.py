@@ -49,7 +49,7 @@ def compile_tests():
 
 def run_tests():
     for test in test_programs:
-        result = subprocess.run(str("./" + test), capture_output=True)
+        result = subprocess.run(str("./" + test), check=True)
 
 compile_tests()
 run_tests()

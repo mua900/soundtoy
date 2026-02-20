@@ -1,28 +1,30 @@
 #include <cstring>
+#include <cstdio>
 #include "api.h"
+
+bool test_expression(St_Sampler* sampler, const char* expression);
 
 int main() {
 	St_Sampler* sampler = st_sampler_create(60);
 
-	const char* sin = "sin(t)";
-	if (!st_sampler_set_expression(sampler, sin, strlen(sin))) {
-		return 1;
-	}
-
-	const char* cos = "cos(t)";
-	if (!st_sampler_set_expression(sampler, cos, strlen(cos))) {
-		return 1;
-	}
-
-	const char* abs = "abs(t)";
-	if (!st_sampler_set_expression(sampler, abs, strlen(abs))) {
-		return 1;
-	}
-
-	const char* complex = "abs(sin(2.0*pi*t) + cos(t*t))";
-	if (!st_sampler_set_expression(sampler, complex, strlen(complex))) {
+	if (!test_expression(sampler, "sin(t)")) { return 1; }
+	if (!test_expression(sampler, "abs(t)")) { return 1; }
+	if (!test_expression(sampler, "cos(t)")) { return 1; }
+	if (!test_expression(sampler, "abs(sin(2.0*pi*t) + cos(t*t))")) {
+		const char* error = st_get_last_error();
+		fprintf(stderr, "%s\n", error);
 		return 1;
 	}
 
 	return 0;
+}
+
+bool test_expression(St_Sampler* sampler, const char* expression)
+{
+	bool success = st_sampler_set_expression(sampler, expression, strlen(expression));
+	if (!success) {
+		printf("Failed setting expression %s\n", expression);
+	}
+
+	return success;
 }
