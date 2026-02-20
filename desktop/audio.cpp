@@ -173,8 +173,6 @@ bool ExpressionAudio::set_playback_device(SDL_AudioDeviceID p_device) {
     return true;
 }
 
-// @todo use SDL_PutAudioStreamDataNoCopy instead
-
 static void SDLCALL expression_audio_callback_mono(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
 {
     total_amount /= sizeof(float);
@@ -188,7 +186,7 @@ static void SDLCALL expression_audio_callback_mono(void* userdata, SDL_AudioStre
     {
         st_fill(sampler, sample_buffer.data, sample_buffer.size);
 
-        SDL_PutAudioStreamData(stream, sample_buffer.data, sample_buffer.size);
+        SDL_PutAudioStreamData(stream, sample_buffer.data, sample_buffer.size * sizeof(float));
     }
 
     int remaining = total_amount % sample_buffer.size;
@@ -210,7 +208,9 @@ static void SDLCALL expression_audio_callback_stereo(void* userdata, SDL_AudioSt
     {
         st_fill_interleaved(audio->sampler_left, audio->sampler_right, sample_buffer.data, sample_buffer.size / 2);
 
-        SDL_PutAudioStreamData(stream, sample_buffer.data, sample_buffer.size);
+		// @todo pan
+
+        SDL_PutAudioStreamData(stream, sample_buffer.data, sample_buffer.size * sizeof(float));
     }
 
     int remaining = total_amount % sample_buffer.size;
