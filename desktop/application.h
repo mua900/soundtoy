@@ -24,6 +24,7 @@ struct Assets {
     Font font_small = {};
     Font font_medium = {};
     Font font_large = {};
+    Font font_editor = {};
 
     SDL_Texture* pause_texture = NULL;
     SDL_Texture* resume_texture = NULL;
@@ -180,6 +181,8 @@ private:
     void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
 };
 
+bool load_font(Font* font, String_Builder& path, String font_folder, String font_file, float size);
+
 void render_text_size(SDL_Renderer* renderer, Text text, vec2 where, vec2 absolute_scale = vec2(0, 0));
 void render_text_scale(SDL_Renderer* renderer, Text text, vec2 where, vec2 scale_factor = vec2(0,0));
 
@@ -187,3 +190,4 @@ void draw_arrowhead(SDL_Renderer* renderer, vec2 position, vec2 direction, float
 
 // create a signal from the given sampler
 Signal create_signal(St_Sampler* sampler, float time_start, int sample_count, int sample_rate);
+

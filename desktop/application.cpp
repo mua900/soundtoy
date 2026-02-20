@@ -272,6 +272,13 @@ bool Application::update_channel_count(int channels)
 #define FONT_SIZE_SMALL   18.0
 #define FONT_SIZE_MEDIUM  32.0
 #define FONT_SIZE_LARGE   72.0
+#define FONT_SIZE_EDITOR  28.0
+
+#ifdef _WIN32
+    String path_separator = make_string("\\");
+#else
+    String path_separator = make_string("/");
+#endif
 
 bool Application::load_assets()
 {
@@ -305,14 +312,8 @@ bool Application::load_assets()
 bool Application::st_load_assets(String_Builder& sb) {
     printf("Searching for assets in %s\n", sb.c_string());
 
-#ifdef _WIN32
-    String path_seperator = make_string("\\");
-#else
-    String path_seperator = make_string("/");
-#endif
-
     sb.append(make_string("asset"));
-    sb.append(path_seperator);
+    sb.append(path_separator);
 
     // textures
     {
@@ -340,36 +341,49 @@ bool Application::st_load_assets(String_Builder& sb) {
     }
 
     // font
+
     {
-        const String font_folder = make_string("font");
-        const String font_name = make_string("Fira_Sans");
-        const String font_file = make_string("FiraSans-Regular.ttf");
+        String folder = make_string("font");
+        sb.append(folder);
+        sb.append(path_separator);
 
-        sb.append(font_folder);
-        sb.append(path_seperator);
+        bool small_font = load_font(&m_assets.font_small, sb, make_string("Fira_Sans"), make_string("FiraSans-Regular.ttf"), FONT_SIZE_SMALL);
+        bool medium_font = load_font(&m_assets.font_medium, sb, make_string("Fira_Sans"), make_string("FiraSans-Regular.ttf"), FONT_SIZE_MEDIUM);
+        bool large_font = load_font(&m_assets.font_large, sb, make_string("Fira_Sans"), make_string("FiraSans-Regular.ttf"), FONT_SIZE_LARGE);
+        bool editor_font = load_font(&m_assets.font_editor, sb, make_string("Fira_Code"), make_string("FiraCode-Regular.ttf"), FONT_SIZE_EDITOR);
 
-        sb.append(font_name);
-        sb.append(path_seperator);
+        sb.remove(folder.size + 1);
 
-        sb.append(font_file);
-
+        if (!(small_font && medium_font && large_font))
         {
-            TTF_Font* font_small = TTF_OpenFont(sb.c_string(), FONT_SIZE_SMALL);
-            TTF_Font* font_medium = TTF_OpenFont(sb.c_string(), FONT_SIZE_MEDIUM);
-            TTF_Font* font_large = TTF_OpenFont(sb.c_string(), FONT_SIZE_LARGE);
-            if (!(font_small && font_medium && font_large)) {
-                fprintf(stderr, "Could not load font %s\n", sb.c_string());
-                fprintf(stderr, "%s\n", SDL_GetError());
-                return false;
-            }
-
-            m_assets.font_small = { font_small, FONT_SIZE_SMALL };
-            m_assets.font_medium = { font_medium, FONT_SIZE_MEDIUM };
-            m_assets.font_large = { font_large, FONT_SIZE_LARGE };
+            fprintf(stderr, "Could not load fonts\n");
+            return false;
         }
-
-        sb.remove(font_folder.size + 1 + font_name.size + 1 + font_file.size);
     }
+
+    return true;
+}
+
+bool load_font(Font* font, String_Builder& path, String font_folder, String font_file, float size)
+{
+    path.append(font_folder);
+    path.append(path_separator);
+
+    path.append(font_file);
+
+    TTF_Font* ttf_font = TTF_OpenFont(path.c_string(), size);
+
+    path.remove(font_folder.size + 1 + font_file.size);
+
+    if (!ttf_font) {
+        SCOPE_STRING(font_file, font_name);
+        fprintf(stderr, "Could not load font %s\n", font_name);
+        fprintf(stderr, "%s\n", SDL_GetError());
+        return false;
+    }
+
+    font->font = ttf_font;
+    font->size = size;
 
     return true;
 }
@@ -898,7 +912,7 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
                 if (text_field)
                 {
                     text_field->delete_last();
-                    text_field->update_text(m_window.renderer, m_assets.font_medium, false);
+                    text_field->update_text(m_window.renderer, m_assets.font_editor, false);
                 }
             }
             return true;
