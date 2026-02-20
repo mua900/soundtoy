@@ -342,8 +342,8 @@ bool Application::st_load_assets(String_Builder& sb) {
     // font
     {
         const String font_folder = make_string("font");
-        const String font_name = make_string("Roboto");
-        const String font_file = make_string("Roboto-VariableFont.ttf");
+        const String font_name = make_string("Fira_Sans");
+        const String font_file = make_string("FiraSans-Regular.ttf");
 
         sb.append(font_folder);
         sb.append(path_seperator);
