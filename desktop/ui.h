@@ -53,6 +53,22 @@ struct Font {
     float size = 0;
 };
 
+struct GapBuffer {
+    char* buffer = nullptr;
+    int buffer_size = 0;
+    int length = 0;
+    int gap_index = 0;
+    int end_gap = 0;
+
+    void initialize(int init_buffer_size);
+    void append(String string, int where);
+    void remove(int where, int amount);
+    char get_character(int index);
+    void move_gap(int position);
+    void resize(int size);
+    void get_string(String_Builder& sb);
+};
+
 enum Text_Input_Target : u8 {
     NO_TARGET,
     EXPRESSION_INPUT_LEFT,

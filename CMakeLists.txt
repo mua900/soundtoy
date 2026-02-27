@@ -22,6 +22,7 @@ add_executable(soundtoy
     desktop/audio.h
     desktop/audio.cpp
     desktop/ui.h
+    desktop/ui.cpp
     desktop/spectogram.h
     desktop/spectogram.cpp
 

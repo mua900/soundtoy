@@ -65,29 +65,52 @@ public:
 		return ret_index;
 	}
 
-	bool remove_shift(int index) {
+	void remove_shift(int index) {
 		if (!in_bounds(index)) {
-			return false;
+			panic("Out of bounds array access");
 		}
 
-		for (int i = index; i < m_size; i++) {
+		for (int i = index; i < m_size-1; i++) {
 			m_data[i] = m_data[i+1];
 		}
 
 		m_size -= 1;
-
-		return true;
 	}
 
-	bool remove(int index) {
+	void remove(int index) {
 		if (!in_bounds(index)) {
-			return false;
+			panic("Out of bounds array access");
 		}
 
 		m_size -= 1;
 
 		m_data[index] = m_data[m_size-1];
-		return true;
+	}
+
+	void replace(T elem, int index)
+	{
+		if (!in_bounds(index)) {
+			panic("Out of bounds array access");
+		}
+
+		m_data[index] = elem;
+	}
+
+	void insert(T elem, int index)
+	{
+		if (m_size + 1 >= m_cap)
+		{
+			grow();
+		}
+
+		for (int i = m_size; i > index; i -= 1)
+		{
+			m_data[i] = m_data[i - 1];
+		}
+
+		m_data[index] = elem;
+
+		m_size += 1;
 	}
 
 	int add_unique(T elem) {
