@@ -18,6 +18,7 @@ void st_asin(Value* parameters, Value* results);
 void st_acos(Value* parameters, Value* results);
 void st_exp(Value* parameters, Value* results);
 void st_pow(Value* parameters, Value* results);
+void st_fract(Value* parameters, Value* results);
 
 void call_function(Function func, Value* parameters, Value* results) {
     func.implementation(parameters, results);
@@ -77,6 +78,10 @@ void get_default_builtin_functions(Function* list)
     	st_pow,
     	FunctionSignature(String("pow"), make_array(single_value), make_array(two_values))
     );
+    list[BUILTIN_FUNC_FRACT] = Function(
+    	st_fract,
+    	FunctionSignature(String("fract"), make_array(single_value), make_array(single_value))
+    );
 }
 
 bool is_builtin_function(const Expr_Call* call)
@@ -87,6 +92,10 @@ bool is_builtin_function(const Expr_Call* call)
 bool is_builtin_variable(const Expr_Variable* var)
 {
     return var->var_id < BUILTIN_VARIABLE_COUNT;
+}
+
+double fract(double x) {
+	return x - floor(x);
 }
 
 double get_sign(double x)
@@ -118,3 +127,4 @@ void st_exp(Value* parameters, Value* results) { results[0] = Value(exp(paramete
 void st_smoothstep(Value* parameters, Value* results) { results[0] = Value(smoothstep(parameters[0].real)); }
 void st_clamp(Value* parameters, Value* results) { results[0] = Value(clamp(parameters[0].real, parameters[1].real, parameters[2].real)); }
 void st_pow(Value* parameters, Value* results) { results[0] = Value(pow(parameters[0].real, parameters[1].real)); }
+void st_fract(Value* parameters, Value* results) { results[0] = Value(fract(parameters[0].real)); }

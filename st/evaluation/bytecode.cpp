@@ -33,9 +33,8 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
             auto literal = static_cast<Expr_Literal*>(expr);
 
             Constant_Id const_id = program.constant_block.add_constant(literal->value);
-
-            u16 freg = program.allocate_float_register();
-            program.emit_bytecode_instruction(INSTR_LOADF, freg, const_id.constant_index);
+            Value_Location_Info loaded_location = program.emit_load_constant(const_id);
+            u16 freg = program.get_value_to_float_register(loaded_location);
 
             Value_Location_Info location;
             location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
@@ -374,7 +373,7 @@ Value_Location_Info Bytecode_Program::emit_load_constant(Constant_Id const_id)
                 u32 reg = allocate_integer_register();
                 emit_bytecode_instruction(INSTR_LOAD, reg, const_id.constant_index);
                 location.location_type = Value_Location_Type::INTEGER_REGISTER;
-                location.floating_point_register = reg;
+                location.integer_register = reg;
                 break;
             }
         case CONSTANT_TYPE_REAL: {

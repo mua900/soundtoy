@@ -953,7 +953,10 @@ Function_ID get_function_id(String name)
     else if (string_compare(name, make_string("pow"))) {
     	return BUILTIN_FUNC_POW;
     }
-
+	else if (string_compare(name, make_string("fract"))) {
+		return BUILTIN_FUNC_FRACT;
+	}
+    
     return FUNC_ID_INVALID; // @todo user defined functions
 }
 
