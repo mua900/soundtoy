@@ -4,6 +4,12 @@
 #include "common.h"
 
 
+struct ShortTimeFourierTransform {
+    
+    int window_size;
+    int hop_size;
+};
+
 struct Signal {
     Array<float> samples;
 
@@ -21,3 +27,5 @@ struct Spectogram {
 
 Spectogram calculate_spectogram(Signal signal);
 DArray<Complex> calculate_fourier(Signal signal);
+
+float hann(float x);

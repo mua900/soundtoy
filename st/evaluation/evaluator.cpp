@@ -215,7 +215,7 @@ bool Parser::check_expression_string(String expression_string) {
   }
   else {
     return false;
-  }  
+  }
 }
 
 
@@ -275,7 +275,7 @@ Expr* Parser::parse_ternary_expr() {
 		}
 
 		cursor++;  // :
-		
+
 		Expr* else_branch = parse_expression();
 		if (!(then_branch && else_branch)) {
 			free_tree(expr);
@@ -295,7 +295,7 @@ Expr* Parser::parse_equality_expr()
 {
     Expr* left = parse_comparison_expr();
     Token_Type type = tokens.get(cursor).type;
-    while (type == TOKEN_TYPE_PLUS || type == TOKEN_TYPE_MINUS)
+    while (type == TOKEN_TYPE_EQUALS_EQUALS || type == TOKEN_TYPE_EXCLAMATION_EQUALS)
     {
         cursor++;
 
@@ -320,7 +320,7 @@ Expr* Parser::parse_comparison_expr()
 {
     Expr* left = parse_arithmetic_expr();
     Token_Type type = tokens.get(cursor).type;
-    while (type == TOKEN_TYPE_PLUS || type == TOKEN_TYPE_MINUS)
+    while (type == TOKEN_TYPE_GREATER || type == TOKEN_TYPE_LESS)
     {
         cursor++;
 
@@ -398,7 +398,7 @@ Expr* Parser::parse_mod_expr() {
     while (type == TOKEN_TYPE_PERCENT)
 	{
 		cursor++;
-		
+
 		Expr* right = parse_unary_expr();
 		if (!right) {
 			free_tree(left);
@@ -413,7 +413,7 @@ Expr* Parser::parse_mod_expr() {
 
 		type = tokens.get(cursor).type;
 	}
-	
+
 	return left;
 }
 
@@ -421,11 +421,11 @@ Expr* Parser::parse_unary_expr()
 {
     Token_Type type = tokens.get(cursor).type;
     Expr* operand = NULL;
-    while (type == TOKEN_TYPE_MINUS || type == TOKEN_TYPE_PLUS)
+    while (type == TOKEN_TYPE_MINUS || type == TOKEN_TYPE_EXCLAMATION)
     {
         cursor++;
 
-        operand = parse_expression();
+        operand = parse_unary_expr();
         if (!operand)
         {
             return NULL;
@@ -548,7 +548,7 @@ Expr* Parser::parse_primary_expr()
 
                         return input_sample;
                     }
-                    
+
                     default: panic("Invalid variable id");  // bug
                 }
             }
@@ -557,19 +557,10 @@ Expr* Parser::parse_primary_expr()
             }
             else {
                 Find_Result find = find_symbol(symbols, token.token_string);
-                String name = token.token_string;
-                bool found = false;
-                int index = 0;
-                for (int i = 0; i < symbols.size; i++) {
-                    if (string_compare(name, symbols.get(i).name)) {
-                        found = true;
-                        index = i;
-                    }
-                }
 
-                if (found) {
-                    Variable var = symbols.get(index);
-                    return new Expr_Variable(var.name, index, var.type);
+                if (find.found) {
+                    Variable var = symbols.get(find.index);
+                    return new Expr_Variable(var.name, find.index, var.type);
                 }
                 else {
                     parser_error = Error(make_string("Undefined variable"), token.offset);
@@ -765,7 +756,7 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
             Eval result = evaluate_expression(ternary->condition);
 
             if (!result.success) return fail;
-            
+
             if (result.value == 0.0) {
                 return evaluate_expression(ternary->else_);
             }
@@ -783,7 +774,7 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
 }
 
 void print_expr(const Expr* expr, int indent);
-void print_expression(const Expr* expr){ 
+void print_expression(const Expr* expr){
   print_expr(expr, 0);
 }
 
@@ -970,7 +961,7 @@ void free_tree(Expr* node) {
 	if (!node) {
 		return;
 	}
-	
+
 	if (node->type == Expr_Type::Binary) {
 		free_tree(static_cast<Expr_Binary*>(node)->left);
 		free_tree(static_cast<Expr_Binary*>(node)->right);
@@ -987,7 +978,19 @@ void free_tree(Expr* node) {
 			free_tree(arg);
 		}
 	}
-	
+    else if (node->type == Expr_Type::Ternary) {
+        auto ternary = static_cast<Expr_Ternary*>(node);
+        free_tree(ternary->condition);
+        free_tree(ternary->then_);
+        free_tree(ternary->else_);
+    }
+    else if (node->type == Expr_Type::Tuple) {
+        auto tuple = static_cast<Expr_Tuple*>(node);
+        for (auto expr : tuple->expressions) {
+            free_tree(expr);
+        }
+    }
+
 	delete node;
 }
 
@@ -1013,19 +1016,27 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
         case Expr_Type::Grouping:
 		{
 			auto group = static_cast<Expr_Grouping*>(expr);
-			return collapse_expr_real(group->expr, builtin_functions, error_string);
+			Expr* expr = group->expr;
+			delete group;
+			return collapse_expr_real(expr, builtin_functions, error_string);
 		}
         case Expr_Type::Binary:
 		{
 			auto binary = static_cast<Expr_Binary*>(expr);
 
+            ASSERT(binary->left || binary->right);
+
 			if (!binary->left)
 			{
-				return collapse_expr_real(binary->right, builtin_functions, error_string);
+                Expr* right = binary->right;
+                delete binary;
+				return collapse_expr_real(right, builtin_functions, error_string);
 			}
 			if (!binary->right)
 			{
-				return collapse_expr_real(binary->left, builtin_functions, error_string);
+                Expr* left = binary->left;
+                delete binary;
+				return collapse_expr_real(left, builtin_functions, error_string);
 			}
 
 			auto left = collapse_expr_real(binary->left, builtin_functions, error_string);
@@ -1039,10 +1050,14 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 				Value left_value = static_cast<Expr_Literal*>(left)->value;
 				Value right_value = static_cast<Expr_Literal*>(right)->value;
 
+                Op_Binary operation = binary->op;
+
+                free_tree(binary);
+
 				double left_numeric = (left_value.type == Var_Type_Integer) ? left_value.integer : left_value.real;
 				double right_numeric = (right_value.type == Var_Type_Integer) ? right_value.integer : right_value.real;
 
-				switch (binary->op)
+                switch (operation)
 				{
 				case Binop_Unknown:
 					*error_string = make_string("Unknown binary operator");
@@ -1099,10 +1114,10 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 				}
 
 				// @todo proper typechecking for arguments
-				
+
 				int arg_count = call->arguments.size;
 				int ret_count = builtin.signature.return_types.size;
-				
+
 				if (arg_count == 1 && computable_now) {
 					call->arguments.data[0] = collapse_expr_real(call->arguments.data[0], builtin_functions, error_string);
 
@@ -1195,8 +1210,12 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 
 			if (unary->operand->type == Expr_Type::Literal)
 			{
+                Op_Unary unop = unary->op;
 				auto operand = static_cast<Expr_Literal*>(unary->operand);
-				switch (unary->op)
+
+                delete unary;
+
+				switch (unop)
 				{
                 case Unop_Negate:
 					{
@@ -1271,7 +1290,7 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			}
 
 			ternary->condition = cond;
-		
+
 			auto then_ = collapse_expr_real(ternary->then_, builtin_functions, error_string);
 			auto else_ = collapse_expr_real(ternary->else_, builtin_functions, error_string);
 
@@ -1289,6 +1308,11 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
             auto tuple = static_cast<Expr_Tuple*>(expr);
             for (auto& e : tuple->expressions) {
                 e = collapse_expr_real(e, builtin_functions, error_string);
+                if (!e)
+                {
+                    free_tree(tuple);
+                    return NULL;
+                }
             }
             return tuple;
         }

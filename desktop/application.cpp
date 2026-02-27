@@ -24,7 +24,7 @@ bool Application::initialize()
     SDL_SetAppMetadata(soundtoy_name, soundtoy_version, soundtoy_identifier);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
-        std::cerr << "Failed to init SDL\n";
+        fprintf(stderr, "Failed to init SDL\n");
         return false;
     }
 
@@ -36,7 +36,7 @@ bool Application::initialize()
         SDL_Renderer* renderer;
         SDL_WindowFlags flags = SDL_WINDOW_RESIZABLE;
         if (!SDL_CreateWindowAndRenderer("soundtoy", 1440, 810, flags, &window, &renderer)) {
-            std::cerr << "Failed to create window and renderer\n";
+            fprintf(stderr, "Failed to create window and renderer\n");
             return false;
         }
 
@@ -75,13 +75,13 @@ bool Application::initialize()
     {
         if (!TTF_Init())
         {
-            std::cerr << "Could not initialize TTF\n";
+            fprintf(stderr, "Could not initialize TTF\n");
             return false;
         }
     }
 
     if (!load_assets()) {
-        std::cerr << "Could not load assets\n";
+        fprintf(stderr, "Could not load assets\n");
         return false;
     }
 
@@ -89,7 +89,7 @@ bool Application::initialize()
 
     {
         if (!st_initialize()) {
-            std::cerr << "Could not initialize soundtoy library\n";
+            fprintf(stderr, "Could not initialize soundtoy library\n");
             return false;
         }
 
@@ -133,12 +133,12 @@ bool Application::initialize()
     }
 
     if (!m_audio.expr_audio.initialize(m_buffers.audio_samples, initial_sample_rate, 1, m_samplers.audio_left, m_samplers.audio_right)) {
-        std::cerr << "Failed to initialize expression audio\n";
+        fprintf(stderr, "Failed to initialize expression audio\n");
         return false;
     }
 
     if (!m_audio.audio_player.initialize(DESIRED_AUDIO_SAMPLE_RATE, 2, 0.5)) {
-        std::cerr << "Failed to initialize audio player: " << SDL_GetError() << "\n";
+        fprintf(stderr, "Failed to initialize audio player: %s\n", SDL_GetError());
         return false;
     }
 

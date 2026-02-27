@@ -10,6 +10,7 @@ Spectogram calculate_spectogram(Signal signal)
     int freq_count;
 
 
+
     return Spectogram(Array<float> (samples.data(), samples.size()));
 }
 
@@ -20,4 +21,9 @@ DArray<Complex> calculate_fourier(Signal signal)
     dft(signal.samples.data, frequencies.data(), signal.samples.size);
 
     return frequencies;
+}
+
+float hann(float x)
+{
+    return 0.5 - 0.5 * cosf(x*CONSTANT_TAU);
 }

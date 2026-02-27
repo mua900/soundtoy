@@ -5,7 +5,7 @@
 #include "template.h"
 
 enum Op_Unary {
-    Unop_Negate, Unop_Not
+    Unop_Negate, Unop_Not // @todo also plus maybe?
 };
 
 // @todo bitwise operators
@@ -116,6 +116,7 @@ struct Expr_Unary : Expr {
     Expr_Unary(Op_Unary p_op, Expr* p_operand) : op(p_op), operand(p_operand)
 	{
         type = Expr_Type::Unary;
+        flags = p_operand->flags;
     }
 };
 
@@ -127,6 +128,8 @@ struct Expr_Binary : Expr {
     Expr_Binary(Expr* l, Expr* r, Op_Binary p_op) : left(l), right(r), op(p_op)
 	{
         type = Expr_Type::Binary;
+        flags |= l->flags;
+        flags |= r->flags;
     }
 };
 
@@ -141,6 +144,7 @@ struct Expr_Grouping : Expr {
     Expr_Grouping(Expr* p_expr) : expr(p_expr)
 	{
         type = Expr_Type::Grouping;
+        flags = p_expr->flags;
     }
 };
 
@@ -152,6 +156,10 @@ struct Expr_Call : Expr {
     Expr_Call(String f_name, Array<Expr*> args, int func_id) : function_name(f_name), arguments(args), fn_id(func_id)
 	{
         type = Expr_Type::Call;
+        for (const auto arg : args)
+        {
+            flags |= arg->flags;
+        }
     }
 };
 
@@ -174,15 +182,22 @@ struct Expr_Ternary : Expr {
 	Expr_Ternary(Expr* condition, Expr* then_, Expr* else_) : condition(condition), then_(then_), else_(else_)
 	{
 		type = Expr_Type::Ternary;
+		flags |= condition->flags;
+		flags |= then_->flags;
+		flags |= else_->flags;
 	}
 };
 
 struct Expr_Tuple : Expr {
 	Array<Expr*> expressions;
-	
+
 	Expr_Tuple(Array<Expr*> exprs)
 		: expressions(exprs)
 	{
 		type = Expr_Type::Tuple;
+		for (const auto expr : expressions)
+		{
+		  flags |= expr->flags;
+		}
 	}
 };
