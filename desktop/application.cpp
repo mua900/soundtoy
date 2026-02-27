@@ -1413,9 +1413,9 @@ bool Application::set_eval_string_right(String eval_string)
 }
 
 // @todo we can do cooler things with rendering waveforms or audio data
+// @todo simplify all of these below and stop using static variables
 
 void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color color) {
-    // @todo simplify
 
     if (!(m_audio.audio_data.samples && m_audio.audio_data.is_in_desired_spec())) {
         return;

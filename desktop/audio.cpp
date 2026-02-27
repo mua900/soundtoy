@@ -256,8 +256,8 @@ void AudioPlayer::put_audio_data()
 
     if (playback_position >= this->audio_data->frame_count)
     {
-        // we are done playing the track
         playback_position = 0;
+        pause();
     }
 }
 

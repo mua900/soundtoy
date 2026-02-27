@@ -40,11 +40,11 @@ def compile_tests():
         command_line.append("-o")
         command_line.append(out_name)
 
-        print("Compiling {test}. cmd: ", command_line)
+        print(f"Compiling {test}. cmd: {command_line}")
 
         compile_result = subprocess.run(command_line)
         if compile_result.returncode != 0:
-            print("Error trying to compile {test}")
+            print(f"Error trying to compile {test}")
             exit()
 
 def run_tests():

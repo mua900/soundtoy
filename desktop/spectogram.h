@@ -3,13 +3,6 @@
 #include "template.h"
 #include "common.h"
 
-
-struct ShortTimeFourierTransform {
-    
-    int window_size;
-    int hop_size;
-};
-
 struct Signal {
     Array<float> samples;
 
@@ -17,6 +10,13 @@ struct Signal {
     Signal(float* p_samples, int p_sample_count)
         : samples(p_samples, p_sample_count)
     {}
+};
+
+// @todo
+struct ShortTimeFourierTransform {
+	Signal signal;
+    int window_size;
+    int hop_size;
 };
 
 struct Spectogram {
