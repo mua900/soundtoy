@@ -133,7 +133,6 @@ private:
     void draw_common_ui();
     void draw_sound_mode_ui();
     void draw_graph_mode_ui();
-    void draw_imgui();
 
     bool mouse_input();
     bool mouse_input_common();

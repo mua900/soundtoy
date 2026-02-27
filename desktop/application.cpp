@@ -4,12 +4,6 @@
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
-/*
-#include <imgui.h>
-#include <imgui_impl_sdl3.h>
-#include <imgui_impl_sdlrenderer3.h>
-*/
-
 static const char* org_name = "flying-carpet";
 static const char* soundtoy_identifier = "flying-carpet.soundtoy";
 static const char* soundtoy_name = "soundtoy";
@@ -41,31 +35,6 @@ bool Application::initialize()
         }
 
         m_window = { window, renderer };
-
-        // setup imgui
-        /*
-        {
-            IMGUI_CHECKVERSION();
-            ImGui::CreateContext();
-
-            ImGuiIO& imgui_io = ImGui::GetIO();
-            imgui_io.IniFilename = nullptr;
-            imgui_io.LogFilename = nullptr;
-            imgui_io.IniSavingRate = 0;
-
-            imgui_io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-
-            ImGui::StyleColorsDark();
-            //ImGui::StyleColorsLight();
-
-            ImGuiStyle& style = ImGui::GetStyle();
-            style.ScaleAllSizes(scale);
-            style.FontScaleDpi = scale;
-
-            ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
-            ImGui_ImplSDLRenderer3_Init(renderer);
-        }
-        */
     }
 
     // accept drop events
@@ -253,12 +222,6 @@ bool Application::gen_static_text(Color color)
     return true;
 }
 
-void Application::draw_imgui() {
-    int window_x, window_y;
-    SDL_GetWindowSize(m_window.window, &window_x, &window_y);
-    vec2 window_size = vec2(window_x, window_y);
-}
-
 bool Application::update_channel_count(int channels)
 {
     bool success = m_audio.expr_audio.reinitialize(m_audio.expr_audio.get_sample_rate(), channels);
@@ -393,8 +356,6 @@ void Application::handle_events()
     SDL_Event e = {};
     while (SDL_PollEvent(&e))
     {
-        // ImGui_ImplSDL3_ProcessEvent(&e);
-
         switch (e.type)
         {
             case SDL_EVENT_QUIT:
@@ -452,7 +413,7 @@ void Application::handle_events()
                 auto text_field = m_ui.get_selected_text_field();
                 if (text_field)
                 {
-                    text_field->m_text.append(input_text);
+                    text_field->append_string(input_text);
                     update_input_string();
                 }
                 break;
@@ -584,12 +545,6 @@ void Application::cleanup()
     st_sampler_destroy(m_samplers.waveform_left);
     st_sampler_destroy(m_samplers.waveform_right);
     m_audio.expr_audio.cleanup();
-
-    /*
-    ImGui_ImplSDLRenderer3_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
-    ImGui::DestroyContext();
-    */
 
     SDL_Quit();
 }
@@ -760,7 +715,7 @@ void Application::draw_common_ui() {
         // @todo split this into invalid for left and right
         if (m_events[EVENT_INVALID_EXPRESSION].active)
         {
-            auto tf_area = m_ui.expression_input_left.m_area;
+            auto tf_area = m_ui.expression_input_left.area;
             render_text_size(m_window.renderer, m_rendered_text.get(TEXT_INVALID_EXPRESSION),
                     vec2(tf_area.x + tf_area.w/2, tf_area.y + tf_area.h), text_scale);
         }
@@ -793,7 +748,7 @@ void Application::render_slider(Rectangle area, vec2 knob_scale, float value, Co
 
 void Application::render_text_field(const Text_Field& text_field)
 {
-    SDL_FRect tf_area = { text_field.m_area.x, text_field.m_area.y, text_field.m_area.w, text_field.m_area.h };
+    SDL_FRect tf_area = { text_field.area.x, text_field.area.y, text_field.area.w, text_field.area.h };
     SDL_RenderFillRect(m_window.renderer, &tf_area);
 
     SDL_Texture* text_texture = text_field.m_texture;
@@ -1159,9 +1114,9 @@ bool Application::mouse_input_sound_mode()
         }
     }
 
-    if (m_ui.expression_input_left.m_area.contains(m_mouse.pos))
+    if (m_ui.expression_input_left.area.contains(m_mouse.pos))
     {
-      const SDL_Rect area = {(int)m_ui.expression_input_left.m_area.x, (int)m_ui.expression_input_left.m_area.y, (int)m_ui.expression_input_left.m_area.w, (int)m_ui.expression_input_left.m_area.h};
+        const SDL_Rect area = {(int)m_ui.expression_input_left.area.x, (int)m_ui.expression_input_left.area.y, (int)m_ui.expression_input_left.area.w, (int)m_ui.expression_input_left.area.h};
         SDL_SetTextInputArea(m_window.window, &area, m_ui.expression_input_left.m_cursor_pixel);
 
         toggle_text_input();
@@ -1174,9 +1129,9 @@ bool Application::mouse_input_sound_mode()
 
     if (m_audio.expr_audio.get_channel_count() == 2)
     {
-        if (m_ui.expression_input_right.m_area.contains(m_mouse.pos))
+        if (m_ui.expression_input_right.area.contains(m_mouse.pos))
         {
-            const SDL_Rect area = {(int)m_ui.expression_input_right.m_area.x, (int)m_ui.expression_input_right.m_area.y, (int)m_ui.expression_input_right.m_area.w, (int)m_ui.expression_input_right.m_area.h};
+            const SDL_Rect area = {(int)m_ui.expression_input_right.area.x, (int)m_ui.expression_input_right.area.y, (int)m_ui.expression_input_right.area.w, (int)m_ui.expression_input_right.area.h};
             SDL_SetTextInputArea(m_window.window, &area, m_ui.expression_input_right.m_cursor_pixel);
 
             toggle_text_input();
@@ -1248,22 +1203,22 @@ void Application::update_ui_state(vec2 window_size)
 
     if (m_audio.expr_audio.get_channel_count() == 1)
     {
-        m_ui.expression_input_left.m_area.w = window_size.x * (1.0 / 2.0);
-        m_ui.expression_input_left.m_area.h = window_size.y * (1.0 / 5.0);
-        m_ui.expression_input_left.m_area.x = window_size.x / 2 - m_ui.expression_input_left.m_area.w / 2;
-        m_ui.expression_input_left.m_area.y = window_size.y / 2 + m_ui.expression_input_left.m_area.h;
+        m_ui.expression_input_left.area.w = window_size.x * (1.0 / 2.0);
+        m_ui.expression_input_left.area.h = window_size.y * (1.0 / 5.0);
+        m_ui.expression_input_left.area.x = window_size.x / 2 - m_ui.expression_input_left.area.w / 2;
+        m_ui.expression_input_left.area.y = window_size.y / 2 + m_ui.expression_input_left.area.h;
     }
     else if (m_audio.expr_audio.get_channel_count() == 2)
     {
-        m_ui.expression_input_left.m_area.w = window_size.x * (1.0 / 3.0);
-        m_ui.expression_input_left.m_area.h = window_size.y * (1.0 / 5.0);
-        m_ui.expression_input_left.m_area.x = window_size.x * (1.0 / 9.0);
-        m_ui.expression_input_left.m_area.y = window_size.y / 2 + m_ui.expression_input_left.m_area.h;
+        m_ui.expression_input_left.area.w = window_size.x * (1.0 / 3.0);
+        m_ui.expression_input_left.area.h = window_size.y * (1.0 / 5.0);
+        m_ui.expression_input_left.area.x = window_size.x * (1.0 / 9.0);
+        m_ui.expression_input_left.area.y = window_size.y / 2 + m_ui.expression_input_left.area.h;
 
-        m_ui.expression_input_right.m_area.w = window_size.x * (1.0 / 3.0);
-        m_ui.expression_input_right.m_area.h = window_size.y * (1.0 / 5.0);
-        m_ui.expression_input_right.m_area.x = window_size.x * (5.0 / 9.0);
-        m_ui.expression_input_right.m_area.y = window_size.y / 2 + m_ui.expression_input_right.m_area.h;
+        m_ui.expression_input_right.area.w = window_size.x * (1.0 / 3.0);
+        m_ui.expression_input_right.area.h = window_size.y * (1.0 / 5.0);
+        m_ui.expression_input_right.area.x = window_size.x * (5.0 / 9.0);
+        m_ui.expression_input_right.area.y = window_size.y / 2 + m_ui.expression_input_right.area.h;
     }
 
     m_ui.channel_count.set_area(vec2(window_size.x / 2,
@@ -1304,8 +1259,6 @@ bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, Font font, Co
         m_texture = NULL;
         return true;
     }
-
-    Rectangle area = m_area;
 
     int measure_pixels = 0;
     size_t measure_characters = 0;

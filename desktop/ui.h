@@ -60,6 +60,10 @@ struct GapBuffer {
     int gap_index = 0;
     int end_gap = 0;
 
+    GapBuffer() {
+        initialize(256);
+    }
+
     void initialize(int init_buffer_size);
     void append(String string, int where);
     void remove(int where, int amount);
@@ -77,7 +81,8 @@ enum Text_Input_Target : u8 {
 
 struct Text_Field
 {
-    Rectangle m_area = {};
+    Rectangle area = {};
+    GapBuffer m_buffer = {};
     String_Builder m_text = {};
     float m_font_size = 0.0;
     int m_cursor_character = 0;
@@ -91,12 +96,13 @@ struct Text_Field
 
     String get_string()
     {
+        m_buffer.get_string(m_text);
         return m_text.to_string();
     }
 
     void append_string(String s)
     {
-        m_text.append(s);
+        m_buffer.append(s, m_buffer.length);
     }
 
     bool update_text(SDL_Renderer* renderer, Font font, bool wrapped)
@@ -107,12 +113,15 @@ struct Text_Field
 
     void delete_text()
     {
-        m_text.remove_slice(m_selection_start, m_selection_end);
+        if (m_selection_end < m_selection_start)
+            return;
+        int amount = m_selection_end - m_selection_start;
+        m_buffer.remove(m_selection_start, amount);
     }
 
     void delete_last()
     {
-        m_text.remove(1);
+        m_buffer.remove(m_buffer.length - 1, 1);
     }
 
 private:
