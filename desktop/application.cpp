@@ -1295,17 +1295,16 @@ bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, Font font, Co
         return false;
     }
 
-    float texture_width;
-    float texture_height;
-    SDL_GetTextureSize(texture, &texture_width, &texture_height);
-
-    int line_skip = TTF_GetFontLineSkip(font.font);
-
-    line_count = (wrapped) ? MAX(1, (int)(texture_height / line_skip)) : (1);
+    float texture_width, texture_height;
+    SDL_GetTextureSize(m_texture, &texture_width, &texture_height);
 
     SDL_DestroyTexture(m_texture);  // old texture
 
+    int line_skip = TTF_GetFontLineSkip(font.font);
+    line_count = (wrapped) ? MAX(1, (int)(texture_height / line_skip)) : (1);
+
     // calculate cursor position
+    int cursor_line = 0;
     int cursor_pixel_x = 0;
     size_t cursor_character = 0;
 
@@ -1315,14 +1314,17 @@ bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, Font font, Co
         TTF_MeasureString(font.font, str.data + cursor_character, m_selection_start - cursor_character, area.w, &cursor_pixel_x, &cursor_character_this_line);
 
         cursor_character += cursor_character_this_line;
+
+        cursor_line += 1;
     }
 
-    int cursor_pixel_y = (line_count - 1) * line_skip;
+    int cursor_pixel_y = (cursor_line - 1) * line_skip;
 
     m_texture = texture;
     m_line_count = line_count;
     m_cursor_pixel_x = cursor_pixel_x;
     m_cursor_pixel_y = cursor_pixel_y;
+    m_cursor_line = cursor_line;
     m_cursor_character = cursor_character;
 
     return true;
