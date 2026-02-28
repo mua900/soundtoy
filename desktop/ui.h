@@ -84,14 +84,16 @@ struct Text_Field
     Rectangle area = {};
     GapBuffer m_buffer = {};
     String_Builder m_text = {};
-    float m_font_size = 0.0;
-    int m_cursor_character = 0;
-    int m_cursor_pixel = 0;
+    size_t m_cursor_character = 0;
+    int m_cursor_pixel_x = 0;
+    int m_cursor_pixel_y = 0;
+    int m_cursor_line = 0;
     int m_line_count = 0;
 
     int m_selection_start = 0;
     int m_selection_end = 0;
 
+    float m_font_size = 0.0;
     SDL_Texture* m_texture = nullptr;  // cached texture the text is rendered on, updated every text input event
 
     String get_string()
@@ -102,7 +104,18 @@ struct Text_Field
 
     void append_string(String s)
     {
-        m_buffer.append(s, m_buffer.length);
+        if (m_selection_start != m_selection_end)
+        {
+            m_buffer.remove(m_selection_start, m_selection_end - m_selection_start);
+            m_buffer.append(s, m_selection_start);
+        }
+        else
+        {
+            m_buffer.append(s, m_buffer.length);
+        }
+
+        m_selection_start = m_buffer.length;
+        m_selection_end = m_buffer.length;
     }
 
     bool update_text(SDL_Renderer* renderer, Font font, bool wrapped)
@@ -122,6 +135,12 @@ struct Text_Field
     void delete_last()
     {
         m_buffer.remove(m_buffer.length - 1, 1);
+    }
+
+    void set_text_input_area(SDL_Window* window, int line_skip)
+    {
+        const SDL_Rect area = { area.x, area.y + m_cursor_line * line_skip, area.w, line_skip};
+        SDL_SetTextInputArea(window, &area, m_cursor_pixel_x);
     }
 
 private:
