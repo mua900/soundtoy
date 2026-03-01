@@ -769,8 +769,12 @@ void Application::render_text_field(const Text_Field& text_field)
 
         SDL_FRect cursor = (SDL_FRect){ text_field.area.x + text_field.m_cursor_pixel_x,
                                         text_field.area.y + text_field.m_cursor_pixel_y,
-                                        font_size, font_size };
-        SDL_RenderRect(m_window.renderer, &cursor);
+                                        text_field.area.w / 100, font_size };
+
+        if (doing_text_input)
+        {
+            SDL_RenderFillRect(m_window.renderer, &cursor);
+        }
     }
 }
 
@@ -874,7 +878,7 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
                 if (text_field)
                 {
                     text_field->delete_last();
-                    text_field->update_text(m_window.renderer, m_assets.font_editor, false);
+                    update_input_string();
                 }
             }
             return true;
@@ -1021,7 +1025,6 @@ bool Application::mouse_input_sound_mode()
         m_rendered_text.data[TEXT_VOLUME_VALUE].clear();
         m_rendered_text.data[TEXT_VOLUME_VALUE] = create_text(make_string(buffer), m_assets.font_large, Color(0x54, 0x22, 0x77, 0xff));
 
-        printf("%f\n", m_audio.expr_audio.get_volume());
         return true;
     }
 
@@ -1039,7 +1042,6 @@ bool Application::mouse_input_sound_mode()
         m_rendered_text.data[TEXT_PAN_VALUE].clear();
         m_rendered_text.data[TEXT_PAN_VALUE] = create_text(make_string(buffer), m_assets.font_large, Color(0x55, 0x22, 0x88, 0xff));
 
-        printf("%s\n", buffer);
         return true;
     }
 
@@ -1123,13 +1125,52 @@ bool Application::mouse_input_sound_mode()
 
     if (m_ui.expression_input_left.area.contains(m_mouse.pos))
     {
-        int line_skip = TTF_GetFontLineSkip(m_assets.font_medium.font);
+        int line_skip = TTF_GetFontLineSkip(m_assets.font_editor.font);
         m_ui.expression_input_left.set_text_input_area(m_window.window, line_skip);
         toggle_text_input();
         m_ui.text_input_target = EXPRESSION_INPUT_LEFT;
 
-        vec2 relative = m_mouse.pos - vec2(m_ui.expression_input_left.area.x, m_ui.expression_input_left.area.y);
-        // int character = TTF_MeasureString();
+        // recalculate cursor position
+        {
+            vec2 relative = m_mouse.pos - vec2(m_ui.expression_input_left.area.x, m_ui.expression_input_left.area.y);
+
+            String string = m_ui.expression_input_left.get_string();
+            Rectangle area = m_ui.expression_input_left.area;
+
+            int line_count = m_ui.expression_input_left.m_line_count;
+
+            // new values
+            int cursor_line = relative.y / line_skip;
+
+            if (cursor_line >= line_count)
+            {
+                return true;
+            }
+
+            size_t cursor_character = 0;
+            int pixel_x = 0;
+            int pixel_y = relative.y - fmodf(relative.y, line_skip);
+
+            // calculate what the lines above us add up to in character count
+            // @todo which can maybe cached
+            for (int i = 0; i < cursor_line; i++)
+            {
+                size_t cursor_character_this_line = 0;
+
+                TTF_MeasureString(m_assets.font_editor.font, string.data + cursor_character, string.size - cursor_character, area.w, nullptr, &cursor_character_this_line);
+
+                cursor_character += cursor_character_this_line;
+            }
+
+            TTF_MeasureString(m_assets.font_editor.font, string.data + cursor_character, string.size - cursor_character, relative.x, &pixel_x, &cursor_character);
+
+            printf("Cursor character : %d\n", cursor_character);
+
+            m_ui.expression_input_left.m_cursor_line = cursor_line;
+            m_ui.expression_input_left.m_cursor_character = cursor_character;
+            m_ui.expression_input_left.m_cursor_pixel_x = pixel_x;
+            m_ui.expression_input_left.m_cursor_pixel_y = pixel_y;
+        }
 
         return true;
     }
@@ -1138,7 +1179,7 @@ bool Application::mouse_input_sound_mode()
     {
         if (m_ui.expression_input_right.area.contains(m_mouse.pos))
         {
-            int line_skip = TTF_GetFontLineSkip(m_assets.font_medium.font);
+            int line_skip = TTF_GetFontLineSkip(m_assets.font_editor.font);
             m_ui.expression_input_right.set_text_input_area(m_window.window, line_skip);
 
             toggle_text_input();
@@ -1259,19 +1300,14 @@ Text_Field* Ui_State::get_selected_text_field()
 
 bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, Font font, Color color, bool wrapped)
 {
+    SDL_DestroyTexture(m_texture);  // old texture
+    m_texture = nullptr;
+
     String str = get_string();
     if (str.size == 0)
     {
-        SDL_DestroyTexture(m_texture);
-        m_texture = NULL;
         return true;
     }
-
-    int measure_pixels = 0;
-    size_t measure_characters = 0;
-    TTF_MeasureString(font.font, str.data, str.size, area.w, &measure_pixels, &measure_characters);
-
-    int line_count = 0;
 
     const SDL_Color text_color = {color.r, color.g, color.b, color.a};
     SDL_Surface* text_surface;
@@ -1296,38 +1332,47 @@ bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, Font font, Co
     }
 
     float texture_width, texture_height;
-    SDL_GetTextureSize(m_texture, &texture_width, &texture_height);
+    SDL_GetTextureSize(texture, &texture_width, &texture_height);
 
-    SDL_DestroyTexture(m_texture);  // old texture
+    calculate_cursor_position(str, font, texture_height, wrapped);
 
+    m_texture = texture;
+    m_font_size = font.size;
+
+    return true;
+}
+
+void Text_Field::calculate_cursor_position(String string, Font font, float texture_height, bool wrapped)
+{
     int line_skip = TTF_GetFontLineSkip(font.font);
-    line_count = (wrapped) ? MAX(1, (int)(texture_height / line_skip)) : (1);
+    int line_count = (wrapped) ? MAX(1, (int)(texture_height / line_skip)) : (1);
 
     // calculate cursor position
     int cursor_line = 0;
     int cursor_pixel_x = 0;
     size_t cursor_character = 0;
 
+    // @todo this might not be correct.
     while (cursor_character < m_selection_start)
     {
         size_t cursor_character_this_line = 0;
-        TTF_MeasureString(font.font, str.data + cursor_character, m_selection_start - cursor_character, area.w, &cursor_pixel_x, &cursor_character_this_line);
+        TTF_MeasureString(font.font, string.data + cursor_character, m_selection_start - cursor_character, area.w, &cursor_pixel_x, &cursor_character_this_line);
 
         cursor_character += cursor_character_this_line;
 
         cursor_line += 1;
     }
 
-    int cursor_pixel_y = (cursor_line - 1) * line_skip;
+    if (cursor_line)
+        cursor_line -= 1;  // 0 based indexing instead of 1 based indexing
 
-    m_texture = texture;
+    int cursor_pixel_y = cursor_line * line_skip;
+
     m_line_count = line_count;
     m_cursor_pixel_x = cursor_pixel_x;
     m_cursor_pixel_y = cursor_pixel_y;
     m_cursor_line = cursor_line;
     m_cursor_character = cursor_character;
-
-    return true;
 }
 
 bool Application::update_input_string()
@@ -1337,7 +1382,7 @@ bool Application::update_input_string()
     {
         return false;
     }
-    return text_field->update_text(m_window.renderer, m_assets.font_medium,
+    return text_field->update_text(m_window.renderer, m_assets.font_editor,
                                    (m_ui.text_input_target == EXPRESSION_INPUT_LEFT) || (m_ui.text_input_target == EXPRESSION_INPUT_RIGHT));
 }
 
@@ -1520,7 +1565,6 @@ void Application::update_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_
         sample_buffer[i].y = middle_y - (sample * half_h);
     }
 }
-
 
 bool Application::load_audio_file(String path) {
     SCOPE_STRING(path, path_c_str);

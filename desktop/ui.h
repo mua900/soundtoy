@@ -120,7 +120,6 @@ struct Text_Field
 
     bool update_text(SDL_Renderer* renderer, Font font, bool wrapped)
     {
-        m_font_size = font.size;
         return render_text_field_texture(renderer, font, Color { 0x11, 0x22, 0x11, 0xff }, wrapped);
     }
 
@@ -130,11 +129,19 @@ struct Text_Field
             return;
         int amount = m_selection_end - m_selection_start;
         m_buffer.remove(m_selection_start, amount);
+
+        m_selection_end = m_selection_start;
     }
 
     void delete_last()
     {
-        m_buffer.remove(m_buffer.length - 1, 1);
+        if (m_buffer.length < 1)
+        {
+            return;
+        }
+        m_selection_start = m_buffer.length - 1;
+        m_selection_end = m_buffer.length;
+        delete_text();
     }
 
     void set_text_input_area(SDL_Window* window, int line_skip)
@@ -142,6 +149,8 @@ struct Text_Field
         const SDL_Rect area = { area.x, area.y + m_cursor_line * line_skip, area.w, line_skip};
         SDL_SetTextInputArea(window, &area, m_cursor_pixel_x);
     }
+
+    void calculate_cursor_position(String string, Font font, float texture_height, bool wrapped);
 
 private:
     bool render_text_field_texture(SDL_Renderer* renderer, Font font, Color color, bool wrapped);
