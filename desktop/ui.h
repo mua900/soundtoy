@@ -133,20 +133,27 @@ struct Text_Field
     {
         if (m_selection_end < m_selection_start)
             return;
+        printf("%d %d\n", m_selection_start, m_selection_end);
         int amount = m_selection_end - m_selection_start;
         m_buffer.remove(m_selection_start, amount);
 
         m_selection_end = m_selection_start;
     }
 
-    void delete_last()
+    void delete_at_cursor()
     {
-        if (m_buffer.length < 1)
-        {
+        if (m_selection_start != m_selection_end)
             return;
-        }
-        m_selection_start = m_buffer.length - 1;
-        m_selection_end = m_buffer.length;
+        delete_at_character(m_selection_start-1);
+    }
+
+    void delete_at_character(int character)
+    {
+        if (character >= m_buffer.length)
+            return;
+
+        m_selection_start = character;
+        m_selection_end = character + 1;
         delete_text();
     }
 
@@ -158,7 +165,7 @@ struct Text_Field
 
     // both of these assume wrapped text
     void calculate_cursor_from_selection(String string, Font font);
-    void calculate_cursor_from_mouse(vec2 mouse_position, String string, Font font);
+    size_t calculate_cursor_from_mouse(vec2 mouse_position, String string, Font font);
 
 private:
     bool render_text_field_texture(SDL_Renderer* renderer, Font font, Color color, bool wrapped);

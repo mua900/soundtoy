@@ -207,7 +207,7 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
                         program.emit_bytecode_instruction(INSTR_PUSH, freg, 0);
                     }
 
-                    program.emit_bytecode_instruction(INSTR_CALL, ret_register, 0);
+                    program.emit_bytecode_instruction(INSTR_CALL, call->fn_id, ret_register);
 
                     location.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
                     location.floating_point_register = ret_register;

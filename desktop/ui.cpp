@@ -109,3 +109,72 @@ void GapBuffer::get_string(String_Builder& sb)
 	sb.clear_and_append(String(buffer, gap_index));
 	sb.append(String(buffer + end_gap, length - gap_index));
 }
+
+void Text_Field::calculate_cursor_from_selection(String string, Font font)
+{
+    int line_skip = TTF_GetFontLineSkip(font.font);
+
+    // calculate cursor position
+    int cursor_line = 0;
+    int cursor_pixel_x = 0;
+    size_t cursor_character = 0;
+
+    // @todo this might not be correct.
+    while (cursor_character < m_selection_start)
+    {
+        size_t cursor_character_this_line = 0;
+        TTF_MeasureString(font.font, string.data + cursor_character, m_selection_start - cursor_character, m_area.w, &cursor_pixel_x, &cursor_character_this_line);
+
+        cursor_character += cursor_character_this_line;
+
+        cursor_line += 1;
+    }
+
+    if (cursor_line)
+        cursor_line -= 1;  // 0 based indexing instead of 1 based indexing
+
+    int cursor_pixel_y = cursor_line * line_skip;
+
+    m_cursor_line = cursor_line;
+    m_cursor_pixel_x = cursor_pixel_x;
+    m_cursor_pixel_y = cursor_pixel_y;
+}
+
+size_t Text_Field::calculate_cursor_from_mouse(vec2 position, String string, Font font)
+{
+    int line_skip = TTF_GetFontLineSkip(font.font);
+    Rectangle area = m_area;
+    int line_count = m_line_count;
+
+    int cursor_line = position.y / line_skip;
+
+    if (cursor_line >= line_count)
+    {
+        return m_buffer.length;
+    }
+
+    size_t cursor_character = 0;
+    int pixel_x = 0;
+    int pixel_y = position.y - fmodf(position.y, line_skip);
+
+    // calculate what the lines above us add up to in character count
+    // @todo which can maybe cached
+    for (int i = 0; i < cursor_line; i++)
+    {
+        size_t cursor_character_this_line = 0;
+
+        TTF_MeasureString(font.font, string.data + cursor_character, string.size - cursor_character, area.w, nullptr, &cursor_character_this_line);
+
+        cursor_character += cursor_character_this_line;
+    }
+
+    size_t last_line_character = 0;
+    TTF_MeasureString(font.font, string.data + cursor_character, string.size - cursor_character, position.x, &pixel_x, &last_line_character);
+    cursor_character += last_line_character;
+
+    m_cursor_line = cursor_line;
+    m_cursor_pixel_x = pixel_x;
+    m_cursor_pixel_y = pixel_y;
+
+    return cursor_character;
+}

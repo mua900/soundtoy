@@ -19,6 +19,7 @@ void st_acos(Value* parameters, Value* results);
 void st_exp(Value* parameters, Value* results);
 void st_pow(Value* parameters, Value* results);
 void st_fract(Value* parameters, Value* results);
+void st_mix(Value* parameters, Value* results);
 
 void call_function(Function func, Value* parameters, Value* results) {
     func.implementation(parameters, results);
@@ -82,6 +83,10 @@ void get_default_builtin_functions(Function* list)
     	st_fract,
     	FunctionSignature(String("fract"), make_array(single_value), make_array(single_value))
     );
+    list[BUILTIN_FUNC_MIX] = Function(
+        st_mix,
+        FunctionSignature(String("mix"), make_array(single_value), make_array(three_values))
+    );
 }
 
 bool is_builtin_function(const Expr_Call* call)
@@ -113,6 +118,10 @@ double clamp(double x, double lower, double upper) {
     return CLAMP(x, lower, upper);
 }
 
+double mix(double a, double b, double t) {
+    return (1.0 - t) * a + t * b;
+}
+
 // wrappers
 
 void st_fabs(Value* parameters, Value* results) { results[0] = Value(fabs(parameters[0].real)); }
@@ -128,3 +137,4 @@ void st_smoothstep(Value* parameters, Value* results) { results[0] = Value(smoot
 void st_clamp(Value* parameters, Value* results) { results[0] = Value(clamp(parameters[0].real, parameters[1].real, parameters[2].real)); }
 void st_pow(Value* parameters, Value* results) { results[0] = Value(pow(parameters[0].real, parameters[1].real)); }
 void st_fract(Value* parameters, Value* results) { results[0] = Value(fract(parameters[0].real)); }
+void st_mix(Value* parameters, Value* results) { results[0] = Value(mix(parameters[0].real, parameters[1].real, parameters[2].real)); }
