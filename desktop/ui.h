@@ -79,12 +79,18 @@ enum Text_Input_Target : u8 {
     EXPRESSION_INPUT_RIGHT,
 };
 
+struct Text_Field_Cursor_Position {
+    size_t character = 0;
+    int line = 0;
+    int pixel_x = 0;
+    int pixel_y = 0;
+};
+
 struct Text_Field
 {
-    Rectangle area = {};
+    Rectangle m_area = {};
     GapBuffer m_buffer = {};
     String_Builder m_text = {};
-    size_t m_cursor_character = 0;
     int m_cursor_pixel_x = 0;
     int m_cursor_pixel_y = 0;
     int m_cursor_line = 0;
@@ -150,7 +156,9 @@ struct Text_Field
         SDL_SetTextInputArea(window, &area, m_cursor_pixel_x);
     }
 
-    void calculate_cursor_position(String string, Font font, float texture_height, bool wrapped);
+    // both of these assume wrapped text
+    void calculate_cursor_from_selection(String string, Font font);
+    void calculate_cursor_from_mouse(vec2 mouse_position, String string, Font font);
 
 private:
     bool render_text_field_texture(SDL_Renderer* renderer, Font font, Color color, bool wrapped);
