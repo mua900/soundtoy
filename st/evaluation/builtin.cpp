@@ -20,6 +20,9 @@ void st_exp(Value* parameters, Value* results);
 void st_pow(Value* parameters, Value* results);
 void st_fract(Value* parameters, Value* results);
 void st_mix(Value* parameters, Value* results);
+void st_saw(Value* parameters, Value* results);
+void st_square(Value* parameters, Value* results);
+void st_triangle(Value* parameters, Value* results);
 
 void call_function(Function func, Value* parameters, Value* results) {
     func.implementation(parameters, results);
@@ -87,6 +90,18 @@ void get_default_builtin_functions(Function* list)
         st_mix,
         FunctionSignature(String("mix"), make_array(single_value), make_array(three_values))
     );
+    list[BUILTIN_FUNC_SAW] = Function(
+        st_saw,
+        FunctionSignature(String("saw"), make_array(single_value), make_array(single_value))
+    );
+    list[BUILTIN_FUNC_SQUARE] = Function(
+        st_square,
+        FunctionSignature(String("square"), make_array(single_value), make_array(single_value))
+    );
+    list[BUILTIN_FUNC_TRIANGLE] = Function(
+        st_triangle,
+        FunctionSignature(String("triangle"), make_array(single_value), make_array(single_value))
+    );
 }
 
 bool is_builtin_function(const Expr_Call* call)
@@ -122,6 +137,18 @@ double mix(double a, double b, double t) {
     return (1.0 - t) * a + t * b;
 }
 
+double saw(double x) {
+    return 2 * (x - floor(x + 0.5));
+}
+
+double square(double x) {
+    return floor(x) * 4 - floor(2 * x) * 2 + 1;
+}
+
+double triangle(double x) {
+    return 4 * abs(x - floor(x + 0.75) + 0.25) - 1;  // @todo this is wrong
+}
+
 // wrappers
 
 void st_fabs(Value* parameters, Value* results) { results[0] = Value(fabs(parameters[0].real)); }
@@ -138,3 +165,6 @@ void st_clamp(Value* parameters, Value* results) { results[0] = Value(clamp(para
 void st_pow(Value* parameters, Value* results) { results[0] = Value(pow(parameters[0].real, parameters[1].real)); }
 void st_fract(Value* parameters, Value* results) { results[0] = Value(fract(parameters[0].real)); }
 void st_mix(Value* parameters, Value* results) { results[0] = Value(mix(parameters[0].real, parameters[1].real, parameters[2].real)); }
+void st_saw(Value* parameters, Value* results) { results[0] = Value(saw(parameters[0].real)); }
+void st_square(Value* parameters, Value* results) { results[0] = Value(square(parameters[0].real)); }
+void st_triangle(Value* parameters, Value* results) { results[0] = Value(triangle(parameters[0].real)); }

@@ -959,6 +959,15 @@ Function_ID get_function_id(String name)
 	else if (string_compare(name, make_string("mix"))) {
 	   return BUILTIN_FUNC_MIX;
 	}
+	else if (string_compare(name, make_string("saw"))) {
+	   return BUILTIN_FUNC_SAW;
+	}
+	else if (string_compare(name, make_string("square"))) {
+	   return BUILTIN_FUNC_SQUARE;
+	}
+	else if (string_compare(name, make_string("triangle"))) {
+	   return BUILTIN_FUNC_TRIANGLE;
+	}
 
     return FUNC_ID_INVALID; // @todo user defined functions
 }
