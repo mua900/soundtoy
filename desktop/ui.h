@@ -117,11 +117,11 @@ struct Text_Field
         }
         else
         {
-            m_buffer.append(s, m_buffer.length);
+            m_buffer.append(s, m_selection_start);
+            m_selection_start += s.size;
         }
 
-        m_selection_start = m_buffer.length;
-        m_selection_end = m_buffer.length;
+        m_selection_end = m_selection_start;
     }
 
     bool update_text(SDL_Renderer* renderer, Font font, bool wrapped)
@@ -144,7 +144,13 @@ struct Text_Field
     {
         if (m_selection_start != m_selection_end)
             return;
-        delete_at_character(m_selection_start-1);
+        if (m_selection_start == 0)
+            return;
+
+        m_selection_end = m_selection_start;
+        m_selection_start -= 1;
+
+        delete_text();
     }
 
     void delete_at_character(int character)
