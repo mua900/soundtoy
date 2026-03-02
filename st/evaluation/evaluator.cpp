@@ -922,6 +922,9 @@ Function_ID get_function_id(String name)
     else if (string_compare(name, make_string("cos"))) {
         return BUILTIN_FUNC_COS;
     }
+    else if (string_compare(name, make_string("tan"))) {
+        return BUILTIN_FUNC_TAN;
+    }
     else if (string_compare(name, make_string("abs"))) {
         return BUILTIN_FUNC_ABS;
     }
@@ -929,11 +932,17 @@ Function_ID get_function_id(String name)
          || string_compare(name, make_string("sgn"))) {
         return BUILTIN_FUNC_SIGN;
     }
-    else if (string_compare(name, make_string("asin"))) {
+    else if (string_compare(name, make_string("asin"))
+            || string_compare(name, make_string("arcsin"))) {
         return BUILTIN_FUNC_ARCSIN;
     }
-    else if (string_compare(name, make_string("acos"))) {
+    else if (string_compare(name, make_string("acos"))
+            || string_compare(name, make_string("arccos"))) {
         return BUILTIN_FUNC_ARCCOS;
+    }
+    else if (string_compare(name, make_string("atan"))
+            || string_compare(name, make_string("arctan"))) {
+        return BUILTIN_FUNC_ARCTAN;
     }
     else if (string_compare(name, make_string("ceil"))) {
         return BUILTIN_FUNC_CEIL;
@@ -949,6 +958,9 @@ Function_ID get_function_id(String name)
     }
     else if (string_compare(name, make_string("exp"))) {
         return BUILTIN_FUNC_EXP;
+    }
+    else if (string_compare(name, make_string("log"))) {
+        return BUILTIN_FUNC_LOG;
     }
     else if (string_compare(name, make_string("pow"))) {
     	return BUILTIN_FUNC_POW;

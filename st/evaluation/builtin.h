@@ -52,8 +52,10 @@ enum Builtin_Func_Type {
     BUILTIN_FUNC_FLOOR,
     BUILTIN_FUNC_SIN,
     BUILTIN_FUNC_COS,
+    BUILTIN_FUNC_TAN,
     BUILTIN_FUNC_ARCSIN,
     BUILTIN_FUNC_ARCCOS,
+    BUILTIN_FUNC_ARCTAN,
     BUILTIN_FUNC_FRACT,
     BUILTIN_FUNC_SMOOTHSTEP,
     BUILTIN_FUNC_MIX,  // should we call this mix or lerp? I think mix is better
@@ -62,6 +64,7 @@ enum Builtin_Func_Type {
     BUILTIN_FUNC_TRIANGLE,
     BUILTIN_FUNC_CLAMP,
     BUILTIN_FUNC_POW,
+    BUILTIN_FUNC_LOG,  // base?
 
     BUILTIN_FUNC_COUNT,
 

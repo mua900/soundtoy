@@ -14,10 +14,13 @@ void st_smoothstep(Value* parameters, Value* results);
 void st_clamp(Value* parameters, Value* results);
 void st_sin(Value* parameters, Value* results);
 void st_cos(Value* parameters, Value* results);
+void st_tan(Value* parameters, Value* results);
 void st_asin(Value* parameters, Value* results);
 void st_acos(Value* parameters, Value* results);
+void st_atan(Value* parameters, Value* results);
 void st_exp(Value* parameters, Value* results);
 void st_pow(Value* parameters, Value* results);
+void st_log(Value* parameters, Value* results);
 void st_fract(Value* parameters, Value* results);
 void st_mix(Value* parameters, Value* results);
 void st_saw(Value* parameters, Value* results);
@@ -102,6 +105,18 @@ void get_default_builtin_functions(Function* list)
         st_triangle,
         FunctionSignature(String("triangle"), make_array(single_value), make_array(single_value))
     );
+    list[BUILTIN_FUNC_TAN] = Function(
+        st_tan,
+        FunctionSignature(String("tan"), make_array(single_value), make_array(single_value))
+    );
+    list[BUILTIN_FUNC_ARCTAN] = Function(
+        st_atan,
+        FunctionSignature(String("atan"), make_array(single_value), make_array(single_value))
+    );
+    list[BUILTIN_FUNC_LOG] = Function(
+        st_log,
+        FunctionSignature(String("log"), make_array(single_value), make_array(single_value))
+    );
 }
 
 bool is_builtin_function(const Expr_Call* call)
@@ -157,9 +172,12 @@ void st_ceil(Value* parameters, Value* results) { results[0] = Value(ceil(parame
 void st_floor(Value* parameters, Value* results) { results[0] = Value(floor(parameters[0].real)); }
 void st_sin(Value* parameters, Value* results) { results[0] = Value(sin(parameters[0].real)); }
 void st_cos(Value* parameters, Value* results) { results[0] = Value(cos(parameters[0].real)); }
+void st_tan(Value* parameters, Value* results) { results[0] = Value(tan(parameters[0].real)); }
 void st_asin(Value* parameters, Value* results) { results[0] = Value(asin(parameters[0].real)); }
 void st_acos(Value* parameters, Value* results) { results[0] = Value(acos(parameters[0].real)); }
+void st_atan(Value* parameters, Value* results) { results[0] = Value(atan(parameters[0].real)); }
 void st_exp(Value* parameters, Value* results) { results[0] = Value(exp(parameters[0].real)); }
+void st_log(Value* parameters, Value* results) { results[0] = Value(log(parameters[0].real)); }
 void st_smoothstep(Value* parameters, Value* results) { results[0] = Value(smoothstep(parameters[0].real)); }
 void st_clamp(Value* parameters, Value* results) { results[0] = Value(clamp(parameters[0].real, parameters[1].real, parameters[2].real)); }
 void st_pow(Value* parameters, Value* results) { results[0] = Value(pow(parameters[0].real, parameters[1].real)); }
