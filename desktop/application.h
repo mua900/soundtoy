@@ -101,6 +101,8 @@ public:
     Spectogram spectogram = {};
     Signal m_signal = {};
 
+    GraphToShow m_graph_to_show = GRAPH_AUDIO_DATA;
+
     Ui_State m_ui = {};
     Color m_background_color = DEFAULT_BACKGROUND_COLOR;
 

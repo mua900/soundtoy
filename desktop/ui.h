@@ -153,6 +153,18 @@ struct Text_Field
         delete_text();
     }
 
+    void delete_after_cursor()
+    {
+        if (m_selection_start != m_selection_end)
+            return;
+        if (m_selection_start == m_buffer.length)
+            return;
+
+        m_selection_end = m_selection_start + 1;
+
+        delete_text();
+    }
+
     void delete_at_character(int character)
     {
         if (character >= m_buffer.length)
@@ -265,6 +277,11 @@ struct Drop_Down_List {
         }
         options.reset();
     }
+};
+
+enum GraphToShow {
+    GRAPH_AUDIO_DATA,
+    GRAPH_FOURIER_TRANSFORM,
 };
 
 struct Ui_State {

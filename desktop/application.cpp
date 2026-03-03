@@ -151,7 +151,9 @@ bool Application::initialize()
         }
 
 
-        m_ui.graph_to_show.set_title(create_text(make_string("Hi there"), m_assets.font_large, Color(0x66, 0x33, 0x55, 0xff)));
+        m_ui.graph_to_show.set_title(create_text(make_string("Graph"), m_assets.font_large, Color(0x66, 0x33, 0x55, 0xff)));
+        m_ui.graph_to_show.add_option(create_text(make_string("Audio Data"), m_assets.font_large, Color(0x66, 0x44, 0x66, 0xff)), 0);
+        m_ui.graph_to_show.add_option(create_text(make_string("Fourier"), m_assets.font_large, Color(0x66, 0x44, 0x66, 0xff)), 0);
     }
 
     quit = false;
@@ -680,21 +682,33 @@ void Application::draw_graph_mode_ui()
     Text_Id text = m_audio.audio_player.paused ? TEXT_RESUME : TEXT_PAUSE;
     render_textured_rectangle(Rectangle(0,0,100,100), m_rendered_text.get(text).texture, Color(0x22,0x55,0x33,0xff));
 
-    if (m_audio.audio_data.samples)
-    {
-        vec2 audio_data_scale = vec2(window_size.x * (5.0 / 8.0), window_size.y * (5.0 / 8.0));
-        vec2 audio_data_position = vec2(window_size.x/2, window_size.y/2 + window_size.y/3);
-        render_audio_data(audio_data_position, vec2(audio_data_scale.x, audio_data_scale.y), Color(0x44, 0x22, 0x77, 0xff));
+    render_dropdown(m_ui.graph_to_show, Color(0x66, 0x44, 0x55, 0xff), Color(0x22, 0x77, 0x55, 0xff));
 
-        // playback position
-        float playback_position = (float) m_audio.audio_player.playback_position / m_audio.audio_player.audio_data->frame_count;
-        float audio_data_start = audio_data_position.x - audio_data_scale.x / 2;
-        draw_arrowhead(m_window.renderer, vec2(audio_data_start + audio_data_scale.x * playback_position, audio_data_position.y - audio_data_scale.y), vec2(0, 1), 50, ColorF(0.4, 0.2, 0.7, 1.0));
-    }
-
-    if (m_signal.samples.data)
+    switch (m_graph_to_show)
     {
-        render_signal(vec2(window_size.x / 2, window_size.y / 2), vec2(window_size.x * (2.0 / 3.0), window_size.y * (1.0 / 4.0)), m_signal, Color(0x55, 0x99, 0x55, 0xff));
+        case GRAPH_AUDIO_DATA: {
+            if (m_audio.audio_data.samples)
+            {
+                vec2 audio_data_scale = vec2(window_size.x * (5.0 / 8.0), window_size.y * (5.0 / 8.0));
+                vec2 audio_data_position = vec2(window_size.x/2, window_size.y/2 + window_size.y/3);
+                render_audio_data(audio_data_position, vec2(audio_data_scale.x, audio_data_scale.y), Color(0x44, 0x22, 0x77, 0xff));
+
+                // playback position
+                float playback_position = (float) m_audio.audio_player.playback_position / m_audio.audio_player.audio_data->frame_count;
+                float audio_data_start = audio_data_position.x - audio_data_scale.x / 2;
+                draw_arrowhead(m_window.renderer, vec2(audio_data_start + audio_data_scale.x * playback_position, audio_data_position.y - audio_data_scale.y), vec2(0, 1), 50, ColorF(0.4, 0.2, 0.7, 1.0));
+            }
+
+            if (m_signal.samples.data)
+            {
+                render_signal(vec2(window_size.x / 2, window_size.y / 2), vec2(window_size.x * (2.0 / 3.0), window_size.y * (1.0 / 4.0)), m_signal, Color(0x55, 0x99, 0x55, 0xff));
+            }
+
+            break;
+        }
+        case GRAPH_FOURIER_TRANSFORM: {
+            break;
+        }
     }
 }
 
@@ -884,21 +898,24 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
             }
             return true;
         }
+        case SDL_SCANCODE_DELETE:
+        {
+            if (doing_text_input)
+            {
+                auto text_field = m_ui.get_selected_text_field();
+                if (text_field)
+                {
+                    text_field->delete_after_cursor();
+                    update_input_string();
+                }
+            }
+        }
         case SDL_SCANCODE_SPACE:
         {
             if (!doing_text_input)
             {
                 m_audio.expr_audio.toggle_pause();
             }
-            return true;
-        }
-        case SDL_SCANCODE_F:
-        {
-            if (keyboard.mod & SDL_KMOD_LCTRL)
-            {
-
-            }
-
             return true;
         }
         case SDL_SCANCODE_R:
@@ -962,6 +979,10 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
 bool Application::keyboard_input_graph_mode(SDL_KeyboardEvent keyboard) {
     switch (keyboard.scancode)
     {
+        case SDL_SCANCODE_SPACE: {
+            m_audio.audio_player.toggle_pause();
+            return true;
+        }
         default: return false;
     }
 }
@@ -1006,6 +1027,43 @@ bool Application::mouse_input_graph_mode()
         m_audio.audio_player.toggle_pause();
         return true;
     }
+
+    {
+        Rectangle graph_header = Rectangle(
+            m_ui.graph_to_show.pos.x - m_ui.graph_to_show.scale.x / 2, m_ui.graph_to_show.pos.y - m_ui.graph_to_show.scale.y / 2,
+            m_ui.graph_to_show.scale.x, m_ui.graph_to_show.scale.y
+        );
+
+        if (graph_header.contains(m_mouse.pos)) {
+            m_ui.graph_to_show.toggle();
+            return true;
+        }
+
+        if (m_ui.graph_to_show.open) {
+            Rectangle audio_data_area = graph_header;
+            Rectangle fourier_area = graph_header;
+
+            audio_data_area.y += graph_header.h;
+            fourier_area.y += graph_header.h * 2;
+
+            bool got_clicked = true;
+            if (audio_data_area.contains(m_mouse.pos)) {
+                m_graph_to_show = GRAPH_AUDIO_DATA;
+            }
+            else if (fourier_area.contains(m_mouse.pos)) {
+                m_graph_to_show = GRAPH_FOURIER_TRANSFORM;
+            }
+            else {
+                got_clicked = false;
+            }
+
+            if (got_clicked) {
+                m_ui.graph_to_show.open = false;
+                return true;
+            }
+        }
+    }
+
 
     return false;
 }
@@ -1235,15 +1293,21 @@ void Application::update_ui_state(vec2 window_size)
 
     m_ui.channel_count.set_area(vec2(window_size.x / 2,
                                      window_size.y * (1.0 / 5.0)),
-                                vec2((float)window_size.x * (1.0 / 5.0),
-                                     (float)window_size.y * (1.0 / 10.0))
+                                vec2(window_size.x * (1.0 / 5.0),
+                                     window_size.y * (1.0 / 10.0))
                                 );
 
     m_ui.playback_device.set_area(vec2(window_size.x * (0.8 / 3.0),
                                        window_size.y * (1.5 / 5.0)),
-                                  vec2((float)window_size.x * (1.0 / 5.0),
-                                       (float)window_size.y * (1.0 / 10.0))
+                                  vec2(window_size.x * (1.0 / 5.0),
+                                       window_size.y * (1.0 / 10.0))
                                   );
+
+    m_ui.graph_to_show.set_area(vec2(window_size.x * (1.0 / 2.0),
+                                     window_size.y * (1.0 / 16.0)),
+                                vec2(window_size.x * (1.0 / 4.0),
+                                     window_size.y * (1.0 / 8.0))
+                                );
 }
 
 Text_Field* Ui_State::get_selected_text_field()
