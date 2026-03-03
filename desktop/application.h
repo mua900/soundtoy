@@ -84,6 +84,8 @@ struct Samplers {
     St_Sampler* waveform_right  = nullptr;
 };
 
+typedef float (*SampleGetter)(void* user, int frame, int channel);
+
 class Application {
 public:
     ApplicationMode mode = ApplicationMode::AppModeSound;
@@ -172,6 +174,8 @@ private:
     bool set_eval_string_right(String s);
     bool select_playback_device(SDL_AudioDeviceID device);
 
+    void render_waveform(vec2 area_center, vec2 area_scale, int frame_count, int channel_count, Color color, SampleGetter sample_getter, void* user_data, bool draw_lines);
+
     void render_audio_data(vec2 area_center, vec2 area_scale, Color color);
     void render_signal(vec2 area_center, vec2 area_scale, Signal signal, Color color);
 
@@ -192,3 +196,5 @@ void draw_arrowhead(SDL_Renderer* renderer, vec2 position, vec2 direction, float
 // create a signal from the given sampler
 Signal create_signal(St_Sampler* sampler, float time_start, int sample_count, int sample_rate);
 
+float get_signal_sample(void* user, int frame, int channel);  // Signal*
+float get_audio_sample(void* data, int frame, int channel);   // AudioData*

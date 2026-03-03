@@ -50,6 +50,7 @@ private:
     bool set_channel_count(SDL_AudioStream* stream, int channel_count);
 };
 
+#define AUDIO_MAX_CHANNELS 8
 
 #define DESIRED_AUDIO_FORMAT SDL_AUDIO_F32
 #define DESIRED_AUDIO_SAMPLE_RATE 48000

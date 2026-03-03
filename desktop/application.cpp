@@ -1435,6 +1435,90 @@ bool Application::set_eval_string_right(String eval_string)
     return success;
 }
 
+float get_signal_sample(void* user, int frame, int channel) {
+    Signal* signal = (Signal*) user;
+    return signal->samples.data[frame];
+}
+
+float get_audio_sample(void* user, int frame, int channel) {
+    AudioData* data = (AudioData*) user;
+    if (data->format != SDL_AUDIO_F32)  // panic maybe?
+        return 0.0;
+    float* samples = (float*)data->samples;
+    return samples[frame * data->channel_count + channel];
+}
+
+void Application::render_waveform(vec2 area_center, vec2 area_scale, int frame_count, int channel_count, Color color, SampleGetter sample_getter, void* user_data, bool draw_lines)
+{
+    SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
+
+    #define BLOCK_SIZE 256
+    static SDL_FPoint points[AUDIO_MAX_CHANNELS][BLOCK_SIZE];
+
+    float vertical_step = area_scale.y / channel_count;
+    float step = (area_scale.x / float(frame_count));
+    float base_height = area_center.y;
+
+    int iter_count = frame_count / BLOCK_SIZE;
+
+    for (int block = 0; block < iter_count; block++)
+    {
+        int block_start = block * BLOCK_SIZE;
+
+        for (int i = 0; i < BLOCK_SIZE; i+=1)
+        {
+            int frame_index = block * BLOCK_SIZE + i;
+
+            for (int ch = 0; ch < channel_count; ch++)
+            {
+                float sample = sample_getter(user_data, frame_index, ch);
+
+                points[ch][i].x = area_center.x - (area_scale.x / 2) + (step * frame_index);
+                points[ch][i].y = (base_height + sample * (area_scale.y / 2.0)) / channel_count + (ch * vertical_step);
+            }
+        }
+
+        for (int ch = 0; ch < channel_count; ch++)
+        {
+            if (draw_lines) {
+                SDL_RenderLines(m_window.renderer, points[ch], BLOCK_SIZE);
+            }
+            else {
+                SDL_RenderPoints(m_window.renderer, points[ch], BLOCK_SIZE);
+            }
+        }
+    }
+
+    int remaining = frame_count - (iter_count * BLOCK_SIZE);
+
+    ASSERT(remaining < BLOCK_SIZE);
+
+    for (int i = 0; i < remaining; i+=1)
+    {
+        int frame_index = iter_count * BLOCK_SIZE + i;
+
+        for (int ch = 0; ch < channel_count; ch++)
+        {
+            float sample = sample_getter(user_data, frame_index, ch);
+
+            points[ch][i].x = area_center.x - (area_scale.x / 2) + (step * frame_index);
+            points[ch][i].y = base_height + sample * (area_scale.y / 2.0) / channel_count + (ch * vertical_step);
+        }
+    }
+
+    for (int ch = 0; ch < channel_count; ch++)
+    {
+        if (draw_lines) {
+            SDL_RenderLines(m_window.renderer, points[ch], remaining);
+        }
+        else {
+            SDL_RenderPoints(m_window.renderer, points[ch], remaining);
+        }
+    }
+
+    #undef BLOCK_SIZE
+}
+
 // @todo we can do cooler things with rendering waveforms or audio data
 // @todo simplify all of these below and stop using static variables
 
@@ -1444,104 +1528,11 @@ void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color col
         return;
     }
 
-    SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
-
-    float* samples = (float*) m_audio.audio_data.samples;
-
-    #define BLOCK_SIZE 256
-    static SDL_FPoint points[DESIRED_AUDIO_CHANNEL_COUNT][BLOCK_SIZE];
-
-    float vertical_step = area_scale.y / DESIRED_AUDIO_CHANNEL_COUNT;
-    float step = (area_scale.x / float(m_audio.audio_data.frame_count));
-    float base_height = area_center.y;
-    int sample_count = m_audio.audio_data.frame_count;
-
-    int iter_count = m_audio.audio_data.frame_count / BLOCK_SIZE;
-
-    for (int block = 0; block < iter_count; block++)
-    {
-        int block_start = block * BLOCK_SIZE;
-
-        for (int i = 0; i < BLOCK_SIZE; i+=1)
-        {
-            int frame_index = block * BLOCK_SIZE + i;
-            int sample_index = (block_start + i) * DESIRED_AUDIO_CHANNEL_COUNT;
-
-            for (int ch = 0; ch < DESIRED_AUDIO_CHANNEL_COUNT; ch++)
-            {
-                points[ch][i].x = area_center.x - (area_scale.x / 2) + (step * frame_index);
-                points[ch][i].y = (base_height + samples[sample_index + ch] * (area_scale.y / 2.0)) / DESIRED_AUDIO_CHANNEL_COUNT + (ch * vertical_step);
-            }
-        }
-
-        for (int ch = 0; ch < DESIRED_AUDIO_CHANNEL_COUNT; ch++)
-        {
-            SDL_RenderPoints(m_window.renderer, points[ch], BLOCK_SIZE);
-        }
-    }
-
-    int remaining = m_audio.audio_data.frame_count - (iter_count * BLOCK_SIZE);
-
-    ASSERT(remaining < BLOCK_SIZE);
-
-    for (int i = 0; i < remaining; i+=1)
-    {
-        int frame_index = iter_count * BLOCK_SIZE + i;
-        int sample_index = (iter_count * BLOCK_SIZE + i) * DESIRED_AUDIO_CHANNEL_COUNT;
-
-        for (int ch = 0; ch < DESIRED_AUDIO_CHANNEL_COUNT; ch++)
-        {
-            points[ch][i].x = area_center.x - (area_scale.x / 2) + (step * frame_index);
-            points[ch][i].y = base_height + samples[sample_index + ch] * (area_scale.y / 2.0) / DESIRED_AUDIO_CHANNEL_COUNT + (ch * vertical_step);
-        }
-    }
-
-    for (int ch = 0; ch < DESIRED_AUDIO_CHANNEL_COUNT; ch++)
-    {
-        SDL_RenderPoints(m_window.renderer, points[ch], remaining);
-    }
-
-    #undef BLOCK_SIZE
+    render_waveform(area_center, area_scale, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count, color, get_audio_sample, &m_audio.audio_data, false);
 }
 
 void Application::render_signal(vec2 area_center, vec2 area_scale, Signal signal, Color color) {
-    SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
-
-    #define BLOCK_SIZE 256
-    static SDL_FPoint points[BLOCK_SIZE];
-
-    float step = (area_scale.x / float(signal.samples.size));
-    float base_height = area_center.y;
-    int sample_count = signal.samples.size;
-
-    int iter_count = sample_count / BLOCK_SIZE;
-
-    for (int block = 0; block < iter_count; block++)
-    {
-        int block_start = block * BLOCK_SIZE;
-
-        for (int index = 0; index < BLOCK_SIZE; index+=1)
-        {
-            points[index].x = area_center.x - (area_scale.x / 2) + (step * index);
-            points[index].y = base_height + signal.samples.data[index] * (area_scale.y / 2.0);
-        }
-
-        SDL_RenderLines(m_window.renderer, points, BLOCK_SIZE);
-    }
-
-    int remaining = signal.samples.size - (iter_count * BLOCK_SIZE);
-
-    ASSERT(remaining < BLOCK_SIZE);
-
-    for (int index = 0; index < remaining; index+=1)
-    {
-        points[index].x = area_center.x - (area_scale.x / 2) + (step * index);
-        points[index].y = base_height + signal.samples.data[index] * (area_scale.y / 2.0);
-    }
-
-    SDL_RenderLines(m_window.renderer, points, remaining);
-
-    #undef BLOCK_SIZE
+    render_waveform(area_center, area_scale, m_signal.samples.size, 1, color, get_signal_sample, &m_signal, true);
 }
 
 void Application::update_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale) {
