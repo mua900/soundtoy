@@ -63,6 +63,9 @@ struct GapBuffer {
     GapBuffer() {
         initialize(256);
     }
+    ~GapBuffer() {
+        reset();
+    }
 
     void initialize(int init_buffer_size);
     void append(String string, int where);
@@ -71,6 +74,8 @@ struct GapBuffer {
     void move_gap(int position);
     void resize(int size);
     void get_string(String_Builder& sb);
+
+    void reset();
 };
 
 enum Text_Input_Target : u8 {
@@ -78,13 +83,6 @@ enum Text_Input_Target : u8 {
     EXPRESSION_INPUT_LEFT,
     EXPRESSION_INPUT_RIGHT,
     VARIABLE_NAME,
-};
-
-struct Text_Field_Cursor_Position {
-    size_t character = 0;
-    int line = 0;
-    int pixel_x = 0;
-    int pixel_y = 0;
 };
 
 struct Text_Field
@@ -102,6 +100,13 @@ struct Text_Field
 
     float m_font_size = 0.0;
     SDL_Texture* m_texture = nullptr;  // cached texture the text is rendered on, updated every text input event
+
+    Text_Field() {}
+
+    Text_Field(Rectangle area)
+    {
+        m_area = area;
+    }
 
     String get_string()
     {
@@ -141,6 +146,13 @@ struct Text_Field
         m_selection_start = 0;
         m_selection_end = 0;
         m_font_size = 0;
+    }
+
+    void reset()
+    {
+        clear();
+        m_buffer.reset();
+        m_text.free_buffer();
     }
 
     void delete_text()

@@ -574,6 +574,9 @@ void Application::draw()
     SDL_RenderPresent(renderer);
 }
 
+const float Variable_Table_Horizontal_Element_Size = (1.0 / 8.0);
+const float Variable_Table_Vertical_Element_Size = (1.0 / 16.0);
+
 void Application::draw_sound_mode_ui()
 {
     int window_x, window_y;
@@ -632,7 +635,7 @@ void Application::draw_sound_mode_ui()
         );
     }
 
-    // add variable
+    // variables
     {
         vec2 pos = vec2(m_ui.add_variable_button.x,m_ui.add_variable_button.y);
         vec2 scale = vec2(m_ui.add_variable_button.w,m_ui.add_variable_button.h);
@@ -642,6 +645,22 @@ void Application::draw_sound_mode_ui()
         draw_plus(m_window.renderer, pos, scale, 20, ColorF(0.5,0.4,0.6,1.0));
 
         render_text_field(m_ui.variable_name);
+
+        // variables
+        {
+            Rectangle start = { window_size.x * float(1.0 / 8.0), window_size.y * (0),
+                                window_size.x * Variable_Table_Horizontal_Element_Size, window_size.y * Variable_Table_Vertical_Element_Size };
+            int index = 0;
+            for (const auto& var : m_variable_text)
+            {
+                SDL_SetRenderDrawColor(m_window.renderer, 0x11, 0x77, 0x44, 0xff);
+                SDL_FRect area = {start.x, start.y + index * start.h, start.w, start.h};
+                SDL_RenderFillRect(m_window.renderer, &area);
+                render_text_size(m_window.renderer, var, vec2(start.x + start.w / 2, start.y + index * start.h + start.h / 2), vec2(start.w, start.h));
+
+                index += 1;
+            }
+        }
     }
 
     // paused/playing text
@@ -665,6 +684,19 @@ void Application::draw_sound_mode_ui()
         {
             render_text_field(m_ui.expression_input_left);
             render_text_field(m_ui.expression_input_right);
+        }
+
+        // error messages
+        {
+            const vec2 text_scale = vec2(300, 100);
+
+            // @todo split this into invalid for left and right
+            if (m_events[EVENT_INVALID_EXPRESSION].active)
+            {
+                auto tf_area = m_ui.expression_input_left.m_area;
+                render_text_size(m_window.renderer, m_rendered_text.get(TEXT_INVALID_EXPRESSION),
+                        vec2(tf_area.x + tf_area.w/2, tf_area.y + tf_area.h), text_scale);
+            }
         }
     }
 
@@ -722,19 +754,6 @@ void Application::draw_common_ui() {
             m_rendered_text[text].texture,
             Color(0x66, 0x55, 0x55, 0xff)
         );
-    }
-
-    // event text
-    {
-        const vec2 text_scale = vec2(300, 100);
-
-        // @todo split this into invalid for left and right
-        if (m_events[EVENT_INVALID_EXPRESSION].active)
-        {
-            auto tf_area = m_ui.expression_input_left.m_area;
-            render_text_size(m_window.renderer, m_rendered_text.get(TEXT_INVALID_EXPRESSION),
-                    vec2(tf_area.x + tf_area.w/2, tf_area.y + tf_area.h), text_scale);
-        }
     }
 }
 
@@ -1068,6 +1087,10 @@ bool Application::mouse_input_graph_mode()
 
 bool Application::mouse_input_sound_mode()
 {
+    int window_x; int window_y;
+    SDL_GetWindowSize(m_window.window, &window_x, &window_y);
+    vec2 window_size = vec2(window_x, window_y);
+
     if (m_ui.volume_slider.contains(m_mouse.pos))
     {
         float diff = m_mouse.pos.x - m_ui.volume_slider.x;
@@ -1172,6 +1195,8 @@ bool Application::mouse_input_sound_mode()
             st_sampler_register_variable(m_samplers.audio_right, variable_name.data, variable_name.size, Var_Type_Real);
 
             reinit_samplers();
+
+            m_variable_text.add(create_text(variable_name, m_assets.font_editor, Color(0x88, 0x33, 0x66, 0xff)));
 
             SCOPE_STRING(variable_name, var_name);
             printf("Added variable: %s\n", var_name);
@@ -1297,6 +1322,9 @@ void Application::toggle_text_input()
 
 void Application::update_ui_state(vec2 window_size)
 {
+    m_ui.volume_slider.x = window_size.x * (1.0 / 20.0);
+    m_ui.volume_slider.y = window_size.y * (1.0 / 8.0);
+
     m_ui.pause_button.x = (window_size.x - m_ui.pause_button.w) / 2;
     m_ui.pause_button.y = (window_size.y - m_ui.pause_button.h) / 2;
 
@@ -1337,19 +1365,30 @@ void Application::update_ui_state(vec2 window_size)
                                      window_size.y * (1.0 / 5.0)),
                                 vec2(window_size.x * (1.0 / 5.0),
                                      window_size.y * (1.0 / 10.0))
-                                );
+    );
 
     m_ui.playback_device.set_area(vec2(window_size.x * (0.8 / 3.0),
                                        window_size.y * (1.5 / 5.0)),
                                   vec2(window_size.x * (1.0 / 5.0),
                                        window_size.y * (1.0 / 10.0))
-                                  );
+    );
 
     m_ui.graph_to_show.set_area(vec2(window_size.x * (1.0 / 2.0),
-                                     window_size.y * (1.0 / 16.0)),
+                                window_size.y * (1.0 / 16.0)),
                                 vec2(window_size.x * (1.0 / 4.0),
-                                     window_size.y * (1.0 / 8.0))
-                                );
+                                window_size.y * (1.0 / 8.0))
+    );
+
+    /*
+    int var_value_index = 0;
+    for (auto& var_value : m_variable_values)
+    {
+        var_value.m_area.x = window_size.x * Variable_Table_Horizontal_Element_Size;
+        var_value.m_area.y = window_size.y * Variable_Table_Vertical_Element_Size * var_value_index;
+
+        var_value_index += 1;
+    }
+    */
 }
 
 Text_Field* Ui_State::get_selected_text_field()
@@ -1442,6 +1481,11 @@ bool Application::set_eval_string(String eval_string)
     bool success = left && right;
     if (!success) {
         fprintf(stderr, "Failed to set sample expression\n");
+        set_event_active(EVENT_INVALID_EXPRESSION, 15.0);
+        return false;
+    }
+    else {
+        set_event_deactive(EVENT_INVALID_EXPRESSION);
     }
 
     if (m_samplers.waveform_left)

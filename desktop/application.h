@@ -115,6 +115,8 @@ public:
 
     Array<Text> m_rendered_text = {};
 
+    DArray<Text> m_variable_text = {};          // user registered variables
+
     bool quit = false;
     bool doing_text_input = false;
 

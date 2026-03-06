@@ -7,6 +7,15 @@ void GapBuffer::initialize(int init_buffer_size) {
     end_gap = init_buffer_size;
 }
 
+void GapBuffer::reset() {
+    delete[] buffer;
+    buffer = nullptr;
+    buffer_size = 0;
+    length = 0;
+    gap_index = 0;
+    end_gap = 0;
+}
+
 void GapBuffer::append(String string, int where)
 {
     if (!(where <= length && where >= 0)) {
