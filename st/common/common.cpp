@@ -135,12 +135,13 @@ String string_get_extension(String s)
 
 String string_copy(String s)
 {
-    char* data = (char*)malloc(s.size);
+    char* data = (char*)malloc(s.size + 1);
     if (!data)
     {
         panic("Malloc fail");
     }
     memcpy(data, s.data, s.size);
+    data[s.size] = '\0';
     return { data, s.size };
 }
 

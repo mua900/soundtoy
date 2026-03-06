@@ -1164,13 +1164,17 @@ bool Application::mouse_input_sound_mode()
     }
 
     if (m_ui.add_variable_button.center().contains(m_mouse.pos)) {
-        // the get_string returns a view so we need to copy it
-        String variable_name = string_copy(m_ui.variable_name.get_string());
+        String variable_name = m_ui.variable_name.get_string();
         if (variable_name.size > 0)
         {
-            m_variables.add(variable_name);
+            // register the variable
+            st_sampler_register_variable(m_samplers.audio_left, variable_name.data, variable_name.size, Var_Type_Real);
+            st_sampler_register_variable(m_samplers.audio_right, variable_name.data, variable_name.size, Var_Type_Real);
+
+            reinit_samplers();
+
             SCOPE_STRING(variable_name, var_name);
-            printf("Variable name %s\n", var_name);
+            printf("Added variable: %s\n", var_name);
             m_ui.variable_name.clear();
         }
         return true;
@@ -1424,6 +1428,12 @@ bool Application::update_input_string()
                                    (m_ui.text_input_target == EXPRESSION_INPUT_LEFT) || (m_ui.text_input_target == EXPRESSION_INPUT_RIGHT));
 }
 
+bool Application::reinit_samplers()
+{
+    String eval_string = m_ui.expression_input_left.get_string();
+    return set_eval_string(eval_string);
+}
+
 bool Application::set_eval_string(String eval_string)
 {
     bool left =  st_sampler_set_expression(m_samplers.audio_left,  eval_string.data, eval_string.size);
@@ -1432,6 +1442,15 @@ bool Application::set_eval_string(String eval_string)
     bool success = left && right;
     if (!success) {
         fprintf(stderr, "Failed to set sample expression\n");
+    }
+
+    if (m_samplers.waveform_left)
+    {
+        st_sampler_destroy(m_samplers.waveform_left);
+    }
+    if (m_samplers.waveform_right)
+    {
+        st_sampler_destroy(m_samplers.waveform_right);
     }
 
     m_samplers.waveform_left = st_sampler_copy(m_samplers.audio_left);

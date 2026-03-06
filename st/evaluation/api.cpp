@@ -117,7 +117,7 @@ extern "C" {
     }
 
     int st_sampler_register_variable(St_Sampler* sampler, const char* name, int length, Variable_Type type) {
-        String symbol = String(name, length);
+        String symbol = string_copy(String(name, length));
         Variable var = Variable(symbol, type);
 
         Find_Result find = find_symbol(sampler->program.symbols, symbol);
@@ -144,8 +144,7 @@ extern "C" {
     }
 
     const char* st_sampler_get_variable_name_at_index(const St_Sampler* sampler, int index) {
-        // @fix returning raw pointer from string that is not guaranteed to be null terminated
-		// if we make a copy then the caller needs to free which isn't nice
+        // we copy the string and null terminate when we get it the first time so this is guaranteed to be null terminated
         return sampler->program.symbols.get(index).name.data;
     }
 
@@ -198,7 +197,7 @@ extern "C" {
         }
 
 		print_expression(expression);
-		
+
         bool compilation_success = bytecode_compile_expression(*program, expression);
         if (!compilation_success) {
             return false;
@@ -229,7 +228,7 @@ extern "C" {
 		}
 	}
     static void bytecode_fill_interleaved(Bytecode_Program* program_left, Bytecode_Program* program_right, float* buffer, int count) {
-		
+
     	float left_inv_sr = 1.0 / program_left->get_sample_rate();
     	float right_inv_sr = 1.0 / program_right->get_sample_rate();
 

@@ -103,8 +103,6 @@ public:
     Spectogram spectogram = {};
     Signal m_signal = {};
 
-    DArray<String> m_variables;  // user defined variables
-
     GraphToShow m_graph_to_show = GRAPH_AUDIO_DATA;
 
     Ui_State m_ui = {};
@@ -160,6 +158,8 @@ private:
     bool load_ui_layout(String filepath);
 
     bool update_channel_count(int count);
+
+    bool reinit_samplers();
 
     void text_input_start();
     void text_input_stop();
