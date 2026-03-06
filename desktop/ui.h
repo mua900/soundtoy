@@ -77,6 +77,7 @@ enum Text_Input_Target : u8 {
     NO_TARGET,
     EXPRESSION_INPUT_LEFT,
     EXPRESSION_INPUT_RIGHT,
+    VARIABLE_NAME,
 };
 
 struct Text_Field_Cursor_Position {
@@ -127,6 +128,19 @@ struct Text_Field
     bool update_text(SDL_Renderer* renderer, Font font, bool wrapped)
     {
         return render_text_field_texture(renderer, font, Color { 0x11, 0x22, 0x11, 0xff }, wrapped);
+    }
+
+    void clear() {
+        m_buffer.remove(0, m_buffer.length);
+        SDL_DestroyTexture(m_texture);
+        m_texture = nullptr;
+        m_cursor_pixel_x = 0;
+        m_cursor_pixel_y = 0;
+        m_cursor_line = 0;
+        m_line_count = 0;
+        m_selection_start = 0;
+        m_selection_end = 0;
+        m_font_size = 0;
     }
 
     void delete_text()
@@ -292,9 +306,9 @@ struct Ui_State {
 
     // sound mode ui
     Rectangle volume_slider = { 100, 100, 100, 10 };
-    Rectangle pan_slider = {
-        INIT_WINDOW_WIDTH * (1.0 / 2.0) - INIT_WINDOW_WIDTH * (5.0 / 16.0), INIT_WINDOW_HEIGHT * (1.0 / 5.0) - INIT_WINDOW_HEIGHT * (1.0 / 32.0),
-        INIT_WINDOW_WIDTH * (5.0 / 8.0), INIT_WINDOW_HEIGHT * (1.0 / 16.0) };
+
+    Text_Field variable_name = {};
+    Rectangle add_variable_button = { 500, 100, 50, 50 };
 
     Rectangle pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
     Rectangle graphs_button = { INIT_WINDOW_WIDTH * (4.0 / 5.0), 0, INIT_WINDOW_WIDTH * (1.0 / 5.0), 100 };

@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <array>
-#include <complex>
 
 
 unsigned int pop_count(u64 x)
@@ -389,7 +388,7 @@ String String_Builder::to_string()
     return String(buffer, cursor);
 }
 
-bool Rectangle::contains(vec2 p)
+bool Rectangle::contains(vec2 p) const
 {
     return p.x >= x && p.y >= y && p.x <= x + w && p.y <= y + h;
 }

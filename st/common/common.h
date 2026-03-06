@@ -280,7 +280,11 @@ struct Rectangle {
         : x(p_x), y(p_y), w(p_w), h(p_h)
     {}
 
-    bool contains(vec2 p);
+    bool contains(vec2 p) const;
+    // the current rectangle assumes center to be the origin so shift it to be the top left corner
+    Rectangle center() const {
+        return Rectangle(x - w / 2, y - h / 2, w, h);
+    }
 };
 
 struct ColorF;

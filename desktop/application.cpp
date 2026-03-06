@@ -7,7 +7,6 @@
 static const char* org_name = "flying-carpet";
 static const char* soundtoy_identifier = "flying-carpet.soundtoy";
 static const char* soundtoy_name = "soundtoy";
-// @todo versioning
 static const char* soundtoy_version = "0.1.0";
 
 #define WAVEFORM_SAMPLE_RATE 64
@@ -625,21 +624,24 @@ void Application::draw_sound_mode_ui()
         render_slider(m_ui.volume_slider, knob_scale, m_audio.expr_audio.get_volume(), slider_color, knob_color, m_rendered_text.data[TEXT_VOLUME_VALUE]);
     }
 
-    // pan slider
-    {
-        vec2 knob_scale = { 0.02, 1 };
-        Color slider_color = Color(0x55, 0x44, 0x22, 0xff);
-        Color knob_color = Color(0x88, 0xBB, 0xAA, 0xff);
-
-        render_slider(m_ui.pan_slider, knob_scale, m_audio.expr_audio.get_pan(), slider_color, knob_color, m_rendered_text.data[TEXT_PAN_VALUE]);
-    }
-
     // pause/resume button
     {
         render_textured_rectangle(m_ui.pause_button,
             m_audio.expr_audio.paused ? m_assets.resume_texture : m_assets.pause_texture,
             Color(0x66, 0x55, 0x55, 0xff)
         );
+    }
+
+    // add variable
+    {
+        vec2 pos = vec2(m_ui.add_variable_button.x,m_ui.add_variable_button.y);
+        vec2 scale = vec2(m_ui.add_variable_button.w,m_ui.add_variable_button.h);
+        SDL_FRect area = { pos.x - scale.x / 2, pos.y - scale.y / 2, scale.x, scale.y };
+        SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x44, 0x66, 0xff);
+        SDL_RenderFillRect(m_window.renderer, &area);
+        draw_plus(m_window.renderer, pos, scale, 20, ColorF(0.5,0.4,0.6,1.0));
+
+        render_text_field(m_ui.variable_name);
     }
 
     // paused/playing text
@@ -854,7 +856,7 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
             {
                 bool set = false;
 
-                if (m_audio.expr_audio.get_channel_count() == 1)
+                if (m_ui.text_input_target == EXPRESSION_INPUT_LEFT && m_audio.expr_audio.get_channel_count() == 1)
                 {
                     set = set_eval_string(text_field->get_string());
                 }
@@ -870,13 +872,9 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
                     }
                 }
 
-                if (!set)
+                if (m_ui.text_input_target == VARIABLE_NAME)
                 {
-                    set_event_active(EVENT_INVALID_EXPRESSION, 10.0);
-                }
-                else
-                {
-                    set_event_deactive(EVENT_INVALID_EXPRESSION);
+                    // do nothing
                 }
 
                 text_input_stop();
@@ -1087,23 +1085,6 @@ bool Application::mouse_input_sound_mode()
         return true;
     }
 
-    if (m_ui.pan_slider.contains(m_mouse.pos))
-    {
-        float diff = m_mouse.pos.x - m_ui.pan_slider.x;
-        float pan = diff / m_ui.pan_slider.w;
-
-        pan = snap_value(pan, 0.0, 1.0, 0.04);
-
-        m_audio.expr_audio.set_pan(pan);
-
-        char buffer[64];
-        snprintf(buffer, sizeof(buffer), "%.3f", pan);
-        m_rendered_text.data[TEXT_PAN_VALUE].clear();
-        m_rendered_text.data[TEXT_PAN_VALUE] = create_text(make_string(buffer), m_assets.font_large, Color(0x55, 0x22, 0x88, 0xff));
-
-        return true;
-    }
-
     if (m_ui.pause_button.contains(m_mouse.pos))
     {
         m_audio.expr_audio.toggle_pause();
@@ -1182,12 +1163,64 @@ bool Application::mouse_input_sound_mode()
         }
     }
 
+    if (m_ui.add_variable_button.center().contains(m_mouse.pos)) {
+        // the get_string returns a view so we need to copy it
+        String variable_name = string_copy(m_ui.variable_name.get_string());
+        if (variable_name.size > 0)
+        {
+            m_variables.add(variable_name);
+            SCOPE_STRING(variable_name, var_name);
+            printf("Variable name %s\n", var_name);
+            m_ui.variable_name.clear();
+        }
+        return true;
+    }
+
+    if (doing_text_input)
+    {
+        if (m_ui.text_input_target == EXPRESSION_INPUT_LEFT && !(m_ui.expression_input_left.m_area.contains(m_mouse.pos)))
+        {
+            m_ui.text_input_target = NO_TARGET;
+            toggle_text_input();
+            return true;
+        }
+        else if (m_ui.text_input_target == EXPRESSION_INPUT_RIGHT && !(m_ui.expression_input_right.m_area.contains(m_mouse.pos)))
+        {
+            m_ui.text_input_target = NO_TARGET;
+            toggle_text_input();
+            return true;
+        }
+        else if (m_ui.text_input_target == VARIABLE_NAME && !(m_ui.variable_name.m_area.contains(m_mouse.pos)))
+        {
+            m_ui.text_input_target = NO_TARGET;
+            toggle_text_input();
+            return true;
+        }
+    }
+
+    if (m_ui.variable_name.m_area.contains(m_mouse.pos)) {
+        if (!(doing_text_input && m_ui.text_input_target == VARIABLE_NAME)) {
+            // not wrapped
+            m_ui.variable_name.set_text_input_area(m_window.window, m_ui.variable_name.m_area.h);
+            toggle_text_input();
+            m_ui.text_input_target = VARIABLE_NAME;
+        }
+
+        vec2 relative = m_mouse.pos - vec2(m_ui.variable_name.m_area.x, m_ui.variable_name.m_area.y);
+        String string = m_ui.variable_name.get_string();
+        m_ui.variable_name.m_selection_start = m_ui.variable_name.calculate_cursor_from_mouse(relative, string, m_assets.font_editor);
+        m_ui.variable_name.m_selection_end = m_ui.variable_name.m_selection_start;
+    }
+
     if (m_ui.expression_input_left.m_area.contains(m_mouse.pos))
     {
         int line_skip = TTF_GetFontLineSkip(m_assets.font_editor.font);
-        m_ui.expression_input_left.set_text_input_area(m_window.window, line_skip);
-        toggle_text_input();
-        m_ui.text_input_target = EXPRESSION_INPUT_LEFT;
+        if (!(doing_text_input && m_ui.text_input_target == EXPRESSION_INPUT_LEFT))
+        {
+            m_ui.expression_input_left.set_text_input_area(m_window.window, line_skip);
+            toggle_text_input();
+            m_ui.text_input_target = EXPRESSION_INPUT_LEFT;
+        }
 
         vec2 relative = m_mouse.pos - vec2(m_ui.expression_input_left.m_area.x, m_ui.expression_input_left.m_area.y);
         String string = m_ui.expression_input_left.get_string();
@@ -1263,13 +1296,18 @@ void Application::update_ui_state(vec2 window_size)
     m_ui.pause_button.x = (window_size.x - m_ui.pause_button.w) / 2;
     m_ui.pause_button.y = (window_size.y - m_ui.pause_button.h) / 2;
 
-    m_ui.pan_slider.w = window_size.x * (5.0 / 8.0);
-    m_ui.pan_slider.h = window_size.y * (1.0 / 32.0);
-    m_ui.pan_slider.x = window_size.x * (1.0 / 2.0) - m_ui.pan_slider.w / 2;
-    m_ui.pan_slider.y = 0;
-
     m_ui.graphs_button.x = window_size.x * (4.0 / 5.0);
     m_ui.graphs_button.y = window_size.y * (1.0 / 5.0);
+
+    m_ui.add_variable_button.x = window_size.x * (15.0 / 16.0);
+    m_ui.add_variable_button.y = window_size.y * (1.0 / 16.0);
+    m_ui.add_variable_button.w = window_size.x * (1.0 / 16.0);
+    m_ui.add_variable_button.h = m_ui.add_variable_button.w;
+
+    m_ui.variable_name.m_area.x = window_size.x * (1.0 / 2.0);
+    m_ui.variable_name.m_area.y = window_size.y * (1.0 / 32.0);
+    m_ui.variable_name.m_area.w = window_size.x * (1.0 / 3.0);
+    m_ui.variable_name.m_area.h = window_size.y * (1.0 / 16.0);
 
     if (m_audio.expr_audio.get_channel_count() == 1)
     {
@@ -1320,6 +1358,8 @@ Text_Field* Ui_State::get_selected_text_field()
         return &expression_input_left;
     case EXPRESSION_INPUT_RIGHT:
         return &expression_input_right;
+    case VARIABLE_NAME:
+        return &variable_name;
     default:
         // error?
         return NULL;
@@ -1532,7 +1572,7 @@ void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color col
 }
 
 void Application::render_signal(vec2 area_center, vec2 area_scale, Signal signal, Color color) {
-    render_waveform(area_center, area_scale, m_signal.samples.size, 1, color, get_signal_sample, &m_signal, true);
+    render_waveform(area_center, area_scale, m_signal.samples.size, 1, color, get_signal_sample, &signal, true);
 }
 
 void Application::update_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale) {
@@ -1754,6 +1794,35 @@ void draw_arrowhead(SDL_Renderer* renderer, vec2 position, vec2 direction, float
     int indices[3] = {0, 1, 2};
 
     SDL_RenderGeometry(renderer, NULL, vertices, 3, indices, 3);
+}
+
+void draw_plus(SDL_Renderer* renderer, vec2 position, vec2 scale, float thickness, ColorF color)
+{
+    SDL_Vertex vertices[8] = {};
+
+    for (int i = 0; i < 8; i++) {
+        vertices[i].color = SDL_FColor { color.r, color.g, color.b, color.a };
+    }
+
+    float half_x = scale.x / 2;
+    float half_y = scale.y / 2;
+    float half_thick = thickness / 2;
+
+    vertices[0].position = { position.x - half_thick, position.y - half_y };
+    vertices[1].position = { position.x - half_thick, position.y + half_y };
+    vertices[2].position = { position.x + half_thick, position.y - half_y };
+    vertices[3].position = { position.x + half_thick, position.y + half_y };
+    vertices[4].position = { position.x - half_x, position.y - half_thick };
+    vertices[5].position = { position.x - half_x, position.y + half_thick };
+    vertices[6].position = { position.x + half_x, position.y - half_thick };
+    vertices[7].position = { position.x + half_x, position.y + half_thick };
+
+    int indices[12] = { 0, 1, 2,
+                        1, 2, 3,
+                        4, 5, 6,
+                        5, 6, 7 };
+
+    SDL_RenderGeometry(renderer, NULL, vertices, 8, indices, 12);
 }
 
 Signal create_signal(St_Sampler* sampler, float time_start, int sample_count, int sample_rate)

@@ -103,6 +103,8 @@ public:
     Spectogram spectogram = {};
     Signal m_signal = {};
 
+    DArray<String> m_variables;  // user defined variables
+
     GraphToShow m_graph_to_show = GRAPH_AUDIO_DATA;
 
     Ui_State m_ui = {};
@@ -191,7 +193,9 @@ bool load_font(Font* font, String_Builder& path, String font_folder, String font
 void render_text_size(SDL_Renderer* renderer, Text text, vec2 where, vec2 absolute_scale = vec2(0, 0));
 void render_text_scale(SDL_Renderer* renderer, Text text, vec2 where, vec2 scale_factor = vec2(0,0));
 
+// polygon drawing
 void draw_arrowhead(SDL_Renderer* renderer, vec2 position, vec2 direction, float scale, ColorF color);
+void draw_plus(SDL_Renderer* renderer, vec2 position, vec2 scale, float thickness, ColorF color);
 
 // create a signal from the given sampler
 Signal create_signal(St_Sampler* sampler, float time_start, int sample_count, int sample_rate);
