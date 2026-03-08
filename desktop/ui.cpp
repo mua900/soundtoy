@@ -128,7 +128,6 @@ void Text_Field::calculate_cursor_from_selection(String string, Font font)
     int cursor_pixel_x = 0;
     size_t cursor_character = 0;
 
-    // @todo this might not be correct.
     while (cursor_character < m_selection_start)
     {
         size_t cursor_character_this_line = 0;
