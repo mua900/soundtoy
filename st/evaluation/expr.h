@@ -84,6 +84,7 @@ using ExprFlags = u8;
 
 struct Expr {
     Expr_Type type;
+    Variable_Type result_type;  // the type the expression evaluates to
     ExprFlags flags = 0;
 };
 
@@ -95,17 +96,21 @@ struct Expr_Literal : Expr {
     Expr_Literal(bool b) : value(b)
 	{
         type = Expr_Type::Literal;
+        result_type = Var_Type_Boolean;
     }
     Expr_Literal(long long integer) : value(integer)
 	{
         type = Expr_Type::Literal;
+        result_type = Var_Type_Integer;
     }
     Expr_Literal(double real) : value(real)
 	{
         type = Expr_Type::Literal;
+        result_type = Var_Type_Real;
     }
     Expr_Literal(Value val) : value(val) {
         type = Expr_Type::Literal;
+        result_type = val.type;
     }
 };
 
@@ -171,6 +176,7 @@ struct Expr_Variable : Expr {
     Expr_Variable(String var_name, int id, Variable_Type var_type) : name(var_name), var_id(id), variable_type(var_type)
 	{
         type = Expr_Type::Variable;
+        result_type = variable_type;
     }
 };
 

@@ -12,7 +12,7 @@
 #define DEFAULT_BACKGROUND_COLOR Color{ 0x88, 0x33, 0x66, 0xff }
 
 struct Text {
-    SDL_Texture* texture = NULL;  // @todo make ownership of this more clear
+    SDL_Texture* texture = NULL;
     String string = {};
 
     Text() {}
@@ -159,7 +159,6 @@ struct Text_Field
     {
         if (m_selection_end < m_selection_start)
             return;
-        printf("%d %d\n", m_selection_start, m_selection_end);
         int amount = m_selection_end - m_selection_start;
         m_buffer.remove(m_selection_start, amount);
 
@@ -218,8 +217,8 @@ private:
 
 #define DROP_DOWN_LIST_SELECTED_SENTINEL -1
 
-// owns the text object inside it
 struct Drop_Down_List {
+	// owns the text object inside it
     struct Entry {
         Text label = {};
         union {
@@ -328,6 +327,8 @@ struct Ui_State {
     Text_Input_Target text_input_target = NO_TARGET;
     Text_Field expression_input_left = {};
     Text_Field expression_input_right = {};
+
+    DArray<Text_Field> variable_values = {};
 
     Drop_Down_List channel_count = {};
     Drop_Down_List playback_device = {};

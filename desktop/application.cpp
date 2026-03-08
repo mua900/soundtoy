@@ -1623,7 +1623,6 @@ void Application::render_waveform(vec2 area_center, vec2 area_scale, int frame_c
 }
 
 // @todo we can do cooler things with rendering waveforms or audio data
-// @todo simplify all of these below and stop using static variables
 
 void Application::render_audio_data(vec2 area_center, vec2 area_scale, Color color) {
 

@@ -186,7 +186,7 @@ struct Bytecode_Processor {
 struct InputStream {
 	Array<float> samples = {};
 	int stride = 0;
-	int sample_index = 0; // @todo a builtin variable to access this
+	int sample_index = 0;
 
 	InputStream() {}
 	InputStream(Array<float> p_samples, int p_stride)

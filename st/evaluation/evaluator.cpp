@@ -524,8 +524,10 @@ Expr* Parser::parse_primary_expr()
             return new Expr_Literal(i);
         }
         case TOKEN_TYPE_LITERAL_FLOAT:
+        {
             cursor++;
             return new Expr_Literal(string_to_real(token.token_string));
+        }
         case TOKEN_TYPE_IDENT:
         {
             cursor++;
@@ -1069,8 +1071,33 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			auto left = collapse_expr_real(binary->left, builtin_functions, error_string);
 			auto right = collapse_expr_real(binary->right, builtin_functions, error_string);
 
+            Variable_Type arithmetic_type = (left->result_type == Var_Type_Integer && right->result_type == Var_Type_Integer) ? Var_Type_Integer : Var_Type_Real;
+
+			// the result type depends on the operation
+			Variable_Type res_type;
+            switch (binary->op)
+			{
+    			case Binop_Unknown:
+    				*error_string = make_string("Unknown binary operator");
+    				break;
+    			case Binop_Add: res_type = arithmetic_type;  break;
+    			case Binop_Sub: res_type = arithmetic_type;  break;
+    			case Binop_Mul: res_type = arithmetic_type;  break;
+    			case Binop_Div: res_type = arithmetic_type;  break;
+    			case Binop_Mod: res_type = arithmetic_type;  break;
+    			case Binop_Eq:  res_type = Var_Type_Boolean; break;
+    			case Binop_Neq: res_type = Var_Type_Boolean; break;
+    			case Binop_Gt:  res_type = Var_Type_Boolean; break;
+    			case Binop_Ge:  res_type = Var_Type_Boolean; break;
+    			case Binop_Lt:  res_type = Var_Type_Boolean; break;
+    			case Binop_Le:  res_type = Var_Type_Boolean; break;
+    			default:
+    				panic("Unknown binary operator");
+			}
+
 			binary->left = left;
 			binary->right = right;
+			binary->result_type = res_type;
 
 			if (left->type == Expr_Type::Literal && right->type == Expr_Type::Literal)
 			{
@@ -1140,10 +1167,17 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 					return NULL;
 				}
 
-				// @todo proper typechecking for arguments
-
 				int arg_count = call->arguments.size;
 				int ret_count = builtin.signature.return_types.size;
+
+				for (int i = 0; i < arg_count; i++)
+				{
+					if (call->arguments.get(i)->result_type != builtin.signature.parameter_types.get(i))
+					{
+						*error_string = make_string("Type mismatch in function parameters");
+						return NULL;
+					}
+				}
 
 				if (arg_count == 1 && computable_now) {
 					call->arguments.data[0] = collapse_expr_real(call->arguments.data[0], builtin_functions, error_string);
@@ -1212,7 +1246,16 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 					return ret;
 				}
 				else {
-					return call;
+                    if (builtin.signature.return_types.size == 1)
+                    {
+    				    call->result_type = builtin.signature.return_types.get(0);
+    					return call;
+                    }
+                    else
+                    {
+                        *error_string = make_string("Builtin functions returning more than a single value not implemented");
+                        return NULL;
+                    }
 				}
 			}
 			else {
@@ -1228,12 +1271,11 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
         case Expr_Type::Unary:
 		{
 			Expr_Unary* unary = static_cast<Expr_Unary*>(expr);
-			{
-				auto operand = collapse_expr_real(unary->operand, builtin_functions, error_string);
-				if (!operand)
-					return NULL;
-				unary->operand = operand;
-			}
+			auto operand = collapse_expr_real(unary->operand, builtin_functions, error_string);
+			if (!operand)
+				return NULL;
+			unary->operand = operand;
+			unary->result_type = operand->result_type;
 
 			if (unary->operand->type == Expr_Type::Literal)
 			{
@@ -1328,6 +1370,8 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			ternary->then_ = then_;
 			ternary->else_ = else_;
 
+			// result_type ???
+
 			return ternary;
 		}
         case Expr_Type::Tuple:
@@ -1341,6 +1385,7 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
                     return NULL;
                 }
             }
+            // result_type ???
             return tuple;
         }
     }
