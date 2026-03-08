@@ -431,7 +431,7 @@ Expr* Parser::parse_unary_expr()
             return NULL;
         }
 
-        Op_Unary op = (type == TOKEN_TYPE_MINUS) ? Unop_Negate : Unop_Not;
+        Op_Unary op = (type == TOKEN_TYPE_MINUS) ? Unop_Negate : ((type == TOKEN_TYPE_PLUS) ? Unop_Plus : Unop_Not);
         operand = new Expr_Unary(op, operand);
 
         type = tokens.get(cursor).type;
@@ -651,6 +651,11 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
                     eval.value = -eval.value;
                     return eval;
                 }
+                case Unop_Plus:
+                {
+                    // nothing to do
+                    return eval;
+                }
                 case Unop_Not:
                 {
                     if (eval.value == 0) {
@@ -812,7 +817,7 @@ void print_expr(const Expr* expr, int indent)
         case Expr_Type::Unary:
         {
             const auto unary = static_cast<const Expr_Unary*>(expr);
-            const char* operator_string = (unary->op == Unop_Negate) ? "Negate" : "Not";
+            const char* operator_string = (unary->op == Unop_Negate) ? "Negate" : ((unary->op == Unop_Plus) ? "Plus" : "Not");
             printf("Unary Expression %s\n", operator_string);
             print_expr(unary->operand, indent + 1);
             break;
@@ -1275,12 +1280,23 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			if (!operand)
 				return NULL;
 			unary->operand = operand;
-			unary->result_type = operand->result_type;
+
+			if (unary->op == Unop_Plus)
+			{
+                if (operand->result_type != Var_Type_Real && operand->result_type != Var_Type_Integer)
+                {
+                    *error_string = make_string("Can not use unary plus on non numeric value");
+                    return NULL;
+                }
+
+                delete unary;
+                return operand;
+			}
 
 			if (unary->operand->type == Expr_Type::Literal)
 			{
                 Op_Unary unop = unary->op;
-				auto operand = static_cast<Expr_Literal*>(unary->operand);
+				auto literal = static_cast<Expr_Literal*>(unary->operand);
 
                 delete unary;
 
@@ -1288,33 +1304,33 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 				{
                 case Unop_Negate:
 					{
-						if (!operand->value.is_numeric())
+						if (!literal->value.is_numeric())
 						{
 							*error_string = make_string("Can not negate non numeric value");
 							return NULL;
 						}
 
-						if (operand->value.type == Var_Type_Integer)
+						if (literal->value.type == Var_Type_Integer)
 						{
-							operand->value.integer = -operand->value.integer;
+							literal->value.integer = -literal->value.integer;
 						}
-						else if (operand->value.type == Var_Type_Real)
+						else if (literal->value.type == Var_Type_Real)
 						{
-							operand->value.real = -operand->value.real;
+							literal->value.real = -literal->value.real;
 						}
 
-						return operand;
+						return literal;
 					}
                 case Unop_Not:
 					{
-						if (operand->value.type != Var_Type_Boolean)
+						if (literal->value.type != Var_Type_Boolean)
 						{
 							*error_string = make_string("Can not apply the operator Not to non boolean value");
 							return NULL;
 						}
 
-						operand->value.boolean = !operand->value.boolean;
-						return operand;
+						literal->value.boolean = !literal->value.boolean;
+						return literal;
 					}
 				}
 			}

@@ -5,7 +5,7 @@
 #include "template.h"
 
 enum Op_Unary {
-    Unop_Negate, Unop_Not // @todo also plus maybe?
+    Unop_Negate, Unop_Plus, Unop_Not
 };
 
 // @todo bitwise operators
