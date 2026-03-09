@@ -32,6 +32,7 @@ enum Bytecode_Opcode : u32
 	INSTR_LOADF,		// load freg, const_float
 	INSTR_LOAD_BUILTIN,	// load_builtin freg builtin_id
 	INSTR_LOAD_VAR,		// load_var freg var_id
+	INSTR_LOAD_SAMPLE,  // load_sample freg
 	INSTR_LOAD_I_TO_F,  // load freg, const_int
 	INSTR_LOAD_F_TO_I,  // load reg, const_float
 
@@ -145,7 +146,9 @@ struct Bytecode_Instr {
 struct Constant_Block {
 	DArray<double> real = {};
 	DArray<s64> integer = {};
-	double builtin_variable[BUILTIN_VARIABLE_COUNT] = {};
+	double time = 0.0;
+	long sample_rate = 0.0;
+	long sample_index = 0.0;
 	Builtin_Function_List builtin_function = {};
 
 	Constant_Id add_constant(Value value);
@@ -200,7 +203,6 @@ struct Bytecode_Program {
 	Bytecode_Code code = {};
 	Constant_Block constant_block = {};
 	InputStream input_stream = {};
-	int sample_index = 0;
 
 	DArray<Variable> symbols;
 	DArray<double> variables = {};
@@ -229,7 +231,6 @@ struct Bytecode_Program {
 
 	void set_input_stream(InputStream istream);
 
-	void set_builtin_variable(double value, u32 builtin_id);
 	void set_builtin_function(StFunction  implementation, u32 builtin_function);
 	void step_time(double time);
 	void set_sample_time(double sample_time);

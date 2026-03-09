@@ -9,7 +9,7 @@ extern "C" {
     };
 
     struct St_Sampler;
-	
+
     bool st_initialize();
     const char* st_get_last_error();
     St_Sampler* st_sampler_create(int sample_rate);

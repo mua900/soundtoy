@@ -473,11 +473,11 @@ void Application::handle_events()
                     {
                         m_audio.expr_audio.pause();
 
-                        st_set_input_stream(m_samplers.audio_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, 2);
-                        st_set_input_stream(m_samplers.audio_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, 2);
+                        st_set_input_stream(m_samplers.audio_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
+                        st_set_input_stream(m_samplers.audio_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
 
-                        st_set_input_stream(m_samplers.waveform_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, 2);
-                        st_set_input_stream(m_samplers.waveform_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, 2);
+                        st_set_input_stream(m_samplers.waveform_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
+                        st_set_input_stream(m_samplers.waveform_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
                     }
                     else
                     {
@@ -1670,6 +1670,7 @@ bool Application::load_audio_file(String path) {
 
     {
         // @todo other file formats than wav
+        // @todo don't change channel counts
 
         SDL_AudioSpec spec;  // output parameter
         u8* buffer = nullptr;

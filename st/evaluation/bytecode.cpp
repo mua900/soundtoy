@@ -47,7 +47,16 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
 
             if (is_builtin_variable(variable)) {
                 u16 freg = program.allocate_float_register();
-                program.emit_bytecode_instruction(INSTR_LOAD_BUILTIN, freg, variable->var_id);
+
+                // special case
+                if (variable->var_id == BUILTIN_VARIABLE_INPUT_SAMPLE)
+                {
+                    program.emit_bytecode_instruction(INSTR_LOAD_SAMPLE, freg, 0);
+                }
+                else
+                {
+                    program.emit_bytecode_instruction(INSTR_LOAD_BUILTIN, freg, variable->var_id);
+                }
 
                 Value_Location_Info builtin_location_info;
                 builtin_location_info.location_type = Value_Location_Type::FLOATING_POINT_REGISTER;
@@ -397,7 +406,7 @@ Value_Location_Info Bytecode_Program::emit_load_constant(Constant_Id const_id)
 
 void Bytecode_Program::step_time(double step)
 {
-    constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] += step;
+    constant_block.time += step;
 }
 
 void Bytecode_Program::set_input_stream(InputStream istream)
@@ -406,19 +415,19 @@ void Bytecode_Program::set_input_stream(InputStream istream)
 }
 
 void Bytecode_Program::set_sample_rate(double sample_rate) {
-    constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE] = sample_rate;
+    constant_block.sample_rate = sample_rate;
 }
 
 double Bytecode_Program::get_sample_rate() const {
-    return constant_block.builtin_variable[BUILTIN_VARIABLE_SAMPLE_RATE];
+    return constant_block.sample_rate;
 }
 
 void Bytecode_Program::set_sample_time(double sample_time) {
-    constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] = sample_time;
+    constant_block.time = sample_time;
 }
 
 double Bytecode_Program::get_sample_time() const {
-    return constant_block.builtin_variable[BUILTIN_VARIABLE_TIME];
+    return constant_block.time;
 }
 
 void Bytecode_Program::reset() {
@@ -428,13 +437,8 @@ void Bytecode_Program::reset() {
     code.code.reset();
     constant_block.real.reset();
     constant_block.integer.reset();
-    constant_block.builtin_variable[BUILTIN_VARIABLE_TIME] = 0.0;
+    constant_block.time = 0.0;
     get_default_builtin_functions(constant_block.builtin_function);
-    sample_index = 0;
-}
-
-void Bytecode_Program::set_builtin_variable(double value, u32 builtin_variable) {
-    constant_block.builtin_variable[builtin_variable] = value;
 }
 
 // Be very careful matching the signatures before using this.
@@ -519,6 +523,12 @@ void Bytecode_Program::print_program() const {
                     else if (instr.op1 == BUILTIN_VARIABLE_SAMPLE_RATE) {
                         builtin_name = "sample_rate";
                     }
+                    else if (instr.op1 == BUILTIN_VARIABLE_SAMPLE_INDEX) {
+                        builtin_name = "sample_index";
+                    }
+                    else if (instr.op1 == BUILTIN_VARIABLE_INPUT_SAMPLE) {
+                        builtin_name = "input_sample";
+                    }
 
                     builder.append(make_string(builtin_name));
                     break;
@@ -560,13 +570,18 @@ void Bytecode_Program::print_program() const {
         }
 
         builder.append(make_string("    Builtin Variables: \n"));
-        for (double builtin : constant_block.builtin_variable) {
+
+        auto print_builtin = [&builder](double builtin) {
             builder.append(make_string("    "));
             char string[64];
             snprintf(string, sizeof(string), "%.3f", builtin);
             builder.append(make_string(string));
             builder.append_char('\n');
-        }
+        };
+
+        print_builtin(constant_block.time);
+        print_builtin(constant_block.sample_rate);
+        print_builtin(constant_block.sample_index);
     }
 
     printf("%s\n", builder.c_string());
@@ -582,6 +597,9 @@ double bytecode_run(Bytecode_Program& program)
     Constant_Block& constant_block = program.constant_block;
     Bytecode_Code& code = program.code;
 	DArray<double>& variables = program.variables;
+	InputStream& input_stream = program.input_stream;
+
+    constant_block.sample_index += 1;
 
 #define BYTECODE_PROGRAM_MAXIMUM_ITERATION_COUNT 2000
     int iteration_count = 0;
@@ -616,7 +634,28 @@ double bytecode_run(Bytecode_Program& program)
                 u16 freg = instr.op0;
                 u16 builtin_index = instr.op1;
 
-                processor.fregs.get_ref(freg) = constant_block.builtin_variable[builtin_index];
+                float value = 0.0;
+                switch (builtin_index)
+                {
+                    case BUILTIN_VARIABLE_TIME:
+                    {
+                        value = constant_block.time;
+                        break;
+                    }
+                    case BUILTIN_VARIABLE_SAMPLE_RATE:
+                    {
+                        value = constant_block.sample_rate;
+                        break;
+                    }
+                    case BUILTIN_VARIABLE_SAMPLE_INDEX:
+                    {
+                        value = constant_block.sample_index;
+                        break;
+                    }
+                    default: panic("Unexpected builtin variable");
+                }
+
+                processor.fregs.get_ref(freg) = value;
 
                 break;
             }
@@ -626,6 +665,15 @@ double bytecode_run(Bytecode_Program& program)
 
 			processor.fregs.get_ref(freg) = variables.get(var_id);
 			break;
+		}
+		case INSTR_LOAD_SAMPLE: {
+            u16 freg = instr.op0;
+
+            int access_index = input_stream.sample_index * input_stream.stride;
+            access_index %= input_stream.samples.size;
+            processor.fregs.get_ref(freg) = input_stream.samples.get(access_index);
+            input_stream.sample_index += 1;
+            break;
 		}
 		case INSTR_LOAD_I_TO_F: {
 			u16 freg = instr.op0;
@@ -937,6 +985,7 @@ const char* opcode_string(Bytecode_Opcode opcode) {
         case INSTR_LOADF: return "INSTR_LOADF";
         case INSTR_LOAD_BUILTIN: return "INSTR_LOAD_BUILTIN";
 	    case INSTR_LOAD_VAR: return "INSTR_LOAD_VAR";
+	    case INSTR_LOAD_SAMPLE: return "INSTR_LOAD_SAMPLE";
     	case INSTR_LOAD_I_TO_F: return "INSTR_LOAD_I_TO_F";
         case INSTR_LOAD_F_TO_I: return "INSTR_LOAD_F_TO_I";
         case INSTR_MOV: return "INSTR_MOV";
