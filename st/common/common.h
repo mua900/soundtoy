@@ -141,7 +141,7 @@ String string_get_extension(String s);
 String string_copy(String s);
 
 int string_to_integer(String s, bool* success);
-double string_to_real(String s);
+double string_to_real(String s, bool* success);
 
 struct String_Builder {
     char* buffer = NULL;

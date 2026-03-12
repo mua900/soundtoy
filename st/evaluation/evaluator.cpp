@@ -526,7 +526,13 @@ Expr* Parser::parse_primary_expr()
         case TOKEN_TYPE_LITERAL_FLOAT:
         {
             cursor++;
-            return new Expr_Literal(string_to_real(token.token_string));
+            bool success = false;
+            double real = string_to_real(token.token_string, &success);
+            if (!success)
+            {
+                return nullptr;
+            }
+            return new Expr_Literal(real);
         }
         case TOKEN_TYPE_IDENT:
         {

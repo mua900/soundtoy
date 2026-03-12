@@ -885,6 +885,25 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
                     // do nothing
                 }
 
+                if (m_ui.text_input_target == VARIABLE_VALUE)
+                {
+                    // id should match the index
+                    int index = m_ui.selected_variable_value_index;
+
+                    String value_string = m_ui.variable_values.get_ref(index).get_string();
+                    bool convertion_success = false;
+                    double value = string_to_real(value_string, &convertion_success);
+
+                    if (convertion_success)
+                    {
+                        st_sampler_set_variable_value(m_samplers.audio_left, index, value);
+                    }
+                    else
+                    {
+                        // @todo display error
+                    }
+                }
+
                 text_input_stop();
             }
 
@@ -1766,6 +1785,8 @@ bool Application::save_app_state(String filepath) {
 }
 
 bool Application::load_app_state(String filepath) {
+    // @todo error handling
+
     BinaryData file_raw;
     String file_content;
 
@@ -1798,10 +1819,10 @@ bool Application::load_app_state(String filepath) {
         value.trim();
 
         if (string_compare(name, String("volume"))) {
-            volume = string_to_real(value);
+            volume = string_to_real(value, nullptr);
         }
         else if (string_compare(name, String("sample_rate"))) {
-            sample_rate = string_to_real(value);
+            sample_rate = string_to_real(value, nullptr);
         }
         else if (string_compare(name, String("expression_left"))) {
             expr_left = value;

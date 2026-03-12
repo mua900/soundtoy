@@ -166,10 +166,19 @@ int string_to_integer(String s, bool* success)
     return accum;
 }
 
-double string_to_real(String s)
+double string_to_real(String s, bool* success)
 {
     char* end_ptr = NULL;
     double res = strtod(s.data, &end_ptr);
+    if (end_ptr)
+    {
+        if (success)
+            *success = false;
+        return 0.0;
+    }
+
+    if (success)
+        *success = true;
     return res;
 }
 
