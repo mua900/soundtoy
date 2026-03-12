@@ -1347,6 +1347,8 @@ void Application::toggle_text_input()
 
 void Application::update_ui_state(vec2 window_size)
 {
+    // @todo deduplicate calculations
+
     m_ui.volume_slider.x = window_size.x * (1.0 / 20.0);
     m_ui.volume_slider.y = window_size.y * (1.0 / 8.0);
 
@@ -1404,16 +1406,18 @@ void Application::update_ui_state(vec2 window_size)
                                 window_size.y * (1.0 / 8.0))
     );
 
-    /*
     int var_value_index = 0;
-    for (auto& var_value : m_variable_values)
+    for (auto& var_value : m_ui.variable_values)
     {
-        var_value.m_area.x = window_size.x * Variable_Table_Horizontal_Element_Size;
-        var_value.m_area.y = window_size.y * Variable_Table_Vertical_Element_Size * var_value_index;
+        Rectangle area = Rectangle( window_size.x * float(2.0 / 8.0),
+                                    window_size.y * Variable_Table_Vertical_Element_Size * var_value_index,
+                                    window_size.x * Variable_Table_Horizontal_Element_Size,
+                                    window_size.y * Variable_Table_Vertical_Element_Size);
+
+        var_value.m_area = area;
 
         var_value_index += 1;
     }
-    */
 }
 
 Text_Field* Ui_State::get_selected_text_field()
