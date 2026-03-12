@@ -48,12 +48,17 @@ public:
 		return m_data[index];
 	}
 
-	T& get_ref(int index) {
+	T& get_ref(int index) const {
 		if (index >= m_size) panic("Out of bounds array access");
 		return m_data[index];
 	}
 
-	int add(T elem)	{
+	T* get_ptr(int index) const {
+		if (index >= m_size) panic("Out of bounds array access");
+		return &m_data[index];
+	}
+
+	int add(T& elem)	{
 		int ret_index = m_size;
 		if (m_size + 1 > m_cap)
 		{
@@ -61,6 +66,18 @@ public:
 		}
 
 		m_data[m_size] = elem;
+		m_size += 1;
+		return ret_index;
+	}
+
+	int add(T&& elem)	{
+		int ret_index = m_size;
+		if (m_size + 1 > m_cap)
+		{
+			grow();
+		}
+
+		m_data[m_size] = std::move(elem);
 		m_size += 1;
 		return ret_index;
 	}
@@ -146,7 +163,7 @@ public:
 		}
 
 		m_size -= 1;
-		return m_data[m_size - 1];
+		return m_data[m_size];
 	}
 
 	void free()	{
@@ -199,7 +216,7 @@ private:
 		T* ndata = new T[ncap];
 		for (int i = 0; i < m_size; i++)
 		{
-			ndata[i] = m_data[i];
+			ndata[i] = std::move(m_data[i]);
 		}
 		delete[](m_data);
 		m_data = ndata;

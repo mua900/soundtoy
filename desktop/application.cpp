@@ -149,7 +149,6 @@ bool Application::initialize()
             printf("%s\n", device_name);
         }
 
-
         m_ui.graph_to_show.set_title(create_text(make_string("Graph"), m_assets.font_large, Color(0x66, 0x33, 0x55, 0xff)));
         m_ui.graph_to_show.add_option(create_text(make_string("Audio Data"), m_assets.font_large, Color(0x66, 0x44, 0x66, 0xff)), 0);
         m_ui.graph_to_show.add_option(create_text(make_string("Fourier"), m_assets.font_large, Color(0x66, 0x44, 0x66, 0xff)), 0);
@@ -248,29 +247,16 @@ bool Application::load_assets()
 {
     String_Builder sb(256);
     const char* base_path = SDL_GetBasePath();
-    char* pref_path = SDL_GetPrefPath(org_name, soundtoy_name);  // need to free
 
     sb.append(make_string(base_path));
 
     bool load_from_base_path = st_load_assets(sb);
-    if (load_from_base_path) {
+    if (!load_from_base_path) {
         // success
-
-        SDL_free(pref_path);
-        pref_path = nullptr;
-
-        return true;
+        return false;
     }
-    else {
-        // failed to load from base path. Try pref path
-        sb.clear_and_append(String(pref_path));
 
-        SDL_free(pref_path);
-        pref_path = nullptr;
-
-        bool load_from_pref_path = st_load_assets(sb);
-        return load_from_pref_path;
-    }
+    return true;
 }
 
 bool Application::st_load_assets(String_Builder& sb) {
@@ -574,7 +560,7 @@ void Application::draw()
     SDL_RenderPresent(renderer);
 }
 
-const float Variable_Table_Horizontal_Element_Size = (1.0 / 8.0);
+const float Variable_Table_Horizontal_Element_Size = (1.0 / 12.0);
 const float Variable_Table_Vertical_Element_Size = (1.0 / 16.0);
 
 void Application::draw_sound_mode_ui()
@@ -648,6 +634,7 @@ void Application::draw_sound_mode_ui()
 
         // variables
         {
+            // @todo make this a scrollable area if there are too many items
             Rectangle start = { window_size.x * float(1.0 / 8.0), window_size.y * (0),
                                 window_size.x * Variable_Table_Horizontal_Element_Size, window_size.y * Variable_Table_Vertical_Element_Size };
             int index = 0;
@@ -657,6 +644,8 @@ void Application::draw_sound_mode_ui()
                 SDL_FRect area = {start.x, start.y + index * start.h, start.w, start.h};
                 SDL_RenderFillRect(m_window.renderer, &area);
                 render_text_size(m_window.renderer, var, vec2(start.x + start.w / 2, start.y + index * start.h + start.h / 2), vec2(start.w, start.h));
+
+                render_text_field(m_ui.variable_values.get_ref(index));
 
                 index += 1;
             }
@@ -1198,33 +1187,18 @@ bool Application::mouse_input_sound_mode()
 
             m_variable_text.add(create_text(variable_name, m_assets.font_editor, Color(0x88, 0x33, 0x66, 0xff)));
 
+            int var_count = st_sampler_get_variable_count(m_samplers.audio_left);
+            Rectangle value_area = Rectangle(window_size.x * float(2.0 / 8.0),
+                                            window_size.y * Variable_Table_Vertical_Element_Size * (var_count - 1),
+                                             window_size.x * Variable_Table_Horizontal_Element_Size,
+                                             window_size.y * Variable_Table_Vertical_Element_Size);
+            m_ui.variable_values.add(Text_Field(value_area));
+
             SCOPE_STRING(variable_name, var_name);
             printf("Added variable: %s\n", var_name);
             m_ui.variable_name.clear();
         }
         return true;
-    }
-
-    if (doing_text_input)
-    {
-        if (m_ui.text_input_target == EXPRESSION_INPUT_LEFT && !(m_ui.expression_input_left.m_area.contains(m_mouse.pos)))
-        {
-            m_ui.text_input_target = NO_TARGET;
-            toggle_text_input();
-            return true;
-        }
-        else if (m_ui.text_input_target == EXPRESSION_INPUT_RIGHT && !(m_ui.expression_input_right.m_area.contains(m_mouse.pos)))
-        {
-            m_ui.text_input_target = NO_TARGET;
-            toggle_text_input();
-            return true;
-        }
-        else if (m_ui.text_input_target == VARIABLE_NAME && !(m_ui.variable_name.m_area.contains(m_mouse.pos)))
-        {
-            m_ui.text_input_target = NO_TARGET;
-            toggle_text_input();
-            return true;
-        }
     }
 
     if (m_ui.variable_name.m_area.contains(m_mouse.pos)) {
@@ -1240,6 +1214,43 @@ bool Application::mouse_input_sound_mode()
         m_ui.variable_name.m_selection_start = m_ui.variable_name.calculate_cursor_from_mouse(relative, string, m_assets.font_editor);
         m_ui.variable_name.m_selection_end = m_ui.variable_name.m_selection_start;
     }
+    else if (m_ui.text_input_target == VARIABLE_NAME) {
+        clear_text_input_selection();
+        return true;
+    }
+
+    int value_field_index = 0;
+    for (auto& var_value : m_ui.variable_values)
+    {
+        if (var_value.m_area.contains(m_mouse.pos))
+        {
+            if (!doing_text_input)
+            {
+                var_value.set_text_input_area(m_window.window, var_value.m_area.h);
+                toggle_text_input();
+                m_ui.text_input_target = VARIABLE_VALUE;
+            }
+
+            vec2 relative = m_mouse.pos - vec2(var_value.m_area.x, var_value.m_area.y);
+            String string = var_value.get_string();
+            var_value.m_selection_start = var_value.calculate_cursor_from_mouse(relative, string, m_assets.font_editor);
+            var_value.m_selection_end = var_value.m_selection_start;
+
+            m_ui.selected_variable_value_index = value_field_index;
+
+            return true;
+        }
+
+        value_field_index += 1;
+    }
+
+    // no variable value field was clicked
+    if (m_ui.text_input_target == VARIABLE_VALUE)
+    {
+        clear_text_input_selection();
+        return true;
+    }
+
 
     if (m_ui.expression_input_left.m_area.contains(m_mouse.pos))
     {
@@ -1258,6 +1269,10 @@ bool Application::mouse_input_sound_mode()
 
         return true;
     }
+    else if (m_ui.text_input_target == EXPRESSION_INPUT_LEFT) {
+        clear_text_input_selection();
+        return true;
+    }
 
     if (m_audio.expr_audio.get_channel_count() == 2)
     {
@@ -1272,9 +1287,19 @@ bool Application::mouse_input_sound_mode()
 
             return true;
         }
+        else if (m_ui.text_input_target == EXPRESSION_INPUT_LEFT) {
+            clear_text_input_selection();
+            return true;
+        }
     }
 
     return false;
+}
+
+void Application::clear_text_input_selection()
+{
+    m_ui.text_input_target = NO_TARGET;
+    toggle_text_input();
 }
 
 void Application::switch_modes() {
@@ -1403,6 +1428,10 @@ Text_Field* Ui_State::get_selected_text_field()
         return &expression_input_right;
     case VARIABLE_NAME:
         return &variable_name;
+    case VARIABLE_VALUE:
+    {
+        return variable_values.get_ptr(selected_variable_value_index);
+    }
     default:
         // error?
         return NULL;

@@ -1,0 +1,1 @@
+- setting the default expression to sin(t*tau*440) or something with a high frequency causes hangs at startup

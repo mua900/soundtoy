@@ -83,6 +83,7 @@ enum Text_Input_Target : u8 {
     EXPRESSION_INPUT_LEFT,
     EXPRESSION_INPUT_RIGHT,
     VARIABLE_NAME,
+    VARIABLE_VALUE,
 };
 
 struct Text_Field
@@ -107,6 +108,9 @@ struct Text_Field
     {
         m_area = area;
     }
+
+    Text_Field(Text_Field&& other) = default;
+    Text_Field& operator=(Text_Field&& other) = default;
 
     String get_string()
     {
@@ -310,9 +314,10 @@ enum GraphToShow {
 };
 
 struct Ui_State {
+    Text_Input_Target text_input_target = NO_TARGET;
+
     // graph mode ui
     Rectangle playback_pause = {0,0,100,100};
-
     Drop_Down_List graph_to_show = {};
 
     // sound mode ui
@@ -324,11 +329,11 @@ struct Ui_State {
     Rectangle pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
     Rectangle graphs_button = { INIT_WINDOW_WIDTH * (4.0 / 5.0), 0, INIT_WINDOW_WIDTH * (1.0 / 5.0), 100 };
 
-    Text_Input_Target text_input_target = NO_TARGET;
     Text_Field expression_input_left = {};
     Text_Field expression_input_right = {};
 
     DArray<Text_Field> variable_values = {};
+    int selected_variable_value_index = 0;  // if a variable value from the list is selected
 
     Drop_Down_List channel_count = {};
     Drop_Down_List playback_device = {};

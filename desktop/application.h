@@ -188,6 +188,8 @@ private:
     void render_slider(Rectangle area, vec2 knob_scale, float value, Color slider_color, Color knob_color, const Text& text);
     void render_text_field(const Text_Field& text_field);
     void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
+
+    void clear_text_input_selection();
 };
 
 bool load_font(Font* font, String_Builder& path, String font_folder, String font_file, float size);
