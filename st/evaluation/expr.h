@@ -133,8 +133,10 @@ struct Expr_Binary : Expr {
     Expr_Binary(Expr* l, Expr* r, Op_Binary p_op) : left(l), right(r), op(p_op)
 	{
         type = Expr_Type::Binary;
-        flags |= l->flags;
-        flags |= r->flags;
+        if (l)
+            flags |= l->flags;
+        if (r)
+            flags |= r->flags;
     }
 };
 
@@ -172,8 +174,9 @@ struct Expr_Variable : Expr {
     String name;
     unsigned int var_id = 0;
     Variable_Type variable_type;
+    bool is_builtin = false;
 
-    Expr_Variable(String var_name, int id, Variable_Type var_type) : name(var_name), var_id(id), variable_type(var_type)
+    Expr_Variable(String var_name, int id, Variable_Type var_type, bool builtin) : name(var_name), var_id(id), variable_type(var_type), is_builtin(builtin)
 	{
         type = Expr_Type::Variable;
         result_type = variable_type;

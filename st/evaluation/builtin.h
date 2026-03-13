@@ -97,4 +97,3 @@ using Builtin_Function_List = Function[BUILTIN_FUNC_COUNT];
 void get_default_builtin_functions(Function* func_list);
 
 bool is_builtin_function(const Expr_Call* call);
-bool is_builtin_variable(const Expr_Variable* var);

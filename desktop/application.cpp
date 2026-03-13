@@ -896,6 +896,7 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
 
                     if (convertion_success)
                     {
+                        printf("%.2f\n", value);
                         st_sampler_set_variable_value(m_samplers.audio_left, index, value);
                     }
                     else

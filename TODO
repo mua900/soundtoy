@@ -2,6 +2,6 @@
 	the user can then write expressions that modify or extend the existing track. (debug)
 - lissajous curve
 - implement tests properly
-- support for user defined variables (partially implemented)
+- support for user defined variables (debug)
 - power spectrum for graph mode
 - good error messages

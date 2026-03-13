@@ -45,7 +45,7 @@ Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
         case Expr_Type::Variable: {
             auto variable = static_cast<Expr_Variable*>(expr);
 
-            if (is_builtin_variable(variable)) {
+            if (variable->is_builtin) {
                 u16 freg = program.allocate_float_register();
 
                 // special case

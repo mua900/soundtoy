@@ -545,13 +545,13 @@ Expr* Parser::parse_primary_expr()
                 switch (builtin_var_id) {
                     case BUILTIN_VARIABLE_TIME:  // fallthrough
                     case BUILTIN_VARIABLE_SAMPLE_RATE: {
-                        return new Expr_Variable(token.token_string, builtin_var_id, Var_Type_Real);
+                        return new Expr_Variable(token.token_string, builtin_var_id, Var_Type_Real, true);
                     }
                     case BUILTIN_VARIABLE_SAMPLE_INDEX: {
-                        return new Expr_Variable(token.token_string, builtin_var_id, Var_Type_Integer);
+                        return new Expr_Variable(token.token_string, builtin_var_id, Var_Type_Integer, true);
                     }
                     case BUILTIN_VARIABLE_INPUT_SAMPLE: {
-                        Expr* input_sample = new Expr_Variable(token.token_string, builtin_var_id, Var_Type_Real);
+                        Expr* input_sample = new Expr_Variable(token.token_string, builtin_var_id, Var_Type_Real, true);
                         input_sample->flags |= EXPR_USES_INPUT_SAMPLES;
 
                         return input_sample;
@@ -568,7 +568,7 @@ Expr* Parser::parse_primary_expr()
 
                 if (find.found) {
                     Variable var = symbols.get(find.index);
-                    return new Expr_Variable(var.name, find.index, var.type);
+                    return new Expr_Variable(var.name, find.index, var.type, false);
                 }
                 else {
                     parser_error = Error(make_string("Undefined variable"), token.offset);
@@ -635,7 +635,7 @@ Eval Tree_Evaluator::evaluate_expression(Expr* expr) const
             auto var = static_cast<Expr_Variable*>(expr);
 
             // builtin variables
-            if (is_builtin_variable(var))
+            if (var->is_builtin)
             {
                 return { builtins[var->var_id], true };
             }

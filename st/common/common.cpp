@@ -169,8 +169,9 @@ int string_to_integer(String s, bool* success)
 double string_to_real(String s, bool* success)
 {
     char* end_ptr = NULL;
-    double res = strtod(s.data, &end_ptr);
-    if (end_ptr)
+    SCOPE_STRING(s, cstr);
+    double res = strtod(cstr, &end_ptr);
+    if (end_ptr == cstr)
     {
         if (success)
             *success = false;
