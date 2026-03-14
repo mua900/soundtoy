@@ -3,6 +3,7 @@
 #include <iostream>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
+#include <SDL3_mixer/SDL_mixer.h>
 
 static const char* org_name = "flying-carpet";
 static const char* soundtoy_identifier = "flying-carpet.soundtoy";
@@ -46,6 +47,13 @@ bool Application::initialize()
             fprintf(stderr, "Could not initialize TTF\n");
             return false;
         }
+    }
+
+    // mixer
+    {
+        MIX_Init();
+
+
     }
 
     if (!load_assets()) {
@@ -448,7 +456,7 @@ void Application::handle_events()
                 if (drop.data) {
                     m_audio.audio_data.reset();
 
-                    if (!load_audio_file(String(drop.data))) {
+                    if (!m_audio.audio_data.load_audio_file(String(drop.data))) {
                         fprintf(stderr, "Could not load file %s\n", drop.data);
                     }
 
@@ -534,6 +542,7 @@ void Application::cleanup()
     m_audio.expr_audio.cleanup();
 
     SDL_Quit();
+    MIX_Quit();
 }
 
 void Application::draw()
@@ -1709,7 +1718,7 @@ void Application::update_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_
     }
 }
 
-bool Application::load_audio_file(String path) {
+bool AudioData::load_audio_file(String path) {
     SCOPE_STRING(path, path_c_str);
 
     u8* output_buffer;
@@ -1747,13 +1756,13 @@ bool Application::load_audio_file(String path) {
         }
     }
 
-    m_audio.audio_data.samples = output_buffer;
-    m_audio.audio_data.channel_count = desired_spec.channels;
-    m_audio.audio_data.format = desired_spec.format;
-    m_audio.audio_data.frequency = desired_spec.freq;
-    m_audio.audio_data.frame_count = output_length / (SDL_AUDIO_BYTESIZE(desired_spec.format) * desired_spec.channels);
+    samples = output_buffer;
+    channel_count = desired_spec.channels;
+    format = desired_spec.format;
+    frequency = desired_spec.freq;
+    frame_count = output_length / (SDL_AUDIO_BYTESIZE(desired_spec.format) * desired_spec.channels);
 
-    ASSERT(m_audio.audio_data.is_in_desired_spec());
+    ASSERT(is_in_desired_spec());
 
     return true;
 }

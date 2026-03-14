@@ -92,6 +92,8 @@ struct AudioData {
         // @todo do this properly with respecting channels
         return Signal((float*)samples, frame_count * channel_count);
     }
+
+    bool load_audio_file(String path);
 };
 
 
