@@ -191,6 +191,11 @@ bool Parser::consume(Token_Type type)
     return match;
 }
 
+void Parser::report_error()
+{
+
+}
+
 bool Parser::syntax_check(String expression_string) {
 	auto save_symbols = symbols;
 	symbols = Array<Variable>();
@@ -230,7 +235,7 @@ Expr* Parser::parse(String expression_string)
     if (tokens.get(cursor).type != TOKEN_TYPE_END)
     {
         if (expression) {
-            parser_error = Error(make_string("Trailing tokens in expression"), cursor);
+            parser_error = Error("Trailing tokens in expression", cursor);
         }
 
         if (expression)
@@ -465,7 +470,7 @@ Expr* Parser::parse_call_expr()
     while (num_open_parens != 0)
     {
         if (tokens.get(cursor).type == TOKEN_TYPE_END) {
-            parser_error = Error(make_string("Missing ')'"), tokens.get(cursor).offset);
+            parser_error = Error("Missing ')'", tokens.get(cursor).offset);
 
             arguments.free();
             return NULL;
@@ -480,7 +485,7 @@ Expr* Parser::parse_call_expr()
         arguments.add(expression);
 
         if (tokens.get(cursor).type != TOKEN_TYPE_COMMA && tokens.get(cursor).type != TOKEN_TYPE_PAREN_CLOSE) {
-            parser_error = Error(make_string("Expected ',' to seperate or otherwise ')' to close argument list to function call"), tokens.get(cursor).offset);
+            parser_error = Error("Expected ',' to seperate or otherwise ')' to close argument list to function call", tokens.get(cursor).offset);
             arguments.free();
 
             return NULL;
@@ -571,7 +576,7 @@ Expr* Parser::parse_primary_expr()
                     return new Expr_Variable(var.name, find.index, var.type, false);
                 }
                 else {
-                    parser_error = Error(make_string("Undefined variable"), token.offset);
+                    parser_error = Error("Use of undefined variable", token.offset);
                     return nullptr;
                 }
             }

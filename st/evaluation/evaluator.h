@@ -9,11 +9,11 @@
 #include "bytecode.h"
 
 struct Error {
-    String message = {};
+    const char* message;
     int offset = 0;
 
     Error() {}
-    Error(String msg, int off) : message(msg), offset(off) {}
+    Error(const char* msg, int off) : message(msg), offset(off) {}
 };
 
 struct Parser {

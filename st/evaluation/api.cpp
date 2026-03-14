@@ -132,6 +132,7 @@ extern "C" {
 
     bool st_sampler_set_variable_value(St_Sampler* sampler, int variable, float value) {
         if (!sampler->program.variables.in_bounds(variable)) {
+            st_last_error = "Trying to set a variable out of bounds";
             return false;
         }
 
@@ -140,10 +141,20 @@ extern "C" {
     }
 
     float st_sampler_get_variable_value(const St_Sampler* sampler, int variable) {
+        if (!sampler->program.variables.in_bounds(variable)) {
+            st_last_error = "Trying to get a variable out of bounds";
+            return false;
+        }
+
         return sampler->program.variables.get(variable);
     }
 
     const char* st_sampler_get_variable_name_at_index(const St_Sampler* sampler, int index) {
+        if (!sampler->program.variables.in_bounds(index)) {
+            st_last_error = "Trying to get the name of a variable out of bounds";
+            return nullptr;
+        }
+
         // we copy the string and null terminate when we get it the first time so this is guaranteed to be null terminated
         return sampler->program.symbols.get(index).name.data;
     }
@@ -183,6 +194,8 @@ extern "C" {
 		parser.set_symbols(program->symbols);
         Expr* expression = parser.parse(expression_string);
         if (!expression) {
+            Error error = parser.get_error();
+            st_last_error = error.message;  // copy the error
             return false;
         }
 
@@ -200,6 +213,8 @@ extern "C" {
 
         bool compilation_success = bytecode_compile_expression(*program, expression);
         if (!compilation_success) {
+            // if an error occurs here it should be something internal since the expression parsed correctly
+            // so no errors to report to the user
             return false;
         }
 

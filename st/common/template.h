@@ -34,7 +34,7 @@ public:
 		}
 	}
 
-	bool in_bounds(int index) {
+	bool in_bounds(int index) const {
 		return index < m_size && index >= 0;
 	}
 

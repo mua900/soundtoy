@@ -114,6 +114,7 @@ public:
     Event_Timeout m_events[EVENT_COUNT] = {};
 
     Array<Text> m_rendered_text = {};
+    Text m_error_message = {};
 
     DArray<Text> m_variable_text = {};          // user registered variables
 
@@ -172,6 +173,7 @@ private:
     void switch_modes();
 
     Text create_text(String text, Font font, Color color);
+    void destroy_text(Text& text);
 
     bool set_eval_string(String s);
     bool set_eval_string_left(String s);

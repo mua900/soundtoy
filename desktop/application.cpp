@@ -178,6 +178,13 @@ Text Application::create_text(String text, Font font, Color color)
     return Text(texture, text);
 }
 
+void destroy_text(Text& text)
+{
+    SDL_DestroyTexture(text.texture);
+    text.texture = nullptr;
+    text.string = {};
+}
+
 bool Application::gen_static_text(Color color)
 {
     Text paused = create_text(make_string("Paused"), m_assets.font_large, color);
@@ -681,8 +688,11 @@ void Application::draw_sound_mode_ui()
             // @todo split this into invalid for left and right
             if (m_events[EVENT_INVALID_EXPRESSION].active)
             {
+                // get the relevant error message or a generic default fallback
+                Text error_text = (m_error_message.texture) ? m_error_message : m_rendered_text.get(TEXT_INVALID_EXPRESSION);
+
                 auto tf_area = m_ui.expression_input_left.m_area;
-                render_text_size(m_window.renderer, m_rendered_text.get(TEXT_INVALID_EXPRESSION),
+                render_text_size(m_window.renderer, error_text,
                         vec2(tf_area.x + tf_area.w/2, tf_area.y + tf_area.h), text_scale);
             }
         }
@@ -1534,6 +1544,13 @@ bool Application::set_eval_string(String eval_string)
     bool success = left && right;
     if (!success) {
         fprintf(stderr, "Failed to set sample expression\n");
+
+        const char* error = st_get_last_error();
+        if (error)
+        {
+            create_text(make_string(error), m_assets.font_medium, Color(0xAA, 0x55, 0x44, 0xFF));
+        }
+
         set_event_active(EVENT_INVALID_EXPRESSION, 15.0);
         return false;
     }
