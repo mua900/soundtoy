@@ -438,6 +438,7 @@ void Bytecode_Program::reset() {
     constant_block.real.reset();
     constant_block.integer.reset();
     constant_block.time = 0.0;
+    constant_block.sample_index = 0;
     get_default_builtin_functions(constant_block.builtin_function);
 }
 

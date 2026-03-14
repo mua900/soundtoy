@@ -3,7 +3,6 @@
 #include <iostream>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
-#include <SDL3_mixer/SDL_mixer.h>
 
 static const char* org_name = "flying-carpet";
 static const char* soundtoy_identifier = "flying-carpet.soundtoy";
@@ -47,13 +46,6 @@ bool Application::initialize()
             fprintf(stderr, "Could not initialize TTF\n");
             return false;
         }
-    }
-
-    // mixer
-    {
-        MIX_Init();
-
-
     }
 
     if (!load_assets()) {
@@ -542,7 +534,6 @@ void Application::cleanup()
     m_audio.expr_audio.cleanup();
 
     SDL_Quit();
-    MIX_Quit();
 }
 
 void Application::draw()
@@ -673,7 +664,6 @@ void Application::draw_sound_mode_ui()
 
     // text field
     {
-        SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x66, 0x55, 0xff);
         if (m_audio.expr_audio.get_channel_count() == 1)
         {
             render_text_field(m_ui.expression_input_left);
@@ -781,6 +771,7 @@ void Application::render_slider(Rectangle area, vec2 knob_scale, float value, Co
 
 void Application::render_text_field(const Text_Field& text_field)
 {
+    SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x66, 0x55, 0xff);
     SDL_FRect tf_area = { text_field.m_area.x, text_field.m_area.y, text_field.m_area.w, text_field.m_area.h };
     SDL_RenderFillRect(m_window.renderer, &tf_area);
 

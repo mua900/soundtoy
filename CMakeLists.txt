@@ -107,14 +107,14 @@ set(SDLIMAGE_PNG ON)
 add_subdirectory(vendor/SDL_image EXCLUDE_FROM_ALL)
 
 # SDL_mixer
-add_subdirectory(vendor/SDL_mixer EXCLUDE_FROM_ALL)
+# add_subdirectory(vendor/SDL_mixer EXCLUDE_FROM_ALL)
 
 # SDL_ttf
 add_subdirectory(vendor/SDL_ttf EXCLUDE_FROM_ALL)
 
 target_include_directories(soundtoy PRIVATE vendor/SDL/include/)
 target_include_directories(soundtoy PRIVATE vendor/SDL_image/include/)
-target_include_directories(soundtoy PRIVATE vendor/SDL_mixer/include)
+# target_include_directories(soundtoy PRIVATE vendor/SDL_mixer/include)
 target_include_directories(soundtoy PRIVATE vendor/SDL_ttf/include/)
 
 target_link_libraries(
@@ -122,7 +122,7 @@ target_link_libraries(
     PRIVATE
     SDL3::SDL3
     SDL3_image::SDL3_image
-    SDL3_mixer::SDL3_mixer
+#     SDL3_mixer::SDL3_mixer
     SDL3_ttf::SDL3_ttf
 )
 
