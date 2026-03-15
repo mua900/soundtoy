@@ -178,7 +178,7 @@ Text Application::create_text(String text, Font font, Color color)
     return Text(texture, text);
 }
 
-void destroy_text(Text& text)
+void Application::destroy_text(Text& text)
 {
     SDL_DestroyTexture(text.texture);
     text.texture = nullptr;
@@ -421,7 +421,9 @@ void Application::handle_events()
 
                 SDL_AudioDeviceID device = device_event.which;
 
-                m_ui.playback_device.add_option(create_text(make_string(SDL_GetAudioDeviceName(device)), m_assets.font_medium, Color(0x44, 0x77, 0x22, 0xff)),
+                m_ui.playback_device.add_option(create_text(make_string(SDL_GetAudioDeviceName(device)),
+                                                m_assets.font_medium,
+                                                Color(0x44, 0x77, 0x22, 0xff)),
                                                 device);
                 break;
             }
@@ -1548,7 +1550,11 @@ bool Application::set_eval_string(String eval_string)
         const char* error = st_get_last_error();
         if (error)
         {
-            create_text(make_string(error), m_assets.font_medium, Color(0xAA, 0x55, 0x44, 0xFF));
+            if (m_error_message.texture)
+            {
+                destroy_text(m_error_message);
+            }
+            m_error_message = create_text(make_string(error), m_assets.font_medium, Color(0xAA, 0x55, 0x44, 0xFF));
         }
 
         set_event_active(EVENT_INVALID_EXPRESSION, 15.0);

@@ -562,7 +562,9 @@ Expr* Parser::parse_primary_expr()
                         return input_sample;
                     }
 
-                    default: panic("Invalid variable id");  // bug
+                    default: {
+                        panic("Invalid variable id");  // bug case
+                    }
                 }
             }
             else if (builtin_constant != 0.0) {
@@ -576,7 +578,8 @@ Expr* Parser::parse_primary_expr()
                     return new Expr_Variable(var.name, find.index, var.type, false);
                 }
                 else {
-                    parser_error = Error("Use of undefined variable", token.offset);
+                    // if it's not a known constant, function or variable it's an unknown identifier
+                    parser_error = Error("Unknown identifier", token.offset);
                     return nullptr;
                 }
             }
@@ -588,14 +591,15 @@ Expr* Parser::parse_primary_expr()
             Expr* expr = parse_expression();
 
             if (!expr)
-                return NULL;
+                return nullptr;
             if (!consume(TOKEN_TYPE_PAREN_CLOSE))
-                return NULL;
+                return nullptr;
 
             return new Expr_Grouping(expr);
         }
-        default:
-            return NULL;
+        default: {
+            return nullptr;
+        }
     }
 }
 
