@@ -186,3 +186,33 @@ void st_mix(Value* parameters, Value* results) { results[0] = Value(mix(paramete
 void st_saw(Value* parameters, Value* results) { results[0] = Value(saw(parameters[0].real)); }
 void st_square(Value* parameters, Value* results) { results[0] = Value(square(parameters[0].real)); }
 void st_triangle(Value* parameters, Value* results) { results[0] = Value(triangle(parameters[0].real)); }
+
+const char* get_builtin_function_name(Builtin_Func_Type builtin)
+{
+    switch (builtin)
+    {
+        case BUILTIN_FUNC_EXP: { return "BUILTIN_FUNC_EXP"; }
+        case BUILTIN_FUNC_ABS: { return "BUILTIN_FUNC_ABS"; }
+        case BUILTIN_FUNC_SIGN: { return "BUILTIN_FUNC_SIGN"; }
+        case BUILTIN_FUNC_CEIL: { return "BUILTIN_FUNC_CEIL"; }
+        case BUILTIN_FUNC_FLOOR: { return "BUILTIN_FUNC_FLOOR"; }
+        case BUILTIN_FUNC_SIN: { return "BUILTIN_FUNC_SIN"; }
+        case BUILTIN_FUNC_COS: { return "BUILTIN_FUNC_COS"; }
+        case BUILTIN_FUNC_TAN: { return "BUILTIN_FUNC_TAN"; }
+        case BUILTIN_FUNC_ARCSIN: { return "BUILTIN_FUNC_ARCSIN"; }
+        case BUILTIN_FUNC_ARCCOS: { return "BUILTIN_FUNC_ARCCOS"; }
+        case BUILTIN_FUNC_ARCTAN: { return "BUILTIN_FUNC_ARCTAN"; }
+        case BUILTIN_FUNC_FRACT: { return "BUILTIN_FUNC_FRACT"; }
+        case BUILTIN_FUNC_SMOOTHSTEP: { return "BUILTIN_FUNC_SMOOTHSTEP"; }
+        case BUILTIN_FUNC_MIX: { return "BUILTIN_FUNC_MIX"; }
+        case BUILTIN_FUNC_SAW: { return "BUILTIN_FUNC_SAW"; }
+        case BUILTIN_FUNC_SQUARE: { return "BUILTIN_FUNC_SQUARE"; }
+        case BUILTIN_FUNC_TRIANGLE: { return "BUILTIN_FUNC_TRIANGLE"; }
+        case BUILTIN_FUNC_CLAMP: { return "BUILTIN_FUNC_CLAMP"; }
+        case BUILTIN_FUNC_POW: { return "BUILTIN_FUNC_POW"; }
+        case BUILTIN_FUNC_LOG: { return "BUILTIN_FUNC_LOG"; }
+        case BUILTIN_FUNC_UNKNOWN: return "BUILTIN_FUNC_UNKNOWN";
+        default:
+            return "Builtin_Function_Not_Registered";
+    }
+}

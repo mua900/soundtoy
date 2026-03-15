@@ -10,7 +10,7 @@ static const char* soundtoy_name = "soundtoy";
 static const char* soundtoy_version = "0.1.0";
 
 #define WAVEFORM_SAMPLE_RATE 64
-#define DEFAULT_EXPRESSION "sin(t*tau)"
+#define DEFAULT_EXPRESSION "sin(t*tau*440)"
 
 bool Application::initialize()
 {
@@ -95,9 +95,6 @@ bool Application::initialize()
         SDL_FPoint* waveform_sample_buffer_right_mem = new SDL_FPoint[sample_buffer_size_waveform];
         m_buffers.waveform_samples_left = Array<SDL_FPoint>(waveform_sample_buffer_left_mem, sample_buffer_size_waveform);
         m_buffers.waveform_samples_right = Array<SDL_FPoint>(waveform_sample_buffer_right_mem, sample_buffer_size_waveform);
-
-        // set it active to start
-        set_event_active(EVENT_RECALCULATE_WAVEFORM_SAMPLES, 1.0);
     }
 
     if (!m_audio.expr_audio.initialize(m_buffers.audio_samples, initial_sample_rate, 1, m_samplers.audio_left, m_samplers.audio_right)) {

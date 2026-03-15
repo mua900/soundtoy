@@ -44,6 +44,7 @@ void call_function(Function func, Value* parameters, Value* results);
 // Go to get_function_id function and add the name of your function to be matched and return your enum entry on a match.
 // Implement a function with the signature (name is convention, replace the func_name part) st_func_name(Value* inputs, Value* outputs).
 // Go to get_default_builtin_functions function and add the implementation of your function to the list. It needs a signature with typed input and outputs. You will get the idea if you look at the function.
+// And it would be nice if you also add the name of your function to get_builtin_function_name as well.
 enum Builtin_Func_Type {
     BUILTIN_FUNC_EXP,
     BUILTIN_FUNC_ABS,
@@ -70,6 +71,8 @@ enum Builtin_Func_Type {
 
     BUILTIN_FUNC_UNKNOWN,
 };
+
+const char* get_builtin_function_name(Builtin_Func_Type builtin);
 
 enum Builtin_Variable : unsigned int {
     BUILTIN_VARIABLE_TIME = 0,

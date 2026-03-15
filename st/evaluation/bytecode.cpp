@@ -9,7 +9,7 @@ static bool opcode_is_binary(Bytecode_Opcode opcode);
 static bool opcode_is_unary(Bytecode_Opcode opcode);
 
 
-bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
+void bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
     program.reset();
 
     Value_Location_Info location = compile_expr(root, program);
@@ -23,8 +23,6 @@ bool bytecode_compile_expression(Bytecode_Program& program, Expr* root) {
     program.emit_bytecode_instruction(INSTR_RET, location.floating_point_register, 0);
 
     program.print_program();
-
-	return true;
 }
 
 Value_Location_Info compile_expr(Expr* expr, Bytecode_Program& program) {
@@ -532,6 +530,17 @@ void Bytecode_Program::print_program() const {
                     }
 
                     builder.append(make_string(builtin_name));
+                    break;
+                }
+                case INSTR_CALL_BUILTIN: {
+                    Builtin_Func_Type builtin = Builtin_Func_Type(instr.op0);
+
+                    builder.append_integer(instr.op0);
+                    builder.append_char(' ');
+                    builder.append_integer(instr.op1);
+                    builder.append_char(' ');
+                    String function_name = make_string(get_builtin_function_name(builtin));
+                    builder.append(function_name);
                     break;
                 }
                 default: {

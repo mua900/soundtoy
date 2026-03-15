@@ -241,5 +241,5 @@ struct Bytecode_Program {
 	void print_program() const;
 };
 
-bool bytecode_compile_expression(Bytecode_Program& program, Expr* expr);
+void bytecode_compile_expression(Bytecode_Program& program, Expr* expr);
 double bytecode_run(Bytecode_Program& program);

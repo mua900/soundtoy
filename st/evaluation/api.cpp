@@ -211,13 +211,7 @@ extern "C" {
 
 		print_expression(expression);
 
-        bool compilation_success = bytecode_compile_expression(*program, expression);
-        if (!compilation_success) {
-            // if an error occurs here it should be something internal since the expression parsed correctly
-            // so no errors to report to the user
-            free_tree(expression);
-            return false;
-        }
+        bytecode_compile_expression(*program, expression);
 
         free_tree(expression);
 
