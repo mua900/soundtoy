@@ -203,8 +203,8 @@ extern "C" {
         {
             if (program->input_stream.samples.data == nullptr)
             {
-                st_last_error = "No input stream to get samples.";
-
+                st_last_error = "Expression uses input samples but no input stream is set.";
+                free_tree(expression);
                 return false;
             }
         }
@@ -215,6 +215,7 @@ extern "C" {
         if (!compilation_success) {
             // if an error occurs here it should be something internal since the expression parsed correctly
             // so no errors to report to the user
+            free_tree(expression);
             return false;
         }
 

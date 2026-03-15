@@ -24,6 +24,11 @@ enum Op_Binary {
     Binop_Le,
 };
 
+inline bool is_numeric(Variable_Type type)
+{
+    return type == Var_Type_Integer || type == Var_Type_Real;
+}
+
 struct Value {
     Variable_Type type;
 
@@ -37,10 +42,6 @@ struct Value {
     Value(bool b) : type(Var_Type_Boolean), boolean(b) {}
     Value(long long integer) : type(Var_Type_Integer), integer(integer) {}
     Value(double real) : type(Var_Type_Real), real(real) {}
-
-    bool is_numeric() {
-        return type == Var_Type_Integer || type == Var_Type_Real;
-    }
 
 	bool evaluate_truth_value() {
 		switch (type) {

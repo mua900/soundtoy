@@ -27,6 +27,7 @@ struct Parser {
     bool check_expression_string(String expression);
 
     Error get_error() const { return parser_error; }
+    void clear_error() { parser_error = Error(); }
 
 private:
     Array<Variable> symbols = {};
@@ -50,7 +51,8 @@ private:
 
     bool consume(Token_Type type);
 
-    void report_error();  // @todo
+    // through cli
+    void report_error();
 };
 
 void print_expression(const Expr* expr);
@@ -106,4 +108,4 @@ struct Tree_Evaluator
 
 void free_tree(Expr* node);
 
-Expr* collapse_expr(Expr* root, String* error_string);
+Expr* collapse_expr(Expr* root, const char** error_string);

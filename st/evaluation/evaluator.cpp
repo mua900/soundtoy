@@ -193,7 +193,10 @@ bool Parser::consume(Token_Type type)
 
 void Parser::report_error()
 {
-
+    if (parser_error.message)
+    {
+        fprintf(stderr, "At %d: %s\n", parser_error.offset, parser_error.message);
+    }
 }
 
 bool Parser::syntax_check(String expression_string) {
@@ -226,20 +229,21 @@ bool Parser::check_expression_string(String expression_string) {
 
 Expr* Parser::parse(String expression_string)
 {
+    cursor = 0;
+    clear_error();
+
     tokens = tokenize(expression_string);
 
     Expr* expression = nullptr;
 
     expression = parse_expression();
+    if (!expression) return nullptr;
 
     if (tokens.get(cursor).type != TOKEN_TYPE_END)
     {
-        if (expression) {
-            parser_error = Error("Trailing tokens in expression", cursor);
-        }
+        parser_error = Error("Trailing tokens in expression", tokens.get(cursor).offset);
 
-        if (expression)
-            delete expression;
+        delete expression;
 
         return nullptr;
     }
@@ -252,13 +256,13 @@ Expr* Parser::parse_expression()
     Expr* expr = parse_ternary_expr();
     if (expr)
     {
-        String error_string = {};
+        const char* error_string = nullptr;
         expr = collapse_expr(expr, &error_string);
 
         if (!expr)
         {
-            fprintf(stderr, "Collapse expression failed\n");
-			fprintf(stderr, "%s\n", error_string.data);
+			parser_error.message = error_string;
+			parser_error.offset = 0;  // @todo hold location information inside the expression
         }
     }
 
@@ -273,7 +277,13 @@ Expr* Parser::parse_ternary_expr() {
 		cursor++;  // ?
 
 		Expr* then_branch = parse_expression();
+		if (!then_branch)
+		{
+            free_tree(expr);
+            return nullptr;
+		}
 		if (tokens.get(cursor).type != TOKEN_TYPE_COLON) {
+            parser_error = Error("Expected ':' in ternary expression", tokens.get(cursor).offset);
 			free_tree(expr);
 			free_tree(then_branch);
 			return nullptr;
@@ -282,10 +292,9 @@ Expr* Parser::parse_ternary_expr() {
 		cursor++;  // :
 
 		Expr* else_branch = parse_expression();
-		if (!(then_branch && else_branch)) {
+		if (!else_branch) {
 			free_tree(expr);
 			free_tree(then_branch);
-			free_tree(else_branch);
 			return nullptr;
 		}
 
@@ -307,11 +316,17 @@ Expr* Parser::parse_equality_expr()
         Expr* right = parse_comparison_expr();
         if (!right)
         {
-            return NULL;
+            if (!parser_error.message)
+            {
+                parser_error = Error("Expected expression after equality operator", tokens.get(cursor).offset);
+            }
+
+            free_tree(left);
+            return nullptr;
         }
 
         Op_Binary op = get_binop(type);
-        if (op == Binop_Unknown) return NULL;  // this should be a bug if it happens
+        if (op == Binop_Unknown) return nullptr;  // this should be a bug if it happens
 
         left = new Expr_Binary(left, right, op);
 
@@ -332,11 +347,17 @@ Expr* Parser::parse_comparison_expr()
         Expr* right = parse_arithmetic_expr();
         if (!right)
         {
-            return NULL;
+            if (!parser_error.message)
+            {
+                parser_error = Error("Expected expression after comparison operator", tokens.get(cursor).offset);
+            }
+
+            free_tree(left);
+            return nullptr;
         }
 
         Op_Binary op = get_binop(type);
-        if (op == Binop_Unknown) return NULL;  // this should be a bug if it happens
+        if (op == Binop_Unknown) return nullptr;  // this should be a bug if it happens
 
         left = new Expr_Binary(left, right, op);
 
@@ -357,11 +378,17 @@ Expr* Parser::parse_arithmetic_expr()
         Expr* right = parse_factor_expr();
         if (!right)
         {
-            return NULL;
+            if (!parser_error.message)
+            {
+                parser_error = Error("Expected expression after arithmetic operator", tokens.get(cursor).offset);
+            }
+
+            free_tree(left);
+            return nullptr;
         }
 
         Op_Binary op = get_binop(type);
-        if (op == Binop_Unknown) return NULL;  // this should be a bug if it happens
+        if (op == Binop_Unknown) return nullptr;  // this should be a bug if it happens
 
         left = new Expr_Binary(left, right, op);
 
@@ -381,8 +408,13 @@ Expr* Parser::parse_factor_expr()
 
         Expr* right = parse_mod_expr();
         if (!right) {
+            if (!parser_error.message)
+            {
+                parser_error = Error("Expected expression after arithmetic operator", tokens.get(cursor).offset);
+            }
+
 			free_tree(left);
-            return NULL;
+            return nullptr;
         }
 
         Op_Binary op = get_binop(type);
@@ -406,8 +438,13 @@ Expr* Parser::parse_mod_expr() {
 
 		Expr* right = parse_unary_expr();
 		if (!right) {
+            if (!parser_error.message)
+            {
+                parser_error = Error("Expected expression after mod operator", tokens.get(cursor).offset);
+            }
+
 			free_tree(left);
-			return NULL;
+			return nullptr;
 		}
 
 		// Op_Binary op = Binop_Mod;
@@ -425,15 +462,19 @@ Expr* Parser::parse_mod_expr() {
 Expr* Parser::parse_unary_expr()
 {
     Token_Type type = tokens.get(cursor).type;
-    Expr* operand = NULL;
-    while (type == TOKEN_TYPE_MINUS || type == TOKEN_TYPE_EXCLAMATION)
+    Expr* operand = nullptr;
+    while (type == TOKEN_TYPE_MINUS || type == TOKEN_TYPE_EXCLAMATION || type == TOKEN_TYPE_PLUS)
     {
         cursor++;
 
         operand = parse_unary_expr();
         if (!operand)
         {
-            return NULL;
+            if (!parser_error.message)
+            {
+                parser_error = Error("Expected expression after unary operator", tokens.get(cursor).offset);
+            }
+            return nullptr;
         }
 
         Op_Unary op = (type == TOKEN_TYPE_MINUS) ? Unop_Negate : ((type == TOKEN_TYPE_PLUS) ? Unop_Plus : Unop_Not);
@@ -459,7 +500,14 @@ Expr* Parser::parse_call_expr()
     }
 
     String name = tokens.get(cursor).token_string;
-    cursor++;  // identifier
+    Function_ID fn_id = get_function_id(name);
+    if (fn_id == FUNC_ID_INVALID)
+    {
+        parser_error = Error("Unknown function", tokens.get(cursor).offset);
+        return nullptr;
+    }
+
+    cursor++;  // identifier (function name)
 
     // function call
     cursor++;  // (
@@ -473,13 +521,17 @@ Expr* Parser::parse_call_expr()
             parser_error = Error("Missing ')'", tokens.get(cursor).offset);
 
             arguments.free();
-            return NULL;
+            return nullptr;
         }
 
         Expr* expression = parse_expression();
         if (!expression) {
+            for (auto arg : arguments)
+            {
+                free_tree(arg);
+            }
             arguments.free();
-            return NULL;
+            return nullptr;
         }
 
         arguments.add(expression);
@@ -488,7 +540,7 @@ Expr* Parser::parse_call_expr()
             parser_error = Error("Expected ',' to seperate or otherwise ')' to close argument list to function call", tokens.get(cursor).offset);
             arguments.free();
 
-            return NULL;
+            return nullptr;
         }
 
         if (tokens.get(cursor).type == TOKEN_TYPE_COMMA) {
@@ -506,12 +558,6 @@ Expr* Parser::parse_call_expr()
     ASSERT(tokens.get(cursor).type == TOKEN_TYPE_PAREN_CLOSE);
     cursor++; // )
 
-    Function_ID fn_id = get_function_id(name);
-    if (fn_id == FUNC_ID_INVALID)
-    {
-        return NULL;
-    }
-
     return new Expr_Call(name, Array<Expr*>(arguments), fn_id);
 }
 
@@ -526,6 +572,12 @@ Expr* Parser::parse_primary_expr()
             cursor++;
             bool success = false;
             long long i = string_to_integer(token.token_string, &success);
+            if (!success)
+            {
+                parser_error.message = "Invalid integer literal";
+                parser_error.offset = token.offset;
+                return nullptr;
+            }
             return new Expr_Literal(i);
         }
         case TOKEN_TYPE_LITERAL_FLOAT:
@@ -535,6 +587,8 @@ Expr* Parser::parse_primary_expr()
             double real = string_to_real(token.token_string, &success);
             if (!success)
             {
+                parser_error.message = "Invalid float literal";
+                parser_error.offset = token.offset;
                 return nullptr;
             }
             return new Expr_Literal(real);
@@ -593,11 +647,15 @@ Expr* Parser::parse_primary_expr()
             if (!expr)
                 return nullptr;
             if (!consume(TOKEN_TYPE_PAREN_CLOSE))
+            {
+                parser_error = Error("Expected ')'", tokens.get(cursor).offset);
                 return nullptr;
+            }
 
             return new Expr_Grouping(expr);
         }
         default: {
+            parser_error = Error("Expected expression", token.offset);
             return nullptr;
         }
     }
@@ -1043,8 +1101,8 @@ void free_tree(Expr* node) {
 	delete node;
 }
 
-Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_string);
-Expr* collapse_expr(Expr* root, String* error_string)
+Expr* collapse_expr_real(Expr* root, Function* builtin_functions, const char** error_string);
+Expr* collapse_expr(Expr* root, const char** error_string)
 {
     static bool inited = false;
     static Builtin_Function_List builtin_functions;
@@ -1057,7 +1115,7 @@ Expr* collapse_expr(Expr* root, String* error_string)
     return collapse_expr_real(root, builtin_functions, error_string);
 }
 
-Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_string)
+Expr* collapse_expr_real(Expr* root, Function* builtin_functions, const char** error_string)
 {
     Expr* expr = root;
     switch (expr->type)
@@ -1091,6 +1149,13 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			auto left = collapse_expr_real(binary->left, builtin_functions, error_string);
 			auto right = collapse_expr_real(binary->right, builtin_functions, error_string);
 
+            if (!(left && right))
+            {
+                free_tree(left);
+                free_tree(right);
+                return nullptr;
+            }
+
             Variable_Type arithmetic_type = (left->result_type == Var_Type_Integer && right->result_type == Var_Type_Integer) ? Var_Type_Integer : Var_Type_Real;
 
 			// the result type depends on the operation
@@ -1098,8 +1163,10 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
             switch (binary->op)
 			{
     			case Binop_Unknown:
-    				*error_string = make_string("Unknown binary operator");
-    				break;
+    				*error_string = "Unknown binary operator";
+                    free_tree(left);
+                    free_tree(right);
+                    return nullptr;
     			case Binop_Add: res_type = arithmetic_type;  break;
     			case Binop_Sub: res_type = arithmetic_type;  break;
     			case Binop_Mul: res_type = arithmetic_type;  break;
@@ -1114,6 +1181,19 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
     			default:
     				panic("Unknown binary operator");
 			}
+
+            if (is_numeric(left->result_type) && is_numeric(right->result_type))
+            {
+                if (!is_numeric(res_type))
+                {
+                    free_tree(left);
+                    free_tree(right);
+
+                    *error_string = "Non arithmetic operation is provided numeric arguments";
+
+                    return nullptr;
+                }
+            }
 
 			binary->left = left;
 			binary->right = right;
@@ -1134,8 +1214,8 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
                 switch (operation)
 				{
 				case Binop_Unknown:
-					*error_string = make_string("Unknown binary operator");
-					break;
+					*error_string = "Unknown binary operator";
+					return nullptr;
 				case Binop_Add:     return new Expr_Literal(left_numeric + right_numeric);
 				case Binop_Sub:     return new Expr_Literal(left_numeric - right_numeric);
 				case Binop_Mul:     return new Expr_Literal(left_numeric * right_numeric);
@@ -1163,6 +1243,11 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			for (int i = 0; i < call->arguments.size; i++)
 			{
 				call->arguments.data[i] = collapse_expr_real(call->arguments.data[i], builtin_functions, error_string);
+				if (!call->arguments.data[i])
+				{
+				    free_tree(call);
+				    return nullptr;
+				}
 				if (call->arguments.data[i]->type == Expr_Type::Literal)
 				{
 					if (static_cast<Expr_Literal*>(call->arguments.data[i])->value.type != Var_Type_Real)
@@ -1183,8 +1268,16 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
                 Function builtin = builtin_functions[call->fn_id];
 
 				if (call->arguments.size != builtin.signature.parameter_types.size) {
-					*error_string = make_string("Wrong number of arguments");
-					return NULL;
+				    SCOPE_STRING(builtin.signature.name, function_name);
+                    static char error_buffer [128];
+                    snprintf(error_buffer, sizeof(error_buffer),
+                            "Function %s expects %d arguments but %d given.",
+                            function_name,
+                            builtin.signature.parameter_types.size,
+                            call->arguments.size);
+                    *error_string = error_buffer;
+                    free_tree(call);
+                    return nullptr;
 				}
 
 				int arg_count = call->arguments.size;
@@ -1194,14 +1287,13 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 				{
 					if (call->arguments.get(i)->result_type != builtin.signature.parameter_types.get(i))
 					{
-						*error_string = make_string("Type mismatch in function parameters");
-						return NULL;
+						*error_string = "Wrong argument type in function call";
+						free_tree(call);
+						return nullptr;
 					}
 				}
 
 				if (arg_count == 1 && computable_now) {
-					call->arguments.data[0] = collapse_expr_real(call->arguments.data[0], builtin_functions, error_string);
-
 					if (call->arguments.get(0)->type == Expr_Type::Literal) {
 						Expr_Literal* lit = static_cast<Expr_Literal*>(call->arguments.get(0));
 
@@ -1273,8 +1365,8 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
                     }
                     else
                     {
-                        *error_string = make_string("Builtin functions returning more than a single value not implemented");
-                        return NULL;
+                        *error_string = "Builtin functions returning more than a single value not implemented";
+                        return nullptr;
                     }
 				}
 			}
@@ -1293,15 +1385,16 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			Expr_Unary* unary = static_cast<Expr_Unary*>(expr);
 			auto operand = collapse_expr_real(unary->operand, builtin_functions, error_string);
 			if (!operand)
-				return NULL;
+				return nullptr;
 			unary->operand = operand;
 
 			if (unary->op == Unop_Plus)
 			{
                 if (operand->result_type != Var_Type_Real && operand->result_type != Var_Type_Integer)
                 {
-                    *error_string = make_string("Can not use unary plus on non numeric value");
-                    return NULL;
+                    *error_string = "Can not use unary plus on non numeric value";
+                    delete unary;
+                    return nullptr;
                 }
 
                 delete unary;
@@ -1317,12 +1410,12 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 
 				switch (unop)
 				{
-                case Unop_Negate:
+                    case Unop_Negate:
 					{
-						if (!literal->value.is_numeric())
+						if (!is_numeric(literal->value.type))
 						{
-							*error_string = make_string("Can not negate non numeric value");
-							return NULL;
+							*error_string = "Can not negate non numeric value";
+							return nullptr;
 						}
 
 						if (literal->value.type == Var_Type_Integer)
@@ -1336,17 +1429,19 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 
 						return literal;
 					}
-                case Unop_Not:
+                    case Unop_Not:
 					{
 						if (literal->value.type != Var_Type_Boolean)
 						{
-							*error_string = make_string("Can not apply the operator Not to non boolean value");
-							return NULL;
+							*error_string = "Can not apply the operator Not to non boolean value";
+							return nullptr;
 						}
 
 						literal->value.boolean = !literal->value.boolean;
 						return literal;
 					}
+					default:
+					   panic("Unhandled unary operation type in collapse_expr");
 				}
 			}
 
@@ -1357,8 +1452,8 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			auto var = static_cast<Expr_Variable*>(expr);
 			if (var->var_id == BUILTIN_VAR_ID_INVALID)
 			{
-				*error_string = make_string("Undefined variable");
-				return NULL;
+				fprintf(stderr, "Internal Error: Invalid variable id in collapse_expr.\n");
+				return nullptr;
 			}
 			return expr;
 		}
@@ -1368,7 +1463,7 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			auto ternary = static_cast<Expr_Ternary*>(expr);
 			auto cond = collapse_expr_real(ternary->condition, builtin_functions, error_string);
 			if (!cond) {
-				return NULL;
+				return nullptr;
 			}
 
 			if (cond->type == Expr_Type::Literal) {
@@ -1395,13 +1490,22 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
 			auto else_ = collapse_expr_real(ternary->else_, builtin_functions, error_string);
 
 			if (!(then_ && else_)) {
-				return NULL;
+				return nullptr;
 			}
 
 			ternary->then_ = then_;
 			ternary->else_ = else_;
 
-			// result_type ???
+			if (then_->result_type != else_->result_type)
+			{
+                if (!(is_numeric(then_->result_type) && is_numeric(else_->result_type)))
+                {
+                    *error_string = "Ternary branches must produce results of the same type.";
+                    return nullptr;
+                }
+			}
+
+			ternary->result_type = (then_->result_type == Var_Type_Integer && else_->result_type == Var_Type_Integer) ? Var_Type_Integer : Var_Type_Real;
 
 			return ternary;
 		}
@@ -1413,7 +1517,7 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, String* error_
                 if (!e)
                 {
                     free_tree(tuple);
-                    return NULL;
+                    return nullptr;
                 }
             }
             // result_type ???
