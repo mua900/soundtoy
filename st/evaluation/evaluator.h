@@ -72,6 +72,7 @@ struct Eval {
     bool success = false;
 };
 
+// @todo remove or update
 struct Tree_Evaluator
 {
     Tree_Evaluator();
@@ -108,4 +109,5 @@ struct Tree_Evaluator
 
 void free_tree(Expr* node);
 
+// typechecking and constant folding on the tree
 Expr* collapse_expr(Expr* root, const char** error_string);

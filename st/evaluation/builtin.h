@@ -65,7 +65,9 @@ enum Builtin_Func_Type {
     BUILTIN_FUNC_TRIANGLE,
     BUILTIN_FUNC_CLAMP,
     BUILTIN_FUNC_POW,
-    BUILTIN_FUNC_LOG,  // base?
+    BUILTIN_FUNC_LOG,  // natural log
+    BUILTIN_FUNC_MIN,
+    BUILTIN_FUNC_MAX,
 
     BUILTIN_FUNC_COUNT,
 

@@ -4,6 +4,12 @@
 // custom implemented builtins
 double get_sign(double x);
 double smoothstep(double x);
+double fract(double x);
+double clamp(double x, double lower, double upper);
+double mix(double a, double b, double t);
+double saw(double x);
+double square(double x);
+double triangle(double x);
 
 // wrappers
 void st_fabs(Value* parameters, Value* results);
@@ -26,6 +32,8 @@ void st_mix(Value* parameters, Value* results);
 void st_saw(Value* parameters, Value* results);
 void st_square(Value* parameters, Value* results);
 void st_triangle(Value* parameters, Value* results);
+void st_min(Value* parameters, Value* results);
+void st_max(Value* parameters, Value* results);
 
 void call_function(Function func, Value* parameters, Value* results) {
     func.implementation(parameters, results);
@@ -117,6 +125,14 @@ void get_default_builtin_functions(Function* list)
         st_log,
         FunctionSignature(String("log"), make_array(single_value), make_array(single_value))
     );
+    list[BUILTIN_FUNC_MAX] = Function(
+        st_max,
+        FunctionSignature(String("max"), make_array(single_value), make_array(two_values))
+    );
+    list[BUILTIN_FUNC_MIN] = Function(
+        st_min,
+        FunctionSignature(String("min"), make_array(single_value), make_array(two_values))
+    );
 }
 
 bool is_builtin_function(const Expr_Call* call)
@@ -186,6 +202,8 @@ void st_mix(Value* parameters, Value* results) { results[0] = Value(mix(paramete
 void st_saw(Value* parameters, Value* results) { results[0] = Value(saw(parameters[0].real)); }
 void st_square(Value* parameters, Value* results) { results[0] = Value(square(parameters[0].real)); }
 void st_triangle(Value* parameters, Value* results) { results[0] = Value(triangle(parameters[0].real)); }
+void st_min(Value* parameters, Value* results) { results[0] = Value(std::min(parameters[0].real, parameters[1].real)); }
+void st_max(Value* parameters, Value* results) { results[0] = Value(std::max(parameters[0].real, parameters[1].real)); }
 
 const char* get_builtin_function_name(Builtin_Func_Type builtin)
 {
@@ -211,6 +229,8 @@ const char* get_builtin_function_name(Builtin_Func_Type builtin)
         case BUILTIN_FUNC_CLAMP: { return "BUILTIN_FUNC_CLAMP"; }
         case BUILTIN_FUNC_POW: { return "BUILTIN_FUNC_POW"; }
         case BUILTIN_FUNC_LOG: { return "BUILTIN_FUNC_LOG"; }
+        case BUILTIN_FUNC_MIN: { return "BUILTIN_FUNC_MIN"; }
+        case BUILTIN_FUNC_MAX: { return "BUILTIN_FUNC_MAX"; }
         case BUILTIN_FUNC_UNKNOWN: return "BUILTIN_FUNC_UNKNOWN";
         default:
             return "Builtin_Function_Not_Registered";

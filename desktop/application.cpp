@@ -56,11 +56,6 @@ bool Application::initialize()
     const int initial_sample_rate = DESIRED_AUDIO_SAMPLE_RATE;
 
     {
-        if (!st_initialize()) {
-            fprintf(stderr, "Could not initialize soundtoy library\n");
-            return false;
-        }
-
         const int waveform_sample_rate = WAVEFORM_SAMPLE_RATE;
 
         St_Sampler* audio_left = st_sampler_create(initial_sample_rate);

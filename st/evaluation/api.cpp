@@ -36,10 +36,6 @@ extern "C" {
     // @todo thread safe
     static const char* st_last_error = nullptr;
 
-    bool st_initialize() {
-        return true;
-    }
-
     const char* st_get_last_error() {
         return st_last_error;
     }

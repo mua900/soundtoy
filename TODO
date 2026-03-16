@@ -1,7 +1,7 @@
 - allow the user to load an existing sound and expose the samples from the sound as a variable to the expression language.
-	the user can then write expressions that modify or extend the existing track. (debug)
+	the user can then write expressions that modify or extend the existing track. (done)
 - lissajous curve
 - implement tests properly
-- support for user defined variables (debug)
+- support for user defined variables (done)
 - power spectrum for graph mode
 - good error messages

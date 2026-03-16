@@ -1060,6 +1060,12 @@ Function_ID get_function_id(String name)
 	else if (string_compare(name, make_string("triangle"))) {
 	   return BUILTIN_FUNC_TRIANGLE;
 	}
+    else if (string_compare(name, make_string("max"))) {
+        return BUILTIN_FUNC_MAX;
+    }
+    else if (string_compare(name, make_string("min"))) {
+        return BUILTIN_FUNC_MIN;
+    }
 
     return FUNC_ID_INVALID; // @todo user defined functions
 }
