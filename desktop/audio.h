@@ -52,9 +52,10 @@ private:
 
 #define AUDIO_MAX_CHANNELS 8
 
-#define DESIRED_AUDIO_FORMAT SDL_AUDIO_F32
-#define DESIRED_AUDIO_SAMPLE_RATE 48000
+// @todo remove these starting with the channel count
 #define DESIRED_AUDIO_CHANNEL_COUNT 2
+#define DESIRED_AUDIO_SAMPLE_RATE 48000
+#define DESIRED_AUDIO_FORMAT SDL_AUDIO_F32
 
 struct AudioData {
     void* samples = nullptr;

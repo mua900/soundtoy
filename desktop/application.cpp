@@ -455,21 +455,13 @@ void Application::handle_events()
 
                     m_audio.audio_player.set_audio_data(&m_audio.audio_data);
 
-                    // load should convert the input file to the desired spec
-                    if (m_audio.audio_data.is_in_desired_spec())
-                    {
-                        m_audio.expr_audio.pause();
+                    m_audio.expr_audio.pause();
 
-                        st_set_input_stream(m_samplers.audio_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
-                        st_set_input_stream(m_samplers.audio_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
+                    st_set_input_stream(m_samplers.audio_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
+                    st_set_input_stream(m_samplers.audio_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
 
-                        st_set_input_stream(m_samplers.waveform_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
-                        st_set_input_stream(m_samplers.waveform_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
-                    }
-                    else
-                    {
-                        fprintf(stderr, "Audio data is not in the desired format\n");
-                    }
+                    st_set_input_stream(m_samplers.waveform_left,  ((float*) m_audio.audio_data.samples) + 0, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
+                    st_set_input_stream(m_samplers.waveform_right, ((float*) m_audio.audio_data.samples) + 1, m_audio.audio_data.frame_count, m_audio.audio_data.channel_count);
                 }
 
                 break;
@@ -795,7 +787,7 @@ void Application::render_text_field(const Text_Field& text_field)
 
         SDL_SetRenderDrawColor(m_window.renderer, 0x33, 0x56, 0x74, 0xff);
 
-        SDL_FRect cursor = (SDL_FRect){ tf_area.x + text_field.m_cursor_pixel_x,
+        SDL_FRect cursor = SDL_FRect{   tf_area.x + text_field.m_cursor_pixel_x,
                                         tf_area.y + text_field.m_cursor_pixel_y,
                                         tf_area.w / 100, font_size };
 
@@ -1738,7 +1730,6 @@ bool AudioData::load_audio_file(String path) {
 
     {
         // @todo other file formats than wav
-        // @todo don't change channel counts
 
         SDL_AudioSpec spec;  // output parameter
         u8* buffer = nullptr;
@@ -1749,6 +1740,12 @@ bool AudioData::load_audio_file(String path) {
         }
 
         printf("%s\n", SDL_GetAudioFormatName(spec.format));
+
+        // accept the channel count of the input file
+        desired_spec.channels = spec.channels;
+        // except we may not be ready for surround setups
+        if (desired_spec.channels > 2)
+            desired_spec.channels = 2;
 
         bool convert_success = SDL_ConvertAudioSamples(&spec, buffer, audio_length, &desired_spec, &output_buffer, &output_length);
 
@@ -1767,8 +1764,6 @@ bool AudioData::load_audio_file(String path) {
     format = desired_spec.format;
     frequency = desired_spec.freq;
     frame_count = output_length / (SDL_AUDIO_BYTESIZE(desired_spec.format) * desired_spec.channels);
-
-    ASSERT(is_in_desired_spec());
 
     return true;
 }

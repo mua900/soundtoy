@@ -680,9 +680,9 @@ double bytecode_run(Bytecode_Program& program)
             u16 freg = instr.op0;
 
             int access_index = input_stream.sample_index * input_stream.stride;
-            access_index %= input_stream.samples.size;
             processor.fregs.get_ref(freg) = input_stream.samples.get(access_index);
             input_stream.sample_index += 1;
+            input_stream.sample_index %= input_stream.samples.size / input_stream.stride;
             break;
 		}
 		case INSTR_LOAD_I_TO_F: {

@@ -147,8 +147,8 @@ struct Constant_Block {
 	DArray<double> real = {};
 	DArray<s64> integer = {};
 	double time = 0.0;
-	long sample_rate = 0.0;
-	long sample_index = 0.0;
+	long sample_rate = 0;
+	long sample_index = 0;
 	Builtin_Function_List builtin_function = {};
 
 	Constant_Id add_constant(Value value);

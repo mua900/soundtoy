@@ -206,7 +206,7 @@ struct Text_Field
 
     void set_text_input_area(SDL_Window* window, int line_skip)
     {
-        const SDL_Rect area = { area.x, area.y + m_cursor_line * line_skip, area.w, line_skip};
+        const SDL_Rect area = { m_area.x, m_area.y + m_cursor_line * line_skip, m_area.w, line_skip};
         SDL_SetTextInputArea(window, &area, m_cursor_pixel_x);
     }
 
