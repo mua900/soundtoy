@@ -192,7 +192,7 @@ static void SDLCALL expression_audio_callback_mono(void* userdata, SDL_AudioStre
     int remaining = total_amount % sample_buffer.size;
     if (remaining > 0) {
         st_fill(audio->sampler_left, sample_buffer.data, remaining);
-        SDL_PutAudioStreamData(stream, sample_buffer.data, remaining);
+        SDL_PutAudioStreamData(stream, sample_buffer.data, remaining * sizeof(float));
     }
 }
 
