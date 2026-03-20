@@ -209,29 +209,29 @@ const char* get_builtin_function_name(Builtin_Func_Type builtin)
 {
     switch (builtin)
     {
-        case BUILTIN_FUNC_EXP: { return "BUILTIN_FUNC_EXP"; }
-        case BUILTIN_FUNC_ABS: { return "BUILTIN_FUNC_ABS"; }
-        case BUILTIN_FUNC_SIGN: { return "BUILTIN_FUNC_SIGN"; }
-        case BUILTIN_FUNC_CEIL: { return "BUILTIN_FUNC_CEIL"; }
-        case BUILTIN_FUNC_FLOOR: { return "BUILTIN_FUNC_FLOOR"; }
-        case BUILTIN_FUNC_SIN: { return "BUILTIN_FUNC_SIN"; }
-        case BUILTIN_FUNC_COS: { return "BUILTIN_FUNC_COS"; }
-        case BUILTIN_FUNC_TAN: { return "BUILTIN_FUNC_TAN"; }
-        case BUILTIN_FUNC_ARCSIN: { return "BUILTIN_FUNC_ARCSIN"; }
-        case BUILTIN_FUNC_ARCCOS: { return "BUILTIN_FUNC_ARCCOS"; }
-        case BUILTIN_FUNC_ARCTAN: { return "BUILTIN_FUNC_ARCTAN"; }
-        case BUILTIN_FUNC_FRACT: { return "BUILTIN_FUNC_FRACT"; }
-        case BUILTIN_FUNC_SMOOTHSTEP: { return "BUILTIN_FUNC_SMOOTHSTEP"; }
-        case BUILTIN_FUNC_MIX: { return "BUILTIN_FUNC_MIX"; }
-        case BUILTIN_FUNC_SAW: { return "BUILTIN_FUNC_SAW"; }
-        case BUILTIN_FUNC_SQUARE: { return "BUILTIN_FUNC_SQUARE"; }
-        case BUILTIN_FUNC_TRIANGLE: { return "BUILTIN_FUNC_TRIANGLE"; }
-        case BUILTIN_FUNC_CLAMP: { return "BUILTIN_FUNC_CLAMP"; }
-        case BUILTIN_FUNC_POW: { return "BUILTIN_FUNC_POW"; }
-        case BUILTIN_FUNC_LOG: { return "BUILTIN_FUNC_LOG"; }
-        case BUILTIN_FUNC_MIN: { return "BUILTIN_FUNC_MIN"; }
-        case BUILTIN_FUNC_MAX: { return "BUILTIN_FUNC_MAX"; }
-        case BUILTIN_FUNC_UNKNOWN: return "BUILTIN_FUNC_UNKNOWN";
+        case BUILTIN_FUNC_EXP:         { return "exponential"; }
+        case BUILTIN_FUNC_ABS:         { return "absolute value"; }
+        case BUILTIN_FUNC_SIGN:        { return "sign"; }
+        case BUILTIN_FUNC_CEIL:        { return "ceil"; }
+        case BUILTIN_FUNC_FLOOR:       { return "floor"; }
+        case BUILTIN_FUNC_SIN:         { return "sin"; }
+        case BUILTIN_FUNC_COS:         { return "cos"; }
+        case BUILTIN_FUNC_TAN:         { return "tan"; }
+        case BUILTIN_FUNC_ARCSIN:      { return "arcsin"; }
+        case BUILTIN_FUNC_ARCCOS:      { return "arccos"; }
+        case BUILTIN_FUNC_ARCTAN:      { return "arctan"; }
+        case BUILTIN_FUNC_FRACT:       { return "fract"; }
+        case BUILTIN_FUNC_SMOOTHSTEP:  { return "smoothstep"; }
+        case BUILTIN_FUNC_MIX:         { return "mix"; }
+        case BUILTIN_FUNC_SAW:         { return "saw"; }
+        case BUILTIN_FUNC_SQUARE:      { return "square"; }
+        case BUILTIN_FUNC_TRIANGLE:    { return "triangle"; }
+        case BUILTIN_FUNC_CLAMP:       { return "clamp"; }
+        case BUILTIN_FUNC_POW:         { return "pow"; }
+        case BUILTIN_FUNC_LOG:         { return "natural log"; }
+        case BUILTIN_FUNC_MIN:         { return "min"; }
+        case BUILTIN_FUNC_MAX:         { return "max"; }
+        case BUILTIN_FUNC_UNKNOWN:     { return "unknown function"; }
         default:
             return "Builtin_Function_Not_Registered";
     }

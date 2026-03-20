@@ -1393,6 +1393,7 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, const char** e
 			if (!operand)
 				return nullptr;
 			unary->operand = operand;
+			unary->result_type = operand->result_type;
 
 			if (unary->op == Unop_Plus)
 			{

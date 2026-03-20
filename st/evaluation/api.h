@@ -14,6 +14,7 @@ extern "C" {
     St_Sampler* st_sampler_create(int sample_rate);
     void st_sampler_destroy(St_Sampler* sampler);
     St_Sampler* st_sampler_copy(St_Sampler* sampler);
+    void st_sampler_reset(St_Sampler* sampler);
     bool st_check_expression_string(const St_Sampler* sampler_or_null, const char* expression_string, int length);
     bool st_sampler_set_expression(St_Sampler* sampler, const char* expression_string, int length);
     float st_sampler_evaluate(St_Sampler* sampler);
@@ -30,7 +31,7 @@ extern "C" {
     void st_set_input_stream(St_Sampler* sampler, float* input_stream, int input_stream_size, int stride);
     void st_clear_input_stream(St_Sampler* sampler);
     void st_fill(St_Sampler* sampler, float* buffer, int sample_count);
-	void st_fill_strided(St_Sampler* sampler, float* buffer, int sample_count);
+	void st_fill_strided(St_Sampler* sampler, float* buffer, int sample_count, int stride);
     void st_fill_interleaved(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int frame_count);
     void st_fill_planar(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int frame_count);
 }

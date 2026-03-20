@@ -25,9 +25,9 @@ extern "C" {
 	static bool bytecode_set_expression(Bytecode_Program* program, String expression_string);
 	static float bytecode_evaluate(Bytecode_Program* program);
 	static void bytecode_fill(Bytecode_Program* program, float* buffer, int sample_count);
-	static void bytecode_fill_strided(Bytecode_Program* program, float* buffer, int sample_count);
-	static void bytecode_fill_interleaved(Bytecode_Program* program_left, Bytecode_Program* program_right, float* buffer, int sample_count);
-	static void bytecode_fill_planar(Bytecode_Program* program_left, Bytecode_Program* program_right, float* buffer, int sample_count);
+	static void bytecode_fill_strided(Bytecode_Program* program, float* buffer, int sample_count, int stride);
+	static void bytecode_fill_interleaved(Bytecode_Program* program_left, Bytecode_Program* program_right, float* buffer, int frame_count);
+	static void bytecode_fill_planar(Bytecode_Program* program_left, Bytecode_Program* program_right, float* buffer, int frame_count);
 
     struct St_Sampler {
         Bytecode_Program program = {};
@@ -171,18 +171,23 @@ extern "C" {
         bytecode_fill(&sampler->program, buffer, length);
     }
 
-	void st_fill_strided(St_Sampler* sampler, float* buffer, int sample_count) {
-        bytecode_fill_strided(&sampler->program, buffer, sample_count);
+	void st_fill_strided(St_Sampler* sampler, float* buffer, int sample_count, int stride) {
+        bytecode_fill_strided(&sampler->program, buffer, sample_count, stride);
 	}
 
     void st_fill_interleaved(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count) {
         bytecode_fill_interleaved(&sampler_left->program, &sampler_right->program, buffer, sample_count);
     }
 
-	void st_fill_planar(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int sample_count) {
-        bytecode_fill_planar(&sampler_left->program, &sampler_right->program, buffer, sample_count);
+	void st_fill_planar(St_Sampler* sampler_left, St_Sampler* sampler_right, float* buffer, int frame_count) {
+        bytecode_fill_planar(&sampler_left->program, &sampler_right->program, buffer, frame_count);
 	}
 
+
+    void st_sampler_reset(St_Sampler* sampler)
+    {
+        sampler->program.reset();
+    }
 
     static bool bytecode_set_expression(Bytecode_Program* program, String expression_string) {
         Parser parser = {};
@@ -224,10 +229,10 @@ extern "C" {
 	        program->step_time(inv_sample_rate);
         }
     }
-	static void bytecode_fill_strided(Bytecode_Program* program, float* buffer, int frame_count) {
+	static void bytecode_fill_strided(Bytecode_Program* program, float* buffer, int sample_count, int stride) {
 		float inv_sample_rate = 1.0 / program->get_sample_rate();
-		for (int i = 0; i < frame_count; i++) {
-			int index = i * 2;
+		for (int i = 0; i < sample_count; i++) {
+			int index = i * stride;
 			buffer[index] = bc_evaluate(program);
 
 			program->step_time(inv_sample_rate);
@@ -250,15 +255,15 @@ extern "C" {
         }
     }
 
-    static void bytecode_fill_planar(Bytecode_Program* program_left, Bytecode_Program* program_right, float* buffer, int sample_count) {
+    static void bytecode_fill_planar(Bytecode_Program* program_left, Bytecode_Program* program_right, float* buffer, int frame_count) {
         float left_inv_sr = 1.0 / program_left->get_sample_rate();
         float right_inv_sr = 1.0 / program_right->get_sample_rate();
 
-    	for (int i = 0; i < sample_count / 2; i++) {
+    	for (int i = 0; i < frame_count / 2; i++) {
     		buffer[i] = bc_evaluate(program_left);
     		program_left->step_time(left_inv_sr);
     	}
-    	for (int i = sample_count / 2; i < sample_count; i++) {
+    	for (int i = frame_count / 2; i < frame_count; i++) {
     		buffer[i] = bc_evaluate(program_right);
     		program_right->step_time(right_inv_sr);
     	}

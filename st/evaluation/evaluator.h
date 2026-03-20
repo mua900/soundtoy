@@ -109,5 +109,6 @@ struct Tree_Evaluator
 
 void free_tree(Expr* node);
 
+// @todo we can do better than this if we separate this into more granular steps
 // typechecking and constant folding on the tree
 Expr* collapse_expr(Expr* root, const char** error_string);

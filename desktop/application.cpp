@@ -9,7 +9,7 @@ static const char* soundtoy_identifier = "flying-carpet.soundtoy";
 static const char* soundtoy_name = "soundtoy";
 static const char* soundtoy_version = "0.1.0";
 
-#define WAVEFORM_SAMPLE_RATE 64
+#define WAVEFORM_SAMPLE_RATE 256
 #define DEFAULT_EXPRESSION "sin(t*tau*440)"
 
 bool Application::initialize()
@@ -1700,7 +1700,7 @@ void Application::render_signal(vec2 area_center, vec2 area_scale, Signal signal
 void Application::update_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_buffer, vec2 area_center, vec2 area_scale) {
     int sample_count = sample_buffer.size;
 
-    st_fill_strided(sampler, &sample_buffer.data[0].y, sample_count);
+    st_fill_strided(sampler, &sample_buffer.data[0].y, sample_count, 2);
 
     const SDL_FRect area = SDL_FRect{ area_center.x - area_scale.x / 2, area_center.y - area_scale.y / 2, area_scale.x, area_scale.y };
 

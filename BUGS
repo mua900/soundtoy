@@ -1,1 +1,1 @@
-# No known bugs to list
+- Function arguments doesn't seem to get constant folded as they should be

@@ -41,6 +41,8 @@ enum Bytecode_Opcode : u32
 	INSTR_MOV_I_TO_F,	// mov  freg, reg
 	INSTR_MOV_F_TO_I,	// mov  reg, freg
 
+	// @todo fused multiply add
+
 	INSTR_ADD,			// add reg1, reg2
 	INSTR_SUB,			// sub reg1, reg2
 	INSTR_MUL,			// mul reg1, reg2
@@ -242,4 +244,6 @@ struct Bytecode_Program {
 };
 
 void bytecode_compile_expression(Bytecode_Program& program, Expr* expr);
+
+// @todo vectorize
 double bytecode_run(Bytecode_Program& program);

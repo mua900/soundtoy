@@ -198,24 +198,26 @@ static void SDLCALL expression_audio_callback_mono(void* userdata, SDL_AudioStre
 
 static void SDLCALL expression_audio_callback_stereo(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
 {
-    total_amount /= sizeof(float) * 2;
+    int frame_count = total_amount / (sizeof(float) * 2);
 
     ExpressionAudio* audio = (ExpressionAudio*)userdata;
 
     auto sample_buffer = audio->sample_buffer;
+    int buffer_frame_capacity = sample_buffer.size / 2;
 
-    for (int turn = 0; turn < total_amount / sample_buffer.size; turn++)
+    int turn = 0;
+    for (turn = 0; turn < frame_count / buffer_frame_capacity; turn++)
     {
-        st_fill_interleaved(audio->sampler_left, audio->sampler_right, sample_buffer.data, sample_buffer.size / 2);
+        st_fill_interleaved(audio->sampler_left, audio->sampler_right, sample_buffer.data, buffer_frame_capacity);
 
 		// @todo pan
-
-        SDL_PutAudioStreamData(stream, sample_buffer.data, sample_buffer.size * sizeof(float));
+        SDL_PutAudioStreamData(stream, sample_buffer.data, buffer_frame_capacity * sizeof(float) * 2);
     }
 
-    int remaining = total_amount % sample_buffer.size;
-    st_fill_interleaved(audio->sampler_left, audio->sampler_right, sample_buffer.data, remaining / 2);
-    SDL_PutAudioStreamData(stream, sample_buffer.data, remaining);
+    int remaining_frames = frame_count - buffer_frame_capacity * turn;
+    st_fill_interleaved(audio->sampler_left, audio->sampler_right, sample_buffer.data, remaining_frames);
+
+    SDL_PutAudioStreamData(stream, sample_buffer.data, remaining_frames * sizeof(float) * 2);
 }
 
 
