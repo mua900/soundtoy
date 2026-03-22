@@ -2,12 +2,14 @@
 
 This file contains several example expressions that try to show useful concepts in audio synthesis and you might want to try.
 
-- simple sine at 440 Hz:
-sin(t * tau * 440)
-- other waves at 440 Hz:
-triangle(t * 440)
-square(t * 440)
-saw(t * 440)
+simple sine at 440 Hz:
+- sin(t * tau * 440)
+
+other waves at 440 Hz:
+
+- triangle(t * 440)
+- square(t * 440)
+- saw(t * 440)
 
 Sound is how a human brain perceives pressure waves propagating through the air.
 We can represent sound as a signal with the signals amplitude representing at each point corresponding to the strength of the pressure wave at that particular point in time.
@@ -29,23 +31,25 @@ And finally there is a builtin variable for an input sample. It is the audio sam
 
 There are builtin functions that you can use. Most of them very standard functions that shouldn't require detailed explanation. They include:
 
-exp(x)           -- exponential function or e^x
-abs(x)           -- absolute value
-sign(x)          -- sign of x
-ceil(x)          -- ceil function
-floor(x)         -- floor function
-sin(x)           -- sine
-cos(x)           -- cosine
-tan(x)           -- tangent
-asin(x)          -- inverse sine
-acos(x)          -- inverse cosine
-atan(x)          -- inverse tangent
-fract(x)         -- fractional part of x
-smoothstep(x)    -- smoothstep between 0 and 1 of x (cubic same as in some shader languages)
-mix(a, b, t)     -- linear interpolation between a and b with interpolation parameter t
-saw(x)           -- sawtooth wave
-square(x)        -- square wave
-triangle(x)      -- triangle wave
-clamp(x, a, b)   -- clamp x between a and b
-pow(x, y)        -- x to the power y
-log(x)           -- natural logarithm of x
+- exp(x)           -- exponential function or e^x
+- abs(x)           -- absolute value
+- sign(x)          -- sign of x
+- ceil(x)          -- ceil function
+- floor(x)         -- floor function
+- sin(x)           -- sine
+- cos(x)           -- cosine
+- tan(x)           -- tangent
+- asin(x)          -- inverse sine
+- acos(x)          -- inverse cosine
+- atan(x)          -- inverse tangent
+- fract(x)         -- fractional part of x
+- smoothstep(x)    -- smoothstep between 0 and 1 of x (cubic same as in some shader languages)
+- mix(a, b, t)     -- linear interpolation between a and b with interpolation parameter t
+- saw(x)           -- sawtooth wave
+- square(x)        -- square wave
+- triangle(x)      -- triangle wave
+- clamp(x, a, b)   -- clamp x between a and b
+- pow(x, y)        -- x to the power y
+- log(x)           -- natural logarithm of x
+- min(x, y)        -- min
+- max(x, y)        -- max
