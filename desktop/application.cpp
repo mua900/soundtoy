@@ -940,6 +940,38 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
             }
             return true;
         }
+        case SDL_SCANCODE_V:
+        {
+            if (keyboard.mod & SDL_KMOD_LCTRL)
+            {
+                if (doing_text_input)
+                {
+                    printf("Paste\n");
+
+                    char* clipboard = SDL_GetClipboardText();
+                    if (strlen(clipboard) == 0)
+                    {
+                        fprintf(stderr, "Failed to get clipboard: %s\n", SDL_GetError());
+                        return true;
+                    }
+
+                    auto field = m_ui.get_selected_text_field();
+                    ASSERT(field);  // doing_text_input is set
+                    field->append_string(make_string(clipboard));
+                    update_input_string();
+
+                    SDL_free(clipboard);
+                }
+            }
+
+            return true;
+        }
+        case SDL_SCANCODE_C:
+        {
+            // @todo implement copying after implementing proper text selection
+            // SDL_SetClipboardText();
+            return true;
+        }
         case SDL_SCANCODE_R:
         {
             // @todo assign this to ui buttons instead
