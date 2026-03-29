@@ -9,7 +9,7 @@ Spectogram calculate_spectogram(Signal signal)
     int time_window;
     int freq_count;
 
-
+    // @todo
 
     return Spectogram(Array<float> (samples.data(), samples.size()));
 }

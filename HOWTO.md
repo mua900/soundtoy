@@ -1,6 +1,6 @@
 # HOWTO
 
-This file contains several example expressions that try to show useful concepts in audio synthesis and you might want to try.
+This files gives on overview of what expressions you can type in to the application.
 
 simple sine at 440 Hz:
 - sin(t * tau * 440)
@@ -23,13 +23,17 @@ Which is what this project is about. You type a mathematical expression and the 
 
 This part gives details about the syntax and semantics of the expression language.
 
+Expression language accepts mathematical expressions.
+It supports arithmetic operations you would expect it to support.
+Like addition, subtraction, multiplication, division, modulo (with or without floats). Also comparisons which produce boolean values and ternary operator.
 The expression language defines several symbols that it knows how to interpret and you can use them in an expression.
-The most important one is time. Written literally as time or abreviated as just t. As the name suggest it represents time. It starts at 0 and increments (1 / sample_rate) between each sample.
-There is a builtin variable to access the current sample rate. Written as literally in snake case as sample_rate or abreviated as sr.
-There is a builtin variable for the current sample index. Written as sample_index or si.
-And finally there is a builtin variable for an input sample. It is the audio sample taken at the same sample index position as the executing expression. Coming from a loaded file which is called an input stream. You can access it via input_sample or it's abreviation s.
+The most important one is time. Written literally as "time" or abreviated as just "t". As the name suggest it represents time. It starts at 0 and increments (1 / sample_rate) between each sample.
+There is a builtin variable to access the current sample rate. Written as literally in snake case as "sample_rate" or abreviated as "sr".
+There is a builtin variable for the current sample index. Written as "sample_index" or "si".
+And finally there is a builtin variable for an input sample. It is the audio sample taken at the same sample index position as the executing expression. Coming from a loaded file which is called an input stream. You can access it via typing "input_sample" or it's abreviation "s".
 
-There are builtin functions that you can use. Most of them very standard functions that shouldn't require detailed explanation. They include:
+There are builtin functions that you can use. Most of them are very standard functions that shouldn't require detailed explanation.
+They include:
 
 - exp(x)           -- exponential function or e^x
 - abs(x)           -- absolute value
@@ -53,3 +57,5 @@ There are builtin functions that you can use. Most of them very standard functio
 - log(x)           -- natural logarithm of x
 - min(x, y)        -- min
 - max(x, y)        -- max
+
+If you know a little bit of C++, it is trivial to add new ones to this existing set. Take a look at st/evaluation/builtin.h if you are interested.

@@ -330,6 +330,8 @@ struct Ui_State {
     Rectangle pause_button = { INIT_WINDOW_WIDTH / 2 - 50, INIT_WINDOW_HEIGHT / 2 - 50, 100, 100 };
     Rectangle graphs_button = { INIT_WINDOW_WIDTH * (4.0 / 5.0), 0, INIT_WINDOW_WIDTH * (1.0 / 5.0), 100 };
 
+    Rectangle save_signal_button;
+
     Text_Field expression_input_left = {};
     Text_Field expression_input_right = {};
 

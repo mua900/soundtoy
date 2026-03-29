@@ -618,9 +618,9 @@ void Application::draw_sound_mode_ui()
     {
         vec2 pos = vec2(m_ui.add_variable_button.x,m_ui.add_variable_button.y);
         vec2 scale = vec2(m_ui.add_variable_button.w,m_ui.add_variable_button.h);
-        SDL_FRect area = { pos.x - scale.x / 2, pos.y - scale.y / 2, scale.x, scale.y };
-        SDL_SetRenderDrawColor(m_window.renderer, 0x66, 0x44, 0x66, 0xff);
-        SDL_RenderFillRect(m_window.renderer, &area);
+        Color color = Color(0x66, 0x44, 0x66, 0xff);
+        Rectangle area = Rectangle(pos, scale);
+        render_rectangle(area, color);
         draw_plus(m_window.renderer, pos, scale, 20, ColorF(0.5,0.4,0.6,1.0));
 
         render_text_field(m_ui.variable_name);
@@ -643,6 +643,11 @@ void Application::draw_sound_mode_ui()
                 index += 1;
             }
         }
+    }
+
+    // save
+    {
+        render_rectangle(m_ui.save_signal_button, Color(0x33, 0x77, 0x65, 0xff));
     }
 
     // paused/playing text
@@ -830,19 +835,6 @@ bool Application::keyboard_input_common(SDL_KeyboardEvent keyboard) {
             quit = true;
             return true;
         }
-
-        case SDL_SCANCODE_T:
-        {
-            if (m_audio.audio_data.samples)
-            {
-                Signal audio = m_audio.audio_data.as_signal();
-                if (audio.samples.data) {
-                    DArray<Complex> fourier_result = calculate_fourier(audio);
-                }
-            }
-
-            return true;
-        }
         default: {
             return false;
         }
@@ -946,8 +938,6 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
             {
                 if (doing_text_input)
                 {
-                    printf("Paste\n");
-
                     char* clipboard = SDL_GetClipboardText();
                     if (strlen(clipboard) == 0)
                     {
@@ -983,8 +973,6 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
                 Signal signal = create_signal(m_samplers.waveform_left, 0.0, sample_rate, sample_rate);
                 if (signal.samples.data)
                 {
-                    printf("Saved signal\n");
-
                     if (m_signal.samples.data)
                     {
                         m_signal.samples.free_data();
@@ -1415,6 +1403,11 @@ void Application::update_ui_state(vec2 window_size)
     m_ui.variable_name.m_area.y = window_size.y * (1.0 / 32.0);
     m_ui.variable_name.m_area.w = window_size.x * (1.0 / 3.0);
     m_ui.variable_name.m_area.h = window_size.y * (1.0 / 16.0);
+
+    m_ui.save_signal_button.x = window_size.x * (1.0 / 4.0);
+    m_ui.save_signal_button.y = window_size.y * (23.0 / 24.0);
+    m_ui.save_signal_button.w = window_size.x * (1.0 / 4.0);
+    m_ui.save_signal_button.h = window_size.y * (1.0 / 12.0);
 
     if (m_audio.expr_audio.get_channel_count() == 1)
     {
@@ -1886,9 +1879,16 @@ bool Application::load_app_state(String filepath) {
     return true;
 }
 
+void Application::render_rectangle(Rectangle rect, Color color)
+{
+    SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
+    SDL_FRect area = { rect.x - rect.w / 2, rect.y - rect.h / 2, rect.w, rect.h };
+    SDL_RenderFillRect(m_window.renderer, &area);
+}
+
 void Application::render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color) {
     SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
-    SDL_FRect area = { rect.x, rect.y, rect.w, rect.h };
+    SDL_FRect area = { rect.x - rect.w / 2, rect.y - rect.h / 2, rect.w, rect.h };
     SDL_RenderFillRect(m_window.renderer, &area);
 
     float tex_w, tex_h;
