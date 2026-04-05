@@ -272,7 +272,10 @@ inline vec2 operator-(const vec2 a, const vec2 b)
 }
 
 struct Rectangle {
-    float x, y, w, h;
+    float x = 0;
+	float y = 0;
+	float w = 0;
+	float h = 0;
 
     Rectangle() {}
     Rectangle(vec2 pos, vec2 scale) : x(pos.x), y(pos.y), w(scale.x), h(scale.y) {}
@@ -280,11 +283,15 @@ struct Rectangle {
         : x(p_x), y(p_y), w(p_w), h(p_h)
     {}
 
-    bool contains(vec2 p) const;
-    // the current rectangle assumes center to be the origin so shift it to be the top left corner
-    Rectangle center() const {
+    bool contains_top_left(vec2 p) const;
+	bool contains_centered(vec2 p) const;
+    // the current rectangle assumes center be the origin so shift it to be the top left corner
+    Rectangle to_top_left() const {
         return Rectangle(x - w / 2, y - h / 2, w, h);
     }
+	Rectangle to_center() const {
+		return Rectangle(x + w / 2, y + h / 2, w, h);
+	}
 };
 
 struct ColorF;

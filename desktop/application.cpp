@@ -189,6 +189,7 @@ bool Application::gen_static_text(Color color)
     Text sample_rate = create_text(make_string("Sample Rate"), m_assets.font_large, color);
     Text text_sound_mode = create_text(make_string("sound mode"), m_assets.font_large, color);
     Text text_graph_mode = create_text(make_string("graph mode"), m_assets.font_large, color);
+	Text save_signal = create_text(make_string("save signal"), m_assets.font_medium, color);
 
     if (!
         (paused.texture &&
@@ -200,7 +201,8 @@ bool Application::gen_static_text(Color color)
          valid_expression.texture &&
          sample_rate.texture &&
          text_sound_mode.texture &&
-         text_graph_mode.texture
+         text_graph_mode.texture &&
+		 save_signal.texture
          )
         )
     {
@@ -217,6 +219,7 @@ bool Application::gen_static_text(Color color)
     m_rendered_text.data[TEXT_VALID_EXPRESSION] = valid_expression;
     m_rendered_text.data[TEXT_SOUND_MODE] = text_sound_mode;
     m_rendered_text.data[TEXT_GRAPH_MODE] = text_graph_mode;
+	m_rendered_text.data[TEXT_SAVE_SIGNAL] = save_signal;
 
     return true;
 }
@@ -647,7 +650,7 @@ void Application::draw_sound_mode_ui()
 
     // save
     {
-        render_rectangle(m_ui.save_signal_button, Color(0x33, 0x77, 0x65, 0xff));
+        render_textured_rectangle(m_ui.save_signal_button, m_rendered_text[TEXT_SAVE_SIGNAL].texture, Color(0x33, 0x77, 0x65, 0xff));
     }
 
     // paused/playing text
@@ -703,7 +706,7 @@ void Application::draw_graph_mode_ui()
     vec2 window_size = vec2((float) window_x, (float) window_y);
 
     Text_Id text = m_audio.audio_player.paused ? TEXT_RESUME : TEXT_PAUSE;
-    render_textured_rectangle(Rectangle(0,0,100,100), m_rendered_text.get(text).texture, Color(0x22,0x55,0x33,0xff));
+    render_textured_rectangle(m_ui.playback_pause, m_rendered_text.get(text).texture, Color(0x22,0x55,0x33,0xff), false);
 
     render_dropdown(m_ui.graph_to_show, Color(0x66, 0x44, 0x55, 0xff), Color(0x22, 0x77, 0x55, 0xff));
 
@@ -740,8 +743,7 @@ void Application::draw_common_ui() {
     {
         int text = (mode == ApplicationMode::AppModeSound) ? TEXT_GRAPH_MODE : TEXT_SOUND_MODE;
         render_textured_rectangle(m_ui.graphs_button,
-            m_rendered_text[text].texture,
-            Color(0x66, 0x55, 0x55, 0xff)
+            m_rendered_text[text].texture, Color(0x66, 0x55, 0x55, 0xff)
         );
     }
 }
@@ -978,8 +980,6 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
                         m_signal.samples.free_data();
                     }
                     m_signal = signal;
-
-                    printf("\n");
                 }
             }
 
@@ -1053,7 +1053,7 @@ bool Application::mouse_input()
 
 bool Application::mouse_input_common()
 {
-    if (m_ui.graphs_button.contains(m_mouse.pos))
+    if (m_ui.graphs_button.contains_centered(m_mouse.pos))
     {
         switch_modes();
         return true;
@@ -1064,7 +1064,7 @@ bool Application::mouse_input_common()
 
 bool Application::mouse_input_graph_mode()
 {
-    if (m_ui.playback_pause.contains(m_mouse.pos))
+    if (m_ui.playback_pause.contains_top_left(m_mouse.pos))
     {
         m_audio.audio_player.toggle_pause();
         return true;
@@ -1076,7 +1076,7 @@ bool Application::mouse_input_graph_mode()
             m_ui.graph_to_show.scale.x, m_ui.graph_to_show.scale.y
         );
 
-        if (graph_header.contains(m_mouse.pos)) {
+        if (graph_header.contains_top_left(m_mouse.pos)) {
             m_ui.graph_to_show.toggle();
             return true;
         }
@@ -1089,10 +1089,10 @@ bool Application::mouse_input_graph_mode()
             fourier_area.y += graph_header.h * 2;
 
             bool got_clicked = true;
-            if (audio_data_area.contains(m_mouse.pos)) {
+            if (audio_data_area.contains_centered(m_mouse.pos)) {
                 m_graph_to_show = GRAPH_AUDIO_DATA;
             }
-            else if (fourier_area.contains(m_mouse.pos)) {
+            else if (fourier_area.contains_centered(m_mouse.pos)) {
                 m_graph_to_show = GRAPH_FOURIER_TRANSFORM;
             }
             else {
@@ -1116,7 +1116,7 @@ bool Application::mouse_input_sound_mode()
     SDL_GetWindowSize(m_window.window, &window_x, &window_y);
     vec2 window_size = vec2(window_x, window_y);
 
-    if (m_ui.volume_slider.contains(m_mouse.pos))
+    if (m_ui.volume_slider.contains_top_left(m_mouse.pos))
     {
         float diff = m_mouse.pos.x - m_ui.volume_slider.x;
         float volume = diff / m_ui.volume_slider.w;
@@ -1133,7 +1133,7 @@ bool Application::mouse_input_sound_mode()
         return true;
     }
 
-    if (m_ui.pause_button.contains(m_mouse.pos))
+    if (m_ui.pause_button.contains_centered(m_mouse.pos))
     {
         m_audio.expr_audio.toggle_pause();
 
@@ -1146,7 +1146,7 @@ bool Application::mouse_input_sound_mode()
             m_ui.channel_count.scale.x, m_ui.channel_count.scale.y
         );
 
-        if (channel_count_header.contains(m_mouse.pos)) {
+        if (channel_count_header.contains_top_left(m_mouse.pos)) {
             m_ui.channel_count.toggle();
             return true;
         }
@@ -1158,12 +1158,12 @@ bool Application::mouse_input_sound_mode()
             stereo_area.y += channel_count_header.h * 2;
 
             bool got_clikcked = true;
-            if (mono_area.contains(m_mouse.pos)) {
+            if (mono_area.contains_top_left(m_mouse.pos)) {
                 if (!update_channel_count(1)) {
                     fprintf(stderr, "Could not update channel count\n");
                 }
             }
-            else if (stereo_area.contains(m_mouse.pos)) {
+            else if (stereo_area.contains_top_left(m_mouse.pos)) {
                 if (!update_channel_count(2)) {
                     fprintf(stderr, "Could not update channel count\n");
                 }
@@ -1185,7 +1185,7 @@ bool Application::mouse_input_sound_mode()
             m_ui.playback_device.scale.x, m_ui.playback_device.scale.y
         );
 
-        if (playback_device_header.contains(m_mouse.pos)) {
+        if (playback_device_header.contains_top_left(m_mouse.pos)) {
             m_ui.playback_device.toggle();
             return true;
         }
@@ -1196,7 +1196,7 @@ bool Application::mouse_input_sound_mode()
                 Rectangle area = playback_device_header;
                 area.y += playback_device_header.h * (i+1);
 
-                if (area.contains(m_mouse.pos)) {
+                if (area.contains_top_left(m_mouse.pos)) {
                     m_audio.expr_audio.set_playback_device(m_ui.playback_device.get_option_data_index(i));
                     m_ui.playback_device.selected = i;
 
@@ -1211,7 +1211,7 @@ bool Application::mouse_input_sound_mode()
         }
     }
 
-    if (m_ui.add_variable_button.center().contains(m_mouse.pos)) {
+    if (m_ui.add_variable_button.contains_centered(m_mouse.pos)) {
         String variable_name = m_ui.variable_name.get_string();
         if (variable_name.size > 0)
         {
@@ -1237,7 +1237,7 @@ bool Application::mouse_input_sound_mode()
         return true;
     }
 
-    if (m_ui.variable_name.m_area.contains(m_mouse.pos)) {
+    if (m_ui.variable_name.m_area.contains_top_left(m_mouse.pos)) {
         if (!(doing_text_input && m_ui.text_input_target == VARIABLE_NAME)) {
             // not wrapped
             m_ui.variable_name.set_text_input_area(m_window.window, m_ui.variable_name.m_area.h);
@@ -1258,7 +1258,7 @@ bool Application::mouse_input_sound_mode()
     int value_field_index = 0;
     for (auto& var_value : m_ui.variable_values)
     {
-        if (var_value.m_area.contains(m_mouse.pos))
+        if (var_value.m_area.contains_centered(m_mouse.pos))
         {
             if (!doing_text_input)
             {
@@ -1288,7 +1288,7 @@ bool Application::mouse_input_sound_mode()
     }
 
 
-    if (m_ui.expression_input_left.m_area.contains(m_mouse.pos))
+    if (m_ui.expression_input_left.m_area.contains_top_left(m_mouse.pos))
     {
         int line_skip = TTF_GetFontLineSkip(m_assets.font_editor.font);
         if (!(doing_text_input && m_ui.text_input_target == EXPRESSION_INPUT_LEFT))
@@ -1312,7 +1312,7 @@ bool Application::mouse_input_sound_mode()
 
     if (m_audio.expr_audio.get_channel_count() == 2)
     {
-        if (m_ui.expression_input_right.m_area.contains(m_mouse.pos))
+        if (m_ui.expression_input_right.m_area.contains_top_left(m_mouse.pos))
         {
             int line_skip = TTF_GetFontLineSkip(m_assets.font_editor.font);
             m_ui.expression_input_right.set_text_input_area(m_window.window, line_skip);
@@ -1328,6 +1328,21 @@ bool Application::mouse_input_sound_mode()
             return true;
         }
     }
+
+	if (m_ui.save_signal_button.contains_centered(m_mouse.pos))
+	{
+		int sample_rate = st_sampler_get_sample_rate(m_samplers.waveform_left);
+		// a second worth of samples
+		Signal signal = create_signal(m_samplers.waveform_left, 0.0, sample_rate, sample_rate);
+		if (signal.samples.data)
+		{
+			if (m_signal.samples.data)
+			{
+				m_signal.samples.free_data();
+			}
+			m_signal = signal;
+		}
+	}
 
     return false;
 }
@@ -1879,16 +1894,16 @@ bool Application::load_app_state(String filepath) {
     return true;
 }
 
-void Application::render_rectangle(Rectangle rect, Color color)
+void Application::render_rectangle(Rectangle rect, Color color, bool center)
 {
     SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
-    SDL_FRect area = { rect.x - rect.w / 2, rect.y - rect.h / 2, rect.w, rect.h };
+    SDL_FRect area = center ? SDL_FRect { rect.x - rect.w / 2, rect.y - rect.h / 2, rect.w, rect.h } : SDL_FRect { rect.x, rect.y, rect.w, rect.h };
     SDL_RenderFillRect(m_window.renderer, &area);
 }
 
-void Application::render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color) {
+void Application::render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color, bool center) {
     SDL_SetRenderDrawColor(m_window.renderer, COLOR_ARG(color));
-    SDL_FRect area = { rect.x - rect.w / 2, rect.y - rect.h / 2, rect.w, rect.h };
+    SDL_FRect area = center ? SDL_FRect { rect.x - rect.w / 2, rect.y - rect.h / 2, rect.w, rect.h } : SDL_FRect { rect.x, rect.y, rect.w, rect.h };
     SDL_RenderFillRect(m_window.renderer, &area);
 
     float tex_w, tex_h;

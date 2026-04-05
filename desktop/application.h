@@ -185,8 +185,8 @@ private:
     void render_audio_data(vec2 area_center, vec2 area_scale, Color color);
     void render_signal(vec2 area_center, vec2 area_scale, Signal signal, Color color);
 
-    void render_rectangle(Rectangle rect, Color color);
-    void render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color);
+    void render_rectangle(Rectangle rect, Color color, bool center = true);
+    void render_textured_rectangle(Rectangle rect, SDL_Texture* texture, Color color, bool center = true);
 
     void render_slider(Rectangle area, vec2 knob_scale, float value, Color slider_color, Color knob_color, const Text& text);
     void render_text_field(const Text_Field& text_field);

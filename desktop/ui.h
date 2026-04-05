@@ -40,6 +40,7 @@ enum Text_Id : int {
     TEXT_INVALID_SAMPLE_RATE,
     TEXT_SOUND_MODE,
     TEXT_GRAPH_MODE,
+	TEXT_SAVE_SIGNAL,
 
     // dynamic text
     TEXT_VOLUME_VALUE,
@@ -206,7 +207,7 @@ struct Text_Field
 
     void set_text_input_area(SDL_Window* window, int line_skip)
     {
-        const SDL_Rect area = { m_area.x, m_area.y + m_cursor_line * line_skip, m_area.w, line_skip};
+        const SDL_Rect area = { int(m_area.x), int(m_area.y) + m_cursor_line * line_skip, int(m_area.w), line_skip};
         SDL_SetTextInputArea(window, &area, m_cursor_pixel_x);
     }
 
