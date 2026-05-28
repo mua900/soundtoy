@@ -1247,7 +1247,7 @@ bool Application::mouse_input_sound_mode()
 
         vec2 relative = m_mouse.pos - vec2(m_ui.variable_name.m_area.x, m_ui.variable_name.m_area.y);
         String string = m_ui.variable_name.get_string();
-        m_ui.variable_name.m_selection_start = m_ui.variable_name.calculate_cursor_from_mouse(relative, string, m_assets.font_editor);
+        m_ui.variable_name.m_selection_start = m_ui.variable_name.calculate_cursor_from_mouse(relative, string, m_assets.font_editor, false);
         m_ui.variable_name.m_selection_end = m_ui.variable_name.m_selection_start;
     }
     else if (m_ui.text_input_target == VARIABLE_NAME) {
@@ -1269,7 +1269,7 @@ bool Application::mouse_input_sound_mode()
 
             vec2 relative = m_mouse.pos - vec2(var_value.m_area.x, var_value.m_area.y);
             String string = var_value.get_string();
-            var_value.m_selection_start = var_value.calculate_cursor_from_mouse(relative, string, m_assets.font_editor);
+            var_value.m_selection_start = var_value.calculate_cursor_from_mouse(relative, string, m_assets.font_editor, false);
             var_value.m_selection_end = var_value.m_selection_start;
 
             m_ui.selected_variable_value_index = value_field_index;
@@ -1300,7 +1300,7 @@ bool Application::mouse_input_sound_mode()
 
         vec2 relative = m_mouse.pos - vec2(m_ui.expression_input_left.m_area.x, m_ui.expression_input_left.m_area.y);
         String string = m_ui.expression_input_left.get_string();
-        m_ui.expression_input_left.m_selection_start = m_ui.expression_input_left.calculate_cursor_from_mouse(relative, string, m_assets.font_editor);
+        m_ui.expression_input_left.m_selection_start = m_ui.expression_input_left.calculate_cursor_from_mouse(relative, string, m_assets.font_editor, true);
         m_ui.expression_input_left.m_selection_end = m_ui.expression_input_left.m_selection_start;
 
         return true;
@@ -1315,15 +1315,21 @@ bool Application::mouse_input_sound_mode()
         if (m_ui.expression_input_right.m_area.contains_top_left(m_mouse.pos))
         {
             int line_skip = TTF_GetFontLineSkip(m_assets.font_editor.font);
-            m_ui.expression_input_right.set_text_input_area(m_window.window, line_skip);
+            if (!(doing_text_input && m_ui.text_input_target == EXPRESSION_INPUT_RIGHT))
+            {
+                m_ui.expression_input_right.set_text_input_area(m_window.window, line_skip);
+                toggle_text_input();
+                m_ui.text_input_target = EXPRESSION_INPUT_RIGHT;
+            }
 
-            toggle_text_input();
-
-            m_ui.text_input_target = EXPRESSION_INPUT_RIGHT;
+            vec2 relative = m_mouse.pos - vec2(m_ui.expression_input_right.m_area.x, m_ui.expression_input_right.m_area.y);
+            String string = m_ui.expression_input_right.get_string();
+            m_ui.expression_input_right.m_selection_start = m_ui.expression_input_right.calculate_cursor_from_mouse(relative, string, m_assets.font_editor, true);
+            m_ui.expression_input_right.m_selection_end = m_ui.expression_input_right.m_selection_start;
 
             return true;
         }
-        else if (m_ui.text_input_target == EXPRESSION_INPUT_LEFT) {
+        else if (m_ui.text_input_target == EXPRESSION_INPUT_RIGHT) {
             clear_text_input_selection();
             return true;
         }
@@ -1536,7 +1542,7 @@ bool Text_Field::render_text_field_texture(SDL_Renderer* renderer, Font font, Co
     int line_skip = TTF_GetFontLineSkip(font.font);
     int line_count = (wrapped) ? MAX(1, (int)(texture_height / line_skip)) : (1);
 
-    calculate_cursor_from_selection(str, font);
+    calculate_cursor_from_selection(str, font, wrapped);
 
     m_line_count = line_count;
     m_texture = texture;

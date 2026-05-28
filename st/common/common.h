@@ -60,13 +60,18 @@ static inline unsigned int msvc_leading_zeros(u64 x)
 
 #endif
 
+#define MAX_SIGNED_16_BIT s16(0x7FFF)
+#define MAX_SIGNED_32_BIT s32(0x7FFFFFFF)
+#define MAX_SIGNED_64_BIT s64(0x7FFFFFFFFFFFFFFF)
+
+constexpr int MAX_INTEGER = (int(-1) ^ int(1 << (sizeof(int)*8 - 1)));
+
 #define ASSERT(x)   do {    \
         if (!(x)) {             \
             fprintf(stderr, "-----*****----- Assertion failed at %s:%d   %s\n", __FILE__, __LINE__, #x); \
             exit(1);    \
         }               \
     } while(0)
-
 
 NORETURN
 void panic(char const* const msg);

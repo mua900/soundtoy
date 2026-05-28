@@ -211,10 +211,8 @@ struct Text_Field
         SDL_SetTextInputArea(window, &area, m_cursor_pixel_x);
     }
 
-    // @todo fix
-    // both of these assume wrapped text
-    void calculate_cursor_from_selection(String string, Font font);
-    size_t calculate_cursor_from_mouse(vec2 mouse_position, String string, Font font);
+    void calculate_cursor_from_selection(String string, Font font, bool wrapped);
+    size_t calculate_cursor_from_mouse(vec2 mouse_position, String string, Font font, bool wrapped);
 
 private:
     bool render_text_field_texture(SDL_Renderer* renderer, Font font, Color color, bool wrapped);
