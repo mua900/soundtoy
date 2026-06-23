@@ -10,10 +10,6 @@
 	path = vendor/SDL_ttf
 	url = https://github.com/libsdl-org/SDL_ttf.git
 	shallow = true
-[submodule "vendor/imgui"]
-	path = vendor/imgui
-	url = https://github.com/ocornut/imgui.git
-	shallow = true
 [submodule "vendor/SDL_mixer"]
 	path = vendor/SDL_mixer
 	url = https://github.com/libsdl-org/SDL_mixer.git

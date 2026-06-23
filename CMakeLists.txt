@@ -25,24 +25,7 @@ add_executable(soundtoy
     desktop/ui.cpp
     desktop/spectogram.h
     desktop/spectogram.cpp
-
-# we don't use imgui right now
-#     vendor/imgui/imgui.cpp
-#     vendor/imgui/imgui.h
-#     vendor/imgui/imgui_draw.cpp
-#     vendor/imgui/imgui_tables.cpp
-#     vendor/imgui/imgui_widgets.cpp
-#     vendor/imgui/imgui_demo.cpp
-#
-#     # the backends we use
-#     vendor/imgui/backends/imgui_impl_sdl3.cpp
-#     vendor/imgui/backends/imgui_impl_sdlrenderer3.cpp
-#     vendor/imgui/backends/imgui_impl_sdl3.h
-#     vendor/imgui/backends/imgui_impl_sdlrenderer3.h
 )
-
-target_include_directories(soundtoy PRIVATE vendor/imgui)
-target_include_directories(soundtoy PRIVATE vendor/imgui/backends)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT soundtoy)
 
@@ -81,6 +64,9 @@ target_link_libraries(soundtoy PRIVATE soundtoy_lib)
 
 # SDL
 add_subdirectory(vendor/SDL EXCLUDE_FROM_ALL)
+
+set(SDLIMAGE_VENDORED ON)
+set(SDLTTF_VENDORED ON)
 
 # SDL_image
 # turn off unused formats
