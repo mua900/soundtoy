@@ -6,7 +6,7 @@ The user provides an expression that will be evaluated repeatedly to produce aud
 The expression parsing and sample generation code is written in C++ and it is under the st/ folder.
 There is a desktop demo under the desktop/ folder and an unfinished web demo under the web/ folder.
 
-Desktop version uses SDL alongside with the companion libraries of SDL_ttf, SDL_image and SDL_mixer.
+Desktop version uses SDL alongside with the companion libraries of SDL_ttf, SDL_image.
 They are included as git submodules under the vendor/ folder.
 Desktop version uses cmake for building.
 

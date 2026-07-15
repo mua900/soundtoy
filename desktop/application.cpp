@@ -530,6 +530,7 @@ void Application::cleanup()
     m_audio.expr_audio.cleanup();
 
     SDL_Quit();
+    TTF_Quit();
 }
 
 void Application::draw()
@@ -925,6 +926,7 @@ bool Application::keyboard_input_sound_mode(SDL_KeyboardEvent keyboard) {
                     update_input_string();
                 }
             }
+            return true;
         }
         case SDL_SCANCODE_SPACE:
         {

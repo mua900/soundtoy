@@ -245,5 +245,4 @@ struct Bytecode_Program {
 
 void bytecode_compile_expression(Bytecode_Program& program, Expr* expr);
 
-// @todo vectorize
 double bytecode_run(Bytecode_Program& program);

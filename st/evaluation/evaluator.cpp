@@ -1326,17 +1326,6 @@ Expr* collapse_expr_real(Expr* root, Function* builtin_functions, const char** e
 					Expr* ret = nullptr;
 
 					if (builtin.signature.return_types.size == 0) {
-						// @todo do we actually allow for functions that don't return anything.
-						// the current assumption is that since they are signal generators, all functions are pure.
-						// so it wouldn't make sense for a function to not return anything and currently no such functions exist.
-						// but if we decide to add them how their semantics should be depends on what exactly they are or what exactly they do.
-						// so we can't decide on that.
-
-						// if they mess up with some settings to the system like setting some global variables or settings only once then we can safely only "execute" them once and not put them on the tree.
-						// but magic functions that mess with settings sounds like a horrible idea so we will probably never add them.
-						// if they do something per sample then we should put them to the tree and if they ever exist.
-						// the second one is the more probable future hence the active path instead of the commented out one.
-
 						return call;
 						// call_function(builtin, arguments.data(), nullptr);
 					}
