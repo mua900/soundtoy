@@ -391,6 +391,25 @@ SDL_AudioStream* create_audio_stream(SDL_AudioDeviceID device, SDL_AudioSpec spe
     return stream;
 }
 
+AudioFileFormat get_audio_file_format(String ext)
+{
+    if (string_compare(ext, String(".wav")))
+    {
+        return AudioFileWAV;
+    }
+    else if (string_compare(ext, String(".ogg")))
+    {
+        return AudioFileVorbis;
+    }
+    else if (string_compare(ext, String(".mp3")))
+    {
+        return AudioFileMp3;
+    }
+    else
+    {
+        return AudioFileUnknown;
+    }
+}
 
 #define STB_VORBIS_IMPLEMENTATION
 #include "stb_vorbis.h"
@@ -417,21 +436,29 @@ bool AudioData::load_audio_file(String path, const char** message)
         u8* buffer = nullptr;
         u32 audio_length = 0;
 
-        if (string_compare(ext, String(".wav")))
+        AudioFileFormat fileFormat = get_audio_file_format(ext);
+        switch (fileFormat)
         {
-            if (!SDL_LoadWAV(path_c_str, &spec, &buffer, &audio_length)) {
-                *message = SDL_GetError();
+            case AudioFileWAV:
+            {
+                if (!SDL_LoadWAV(path_c_str, &spec, &buffer, &audio_length)) {
+                    *message = SDL_GetError();
+                    return false;
+                }
+                break;
+            }
+            case AudioFileVorbis:
+            {
+                *message = "Vorbis support unimplemented";
                 return false;
             }
-        }
-        else if (string_compare(ext, String(".ogg")))
-        {
-            *message = "Vorbis support unimplemented";
-            return false;
-        }
-        else
-        {
-            *message = "Unknown or unsupported file format";
+            case AudioFileMp3:        // fallthrough
+            case AudioFileUnknown:    // fallthrough
+            default:
+            {
+                *message = "Unknown or unsupported file format";
+                return false;
+            }
         }
 
         printf("%s\n", SDL_GetAudioFormatName(spec.format));

@@ -52,6 +52,15 @@ private:
 
 #define AUDIO_MAX_CHANNELS 8
 
+enum AudioFileFormat {
+    AudioFileUnknown,
+    AudioFileWAV,
+    AudioFileVorbis,
+    AudioFileMp3,
+};
+
+AudioFileFormat get_audio_file_format(String ext);
+
 // @todo not desired but the final output format
 #define DESIRED_AUDIO_CHANNEL_COUNT 2
 #define DESIRED_AUDIO_SAMPLE_RATE 48000
