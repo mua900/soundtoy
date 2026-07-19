@@ -449,7 +449,7 @@ bool AudioData::load_audio_file(String path, const char** message)
             }
             case AudioFileVorbis:
             {
-                *message = "Vorbis support unimplemented";
+                *message = "Vorbis support not implemented";
                 return false;
             }
             case AudioFileMp3:        // fallthrough
