@@ -209,6 +209,8 @@ private:
     void render_dropdown(const Drop_Down_List& list, Color title_color, Color option_color);
 
     void clear_text_input_selection();
+
+    bool is_fullscreen() const;
 };
 
 bool load_font(Font* font, String_Builder& path, String font_folder, String font_file, float size);

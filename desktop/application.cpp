@@ -842,6 +842,12 @@ void Application::render_dropdown(const Drop_Down_List& list, Color title_color,
     }
 }
 
+bool Application::is_fullscreen() const
+{
+    SDL_WindowFlags flags = SDL_GetWindowFlags(m_window.window);
+    return flags & SDL_WINDOW_FULLSCREEN;
+}
+
 bool Application::keyboard_input_common(SDL_KeyboardEvent keyboard) {
     switch (keyboard.scancode)
     {
@@ -849,6 +855,11 @@ bool Application::keyboard_input_common(SDL_KeyboardEvent keyboard) {
         {
             quit = true;
             return true;
+        }
+        case SDL_SCANCODE_F11:
+        {
+            SDL_SetWindowFullscreen(m_window.window, !is_fullscreen());
+        	return true;
         }
         default: {
             return false;

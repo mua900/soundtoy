@@ -15,6 +15,8 @@ endforeach()
 set(CMAKE_CXX_STANDARD 20)
 
 add_executable(soundtoy
+	WIN32  # so that windows considers this a gui app
+
     desktop/main.cpp
 
     desktop/application.h
