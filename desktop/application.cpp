@@ -455,8 +455,10 @@ void Application::handle_events()
                 if (drop.data) {
                     m_audio.audio_data.reset();
 
-                    if (!m_audio.audio_data.load_audio_file(String(drop.data))) {
-                        fprintf(stderr, "Could not load file %s\n", drop.data);
+                    const char* message = nullptr;
+                    if (!m_audio.audio_data.load_audio_file(String(drop.data), &message)) {
+                        fprintf(stderr, "Could not load file %s: %s\n", drop.data, message);
+                        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Audio File Load Error", message, m_window.window);
                     }
 
                     m_audio.audio_player.set_audio_data(&m_audio.audio_data);
@@ -1663,8 +1665,11 @@ float get_signal_sample(void* user, int frame, int channel) {
 
 float get_audio_sample(void* user, int frame, int channel) {
     AudioData* data = (AudioData*) user;
-    if (data->format != SDL_AUDIO_F32)  // panic maybe?
+    if (data->format != SDL_AUDIO_F32)
+    {
+        // do we convert?
         return 0.0;
+    }
     float* samples = (float*)data->samples;
     return samples[frame * data->channel_count + channel];
 }
@@ -1772,58 +1777,6 @@ void Application::update_waveform(St_Sampler* sampler, Array<SDL_FPoint> sample_
         float sample = sample_buffer[i].y;
         sample_buffer[i].y = middle_y - (sample * half_h);
     }
-}
-
-bool AudioData::load_audio_file(String path) {
-    SCOPE_STRING(path, path_c_str);
-
-    u8* output_buffer;
-    int output_length = 0;
-
-    // the spec we want
-    SDL_AudioSpec desired_spec;
-    desired_spec.channels = 2;
-    desired_spec.format = SDL_AUDIO_F32;
-    desired_spec.freq = 48000;
-
-    {
-        // @todo other file formats than wav
-
-        SDL_AudioSpec spec;  // output parameter
-        u8* buffer = nullptr;
-        u32 audio_length = 0;
-        if (!SDL_LoadWAV(path_c_str, &spec, &buffer, &audio_length)) {
-            fprintf(stderr, "Couldn't load audio file %s: %s\n", path_c_str, SDL_GetError());
-            return false;
-        }
-
-        printf("%s\n", SDL_GetAudioFormatName(spec.format));
-
-        // accept the channel count of the input file
-        desired_spec.channels = spec.channels;
-        // except we may not be ready for surround setups
-        if (desired_spec.channels > 2)
-            desired_spec.channels = 2;
-
-        bool convert_success = SDL_ConvertAudioSamples(&spec, buffer, audio_length, &desired_spec, &output_buffer, &output_length);
-
-        SDL_free(buffer);
-        audio_length = 0;
-
-        if (!convert_success)
-        {
-            fprintf(stderr, "Couldn't convert audio samples to desired spec. %s\n", SDL_GetError());
-            return false;
-        }
-    }
-
-    samples = output_buffer;
-    channel_count = desired_spec.channels;
-    format = desired_spec.format;
-    frequency = desired_spec.freq;
-    frame_count = output_length / (SDL_AUDIO_BYTESIZE(desired_spec.format) * desired_spec.channels);
-
-    return true;
 }
 
 bool Application::save_app_state(String filepath) {

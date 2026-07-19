@@ -390,3 +390,75 @@ SDL_AudioStream* create_audio_stream(SDL_AudioDeviceID device, SDL_AudioSpec spe
 
     return stream;
 }
+
+
+#define STB_VORBIS_IMPLEMENTATION
+#include "stb_vorbis.h"
+
+bool AudioData::load_audio_file(String path, const char** message)
+{
+    SCOPE_STRING(path, path_c_str);
+
+    String ext = string_get_extension(path);
+
+    u8* output_buffer;
+    int output_length = 0;
+
+    // the spec we want
+    SDL_AudioSpec desired_spec;
+    desired_spec.channels = DESIRED_AUDIO_CHANNEL_COUNT;
+    desired_spec.format = DESIRED_AUDIO_FORMAT;
+    desired_spec.freq = DESIRED_AUDIO_SAMPLE_RATE;
+
+    {
+        // @todo support more file formats
+
+        SDL_AudioSpec spec;  // output parameter
+        u8* buffer = nullptr;
+        u32 audio_length = 0;
+
+        if (string_compare(ext, String(".wav")))
+        {
+            if (!SDL_LoadWAV(path_c_str, &spec, &buffer, &audio_length)) {
+                *message = SDL_GetError();
+                return false;
+            }
+        }
+        else if (string_compare(ext, String(".ogg")))
+        {
+            *message = "Vorbis support unimplemented";
+            return false;
+        }
+        else
+        {
+            *message = "Unknown or unsupported file format";
+        }
+
+        printf("%s\n", SDL_GetAudioFormatName(spec.format));
+
+        // accept the channel count of the input file
+        desired_spec.channels = spec.channels;
+        // except we may not be ready for surround setups
+        if (desired_spec.channels > 2)
+            desired_spec.channels = 2;
+
+        bool convert_success = SDL_ConvertAudioSamples(&spec, buffer, audio_length, &desired_spec, &output_buffer, &output_length);
+
+        SDL_free(buffer);
+        audio_length = 0;
+
+        if (!convert_success)
+        {
+            fprintf(stderr, "Couldn't convert audio samples to desired spec. %s\n", SDL_GetError());
+            return false;
+        }
+    }
+
+    samples = output_buffer;
+    channel_count = desired_spec.channels;
+    format = desired_spec.format;
+    frequency = desired_spec.freq;
+    frame_count = output_length / (SDL_AUDIO_BYTESIZE(desired_spec.format) * desired_spec.channels);
+
+    return true;
+}

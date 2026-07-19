@@ -25,6 +25,9 @@ add_executable(soundtoy
     desktop/ui.cpp
     desktop/spectogram.h
     desktop/spectogram.cpp
+
+    vendor/stb_vorbis/stb_vorbis.c
+    vendor/stb_vorbis/stb_vorbis.h
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT soundtoy)
@@ -61,6 +64,7 @@ target_include_directories(soundtoy PRIVATE st/dsp)
 
 target_link_libraries(soundtoy PRIVATE soundtoy_lib)
 
+target_include_directories(soundtoy PRIVATE vendor/stb_vorbis)
 
 # SDL
 add_subdirectory(vendor/SDL EXCLUDE_FROM_ALL)

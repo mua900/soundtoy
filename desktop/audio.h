@@ -52,7 +52,7 @@ private:
 
 #define AUDIO_MAX_CHANNELS 8
 
-// @todo remove these starting with the channel count
+// @todo not desired but the final output format
 #define DESIRED_AUDIO_CHANNEL_COUNT 2
 #define DESIRED_AUDIO_SAMPLE_RATE 48000
 #define DESIRED_AUDIO_FORMAT SDL_AUDIO_F32
@@ -77,9 +77,11 @@ struct AudioData {
         frame_count = 0;
     }
 
-    bool is_in_desired_spec()
+    bool is_in_desired_spec() const
     {
-        return (samples != nullptr) && (format == DESIRED_AUDIO_FORMAT) && (channel_count == DESIRED_AUDIO_CHANNEL_COUNT) && (frequency == DESIRED_AUDIO_SAMPLE_RATE);
+        return  format == DESIRED_AUDIO_FORMAT &&
+                channel_count == DESIRED_AUDIO_CHANNEL_COUNT &&
+                frequency == DESIRED_AUDIO_SAMPLE_RATE;
     }
 
     Signal as_signal()
@@ -94,7 +96,7 @@ struct AudioData {
         return Signal((float*)samples, frame_count * channel_count);
     }
 
-    bool load_audio_file(String path);
+    bool load_audio_file(String path, const char** message);
 };
 
 
