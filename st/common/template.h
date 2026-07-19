@@ -58,6 +58,11 @@ public:
 		return &m_data[index];
 	}
 
+	T& operator[](int index)
+	{
+		return m_data[index];
+	}
+
 	int add(T& elem)	{
 		int ret_index = m_size;
 		if (m_size + 1 > m_cap)

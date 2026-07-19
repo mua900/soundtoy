@@ -302,7 +302,12 @@ struct Rectangle {
 struct ColorF;
 
 struct Color {
-    unsigned char r, g, b, a;
+    unsigned char r = 0;
+    unsigned char g = 0;
+    unsigned char b = 0;
+    unsigned char a = 0;
+
+    Color() {}
     Color(unsigned char r, unsigned char g, unsigned char b, unsigned char a) : r(r), g(g), b(b), a(a) {}
     Color(const ColorF& color);
 };

@@ -50,6 +50,9 @@ bool Application::initialize()
 
     if (!load_assets()) {
         fprintf(stderr, "Could not load assets\n");
+
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Asset Load Error", "Could not load assets for soundtoy", m_window.window);
+
         return false;
     }
 
@@ -505,6 +508,13 @@ void Application::timeout()
             {
                 m_events[i].active = false;
             }
+        }
+    }
+
+    for (int i = 0; i < messages.size(); i++) {
+        if (messages[i].expire < m_time_seconds) {
+            messages.remove(i);
+            i--;
         }
     }
 }

@@ -65,8 +65,12 @@ target_link_libraries(soundtoy PRIVATE soundtoy_lib)
 # SDL
 add_subdirectory(vendor/SDL EXCLUDE_FROM_ALL)
 
-set(SDLIMAGE_VENDORED ON)
-set(SDLTTF_VENDORED ON)
+option(USE_VENDORED_DEPENDENCIES ON)
+
+if (USE_VENDORED_DEPENDENCIES)
+	set(SDLIMAGE_VENDORED ON)
+	set(SDLTTF_VENDORED ON)
+endif()
 
 # SDL_image
 # turn off unused formats

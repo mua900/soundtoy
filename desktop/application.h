@@ -86,6 +86,18 @@ struct Samplers {
 
 typedef float (*SampleGetter)(void* user, int frame, int channel);
 
+struct ApplicationMessage {
+    vec2 where = {};
+    vec2 scale = {};
+    const char* message = nullptr;
+    float expire = 0;
+    SDL_Texture* texture = nullptr;
+    Color background = {};
+
+    ApplicationMessage() {}
+    ApplicationMessage(vec2 w, vec2 s, const char* m, Color color) : where(w), scale(s), message(m), background(color) {}
+};
+
 class Application {
 public:
     ApplicationMode mode = ApplicationMode::AppModeSound;
@@ -120,6 +132,8 @@ public:
 
     bool quit = false;
     bool doing_text_input = false;
+
+    DArray<ApplicationMessage> messages = {};
 
     bool initialize();
 
@@ -163,6 +177,8 @@ private:
     bool update_channel_count(int count);
 
     bool reinit_samplers();
+
+    int display_message(vec2 where, vec2 scale, const char* message, float duration, Color color, Color background);
 
     void text_input_start();
     void text_input_stop();
