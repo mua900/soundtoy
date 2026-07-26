@@ -164,11 +164,7 @@ Text Application::create_text(String text, Font font, Color color)
 
     SDL_Texture* texture = SDL_CreateTextureFromSurface(m_window.renderer, surface);
 
-    if (!texture)
-    {
-        SDL_DestroySurface(surface);
-        return Text();
-    }
+	SDL_DestroySurface(surface);
 
     return Text(texture, text);
 }
